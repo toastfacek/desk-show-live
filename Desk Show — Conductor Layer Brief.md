@@ -100,8 +100,8 @@ First build is unchanged: one host, 5s, 768p, last-frame chain, static JPEG, no 
 flowchart TB
   Feed["Twitter/X feed"] --> Ingest
   Ingest -->|posts| Segmenter
-  Segmenter -->|one brief| Writer
-  Writer -->|line as text| Conductor
+  Segmenter -->|topic package| Writer
+  Writer -->|thought as text| Conductor
 
   Playhead -->|"clock, ready, cooking"| Conductor
   Spend["spend meter"] --> Conductor
@@ -120,6 +120,9 @@ flowchart TB
 
 A layout beat is one cut: which shot (`host_full`, `host_plus_card`, `card_full`, `idle`, `hold`), the source, and the duration. It is not a line of dialogue.
 
+**Unit of writing vs unit of time.** The segmenter and writer work in conversations: a topic package, then complete thoughts. H3 Max and the conductor work in clips: about 5 seconds, last-frame chain, spend. Do not let the clip length write the script. A thought that needs two takes stays one thought. The second take gets the whole script so far and finishes it.
+
+
 
 This is the contract, not a schema to implement. One fake tweet walks every step so you can see what each piece is allowed to know and what it is allowed to emit. First-slice code (the TDD) only runs writer → H3 Max → post → playhead. Ingest, segmenter, conductor, and compositor are the show path around that.
 
@@ -134,7 +137,7 @@ chain_ready   = false          # take 3 has not finished, so take 4 cannot start
 spend_usd     = 0.60
 spend_cap_usd = 20.00
 holds_recent  = 0
-written_ahead = [line 4]       # writer is allowed to run ahead; video is not
+written_ahead = [thought 4]    # writer is allowed to run ahead; video is not
 ```
 
 ### 1. Ingest
@@ -173,29 +176,37 @@ Writer never sees this list. If it did, it would start fetching.
 
 ### 2. Segmenter
 
-Turns the pile into a "talk about this next" queue. One brief per upcoming line. It can look at the last few topics so it does not repeat. It cannot write dialogue.
+Opens a room. It does not write dialogue. It does not say how long anyone talks.
 
-**Context it sees:** new posts, last 3 briefs that already aired or are queued, host names. It does not see last-frame URLs, spend, or playhead time.
+The output is a topic package: a question the two hosts will actually discuss, a framing (the stance or bit), and a few angles they can explore. An angle is not a headline to read aloud. It is a way into the question.
+
+One package can last several thoughts. Do not emit a new package per take.
+
+**Context it sees:** new posts, the last few topic packages, the two host names. It does not see last-frame URLs, spend, or playhead time.
 
 **Prompt**
 
 ```
-You are the segmenter for a one-host desk show.
-The host is a robot anchor. They comment. They do not report news.
+You are the segmenter for a two-host desk show.
+Hosts: UNIT (robot anchor, dry) and RIVET (needling, wants a number).
+They comment. They do not report news.
 
-You get new posts and the last few briefs.
+You get new posts and recent topic packages.
 Return exactly one JSON object, no prose:
 {
   "item_id": "<post id>",
-  "angle": "<one sentence, what to talk about>",
-  "beats": 1
+  "question": "<the question the hosts will actually discuss>",
+  "framing": "<the stance or bit, one or two sentences>",
+  "angles": ["<way in>", "<way in>", "<way in>"]
 }
 
 Rules:
 - Pick the post that is most commentable right now.
-- Do not write the spoken line.
+- The question must be arguable. Not "what happened."
+- Each angle is a way to explore the question, not a line of dialogue.
+- Do not write spoken lines.
 - Do not invent facts that are not in the post.
-- If nothing is worth a line, return {"skip": true}.
+- If nothing is worth a conversation, return {"skip": true}.
 ```
 
 **In (user)**
@@ -209,9 +220,9 @@ Rules:
       "text": "the vix just did a thing and nobody knows why"
     }
   ],
-  "recent_briefs": [
-    {"item_id": "1950123000000000001", "angle": "a screenshot of a broken chart"},
-    {"item_id": "1950123111111111111", "angle": "someone claiming the tape is fake"}
+  "recent_packages": [
+    {"item_id": "1950123000000000001", "question": "Is a screenshot of a chart evidence?"},
+    {"item_id": "1950123111111111111", "question": "When does a rumor become the tape?"}
   ]
 }
 ```
@@ -221,56 +232,88 @@ Rules:
 ```json
 {
   "item_id": "1950123999999999999",
-  "angle": "the VIX moved and the poster admits they have no thesis",
-  "beats": 1,
+  "question": "If you have no thesis, is the move even information?",
+  "framing": "The poster is narrating a VIX spike as weather. Treat fear as a product with no salesperson.",
+  "angles": [
+    "a ticker that shrugs is still a ticker",
+    "a move without a thesis is a screenshot of a feeling",
+    "RIVET wants the number; UNIT wants the reason"
+  ],
   "skip": false
 }
 ```
 
 ### 3. Writer
 
-Writes the spoken line. One line. It does not pick layout. It does not call fal.
+Writes the next complete thought for whoever is speaking. One writer scripts both hosts. It does not pick layout. It does not call fal. It does not care that H3 Max sells 5-second clips.
 
-**Context it sees:** persona, last N spoken lines, the next brief, who is speaking. It does not see the playhead, the last-frame URL, or the spend meter.
+A thought is a finished move in the conversation: an answer, a turn, a poke, a close. It can be one sentence or two. It is not a 12-word quota and it is not "fill five seconds." If the thought is still open, say so, and the next call finishes it.
+
+Every call gets the whole composed script so far, plus the topic package, plus whose turn it is. That is how a phrase started on take 3 gets completed on take 4 instead of resetting.
+
+The first video slice still performs one host. The writer contract is two-host now. Time-slicing for H3 Max happens after this, not inside it. If a thought is longer than one clip, keep `thought_open: true` and pass the same script forward. Do not shrink the thought to fit the camera.
+
+**Context it sees:** both personas, the full script so far, the current topic package, who speaks next, whether a thought is already open. It does not see the playhead, the last-frame URL, or the spend meter.
 
 **System prompt**
 
 ```
-You are the writer for a desk show.
-Host: UNIT, original robot anchor. Flat robotic monotone, mid-pitch.
-You output one spoken line only.
+You are the writer for a two-host desk show.
+UNIT: original robot anchor. Flat, dry, mid-pitch.
+RIVET: needling, wants a number, will not let a shrug pass.
+
+You write the next complete thought for the speaker you are given.
+A thought is a finished conversational move. Not a word count. Not a duration.
+
 Hard rules:
-- plain text, no quotes, no stage directions
-- 12 words or fewer
-- ends on a period
+- output JSON only, no prose around it
+- spoken text only in "text": no stage directions, no quotes around the line
 - do not mention that you are an AI
 - do not fetch posts
+- stay inside the question, framing, and angles
+- do not answer a different question
+- if the previous thought is open, finish or advance that thought before starting a new one
+- you may leave thought_open true if the move is not done
+- never rewrite earlier lines in the script
 ```
 
 **In (user)**
 
 ```
-Transcript:
+Topic package:
+question: If you have no thesis, is the move even information?
+framing: The poster is narrating a VIX spike as weather. Treat fear as a product with no salesperson.
+angles:
+- a ticker that shrugs is still a ticker
+- a move without a thesis is a screenshot of a feeling
+- RIVET wants the number; UNIT wants the reason
+post: @marketsguy: the vix just did a thing and nobody knows why
+
+Script so far:
 UNIT: The tape is a rumor with a timestamp.
+RIVET: Then give me the timestamp.
 UNIT: That chart is a screenshot of a feeling.
+RIVET: Feeling is not a number, UNIT.
 
-Next brief:
-angle: the VIX moved and the poster admits they have no thesis
-author: marketsguy
-text: the vix just did a thing and nobody knows why
-
-Write UNIT's next line.
+thought_open: true
+next_speaker: UNIT
+Write UNIT's next thought.
 ```
 
 **Out**
 
-```
-Fear has a ticker now, and it shrugs.
+```json
+{
+  "speaker": "UNIT",
+  "text": "Fear has a ticker now, and it shrugs.",
+  "thought_open": false,
+  "angle_used": "a ticker that shrugs is still a ticker"
+}
 ```
 
-That string is line 4. It sits in `written_ahead` until the conductor spends it.
+That object sits in `written_ahead` until the conductor spends the text. The next writer call gets this line appended to the script, even if H3 Max has not performed it yet. Writer ahead, video behind.
 
-If H3 Max later 422s this take, the writer is called again with the same brief plus `reissue: shorter, blander`. It does not get the failed video.
+If H3 Max later 422s the take, the writer is called again with the same script and package plus `reissue: shorter, blander`. It does not get the failed video. It may split the same thought into a smaller utterance. It does not change the question.
 
 ### 4. Conductor
 
@@ -464,12 +507,12 @@ Plays what the conductor handed it. mpv `--keep-open` on a playlist. When the pl
 | Step | Sees | Must not see |
 | --- | --- | --- |
 | Ingest | feed, cursor | lines, spend, frames |
-| Segmenter | posts, recent briefs | playhead, frames, spend |
-| Writer | persona, transcript, one brief | posts list, frames, spend, layout |
+| Segmenter | posts, recent topic packages | playhead, frames, spend |
+| Writer | both personas, full script so far, topic package, whose turn | posts list, frames, spend, layout |
 | Conductor | clock, queues, next line as text, spend | tweet pile, permission to rewrite the line |
 | H3 Max | prompt + first frame + duration | tweets, transcript, spend |
 | Post | the mp4 it just got | the next line |
 | Compositor | beat + files + card | fal |
 | Playhead | ready files | anything upstream |
 
-The only state that crosses video turns is the line as text plus that host's last-frame PNG URL. Writer state is the rolling transcript. Conductor state is the snapshot above. Do not merge those three memories.
+The only state that crosses video turns is the spoken text plus that host's last-frame PNG URL. Writer state is the full composed script plus the open topic package. Conductor state is the snapshot above. Do not merge those three memories.
