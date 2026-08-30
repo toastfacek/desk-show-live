@@ -78,6 +78,20 @@ class Database:
                 updated_at TEXT NOT NULL
             )
             """,
+            """
+            CREATE TRIGGER IF NOT EXISTS baselines_immutable_update
+            BEFORE UPDATE ON baselines
+            BEGIN
+                SELECT RAISE(ABORT, 'baselines are immutable');
+            END
+            """,
+            """
+            CREATE TRIGGER IF NOT EXISTS baselines_immutable_delete
+            BEFORE DELETE ON baselines
+            BEGIN
+                SELECT RAISE(ABORT, 'baselines are immutable');
+            END
+            """,
         )
 
         with self.connect() as connection:
