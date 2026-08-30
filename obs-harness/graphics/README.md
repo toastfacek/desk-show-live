@@ -39,6 +39,7 @@ Headline and names live here so the first drop-in looks like a show. H3 can stil
 
 ## Grid
 
-- Canvas 1920×1080. Side pad 40. Bottom furniture 180 (chyron 84 + two ticker rows).
-- Split host boxes 620×700. Card 640×540 on the join.
+- Canvas 1920×1080. Side pad 32, gap 16. Stage 792 tall under the header.
+- Split is three equal columns: host · card · host. Nothing overlaps.
+- `solo_l` is host left + info window right. `solo_r` is the mirror.
 - Host names: `PHASEONE[lol]` never lowercases; `deb` never capitalizes.

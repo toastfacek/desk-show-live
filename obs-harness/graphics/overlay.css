@@ -43,7 +43,13 @@
   --amber: #f0a33c;
   --cyan: #3ee0e8;
   --live: #ff5a4d;
-  --pad: 40px;
+  --pad: 32px;
+  --gap: 16px;
+  --stage-top: 96px;
+  --stage-h: 792px;
+  --col: 608px;
+  --solo-host: 1184px;
+  --solo-info: 656px;
 }
 
 * {
@@ -153,25 +159,25 @@ body {
 }
 
 .box-wide {
-  top: 96px;
-  left: 80px;
-  width: 1760px;
-  height: 760px;
+  top: var(--stage-top);
+  left: var(--pad);
+  width: calc(1920px - (var(--pad) * 2));
+  height: var(--stage-h);
   display: none;
 }
 
 .box-l {
-  top: 100px;
-  left: 40px;
-  width: 620px;
-  height: 700px;
+  top: var(--stage-top);
+  left: var(--pad);
+  width: var(--col);
+  height: var(--stage-h);
 }
 
 .box-r {
-  top: 100px;
-  left: 1260px;
-  width: 620px;
-  height: 700px;
+  top: var(--stage-top);
+  left: calc(var(--pad) + var(--col) + var(--gap) + var(--col) + var(--gap));
+  width: var(--col);
+  height: var(--stage-h);
 }
 
 #stage[data-speaking="host_a"] .box-l,
@@ -243,13 +249,13 @@ body {
 
 .card {
   position: absolute;
-  top: 168px;
-  left: 640px;
-  width: 640px;
-  height: 540px;
+  top: var(--stage-top);
+  left: calc(var(--pad) + var(--col) + var(--gap));
+  width: var(--col);
+  height: var(--stage-h);
   background: var(--plate);
   border: 3px solid var(--line);
-  padding: 28px 32px;
+  padding: 36px 40px;
   z-index: 20;
   display: none;
 }
@@ -452,40 +458,51 @@ body {
   display: none;
 }
 
-#stage[data-layout="solo_l"] .box-l {
+#stage[data-layout="solo_l"] .box-l,
+#stage[data-layout="solo_l"] .card {
   display: block;
-  top: 96px;
-  left: 160px;
-  width: 860px;
-  height: 760px;
+}
+#stage[data-layout="solo_l"] .box-l {
+  width: var(--solo-host);
+  height: var(--stage-h);
+}
+#stage[data-layout="solo_l"] .card {
+  left: calc(var(--pad) + var(--solo-host) + var(--gap));
+  width: var(--solo-info);
+  height: var(--stage-h);
 }
 #stage[data-layout="solo_l"] .box-r,
 #stage[data-layout="solo_l"] .box-wide,
-#stage[data-layout="solo_l"] .card,
 #stage[data-layout="solo_l"] .hold-plate {
   display: none;
 }
 
-#stage[data-layout="solo_r"] .box-r {
+#stage[data-layout="solo_r"] .box-r,
+#stage[data-layout="solo_r"] .card {
   display: block;
-  top: 96px;
-  left: 900px;
-  width: 860px;
-  height: 760px;
+}
+#stage[data-layout="solo_r"] .card {
+  left: var(--pad);
+  width: var(--solo-info);
+  height: var(--stage-h);
+}
+#stage[data-layout="solo_r"] .box-r {
+  left: calc(var(--pad) + var(--solo-info) + var(--gap));
+  width: var(--solo-host);
+  height: var(--stage-h);
 }
 #stage[data-layout="solo_r"] .box-l,
 #stage[data-layout="solo_r"] .box-wide,
-#stage[data-layout="solo_r"] .card,
 #stage[data-layout="solo_r"] .hold-plate {
   display: none;
 }
 
 #stage[data-layout="card_full"] .card {
   display: block;
-  top: 120px;
-  left: 280px;
-  width: 1360px;
-  height: 720px;
+  top: var(--stage-top);
+  left: var(--pad);
+  width: calc(1920px - (var(--pad) * 2));
+  height: var(--stage-h);
 }
 #stage[data-layout="card_full"] .card p {
   font-size: 52px;

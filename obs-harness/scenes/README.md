@@ -9,9 +9,9 @@ Furniture (chyron, tickers, LIVE, clock, card, host frames) is HTML in `../graph
 | Scene | Must contain |
 | :---- | :---- |
 | `wide` | `HOST_WIDE` full frame; `HEADLINE`; `NAME_A`; `NAME_B` |
-| `split` | Two scene items of `HOST_WIDE` (left crop, right crop); `CENTER` on the join; `HEADLINE`; name bars |
-| `solo_l` | Left crop of `HOST_WIDE`, larger |
-| `solo_r` | Right crop of `HOST_WIDE`, larger |
+| `split` | Two scene items of `HOST_WIDE` (left crop, right crop) in the left and right columns; card in the middle column; `HEADLINE`; name bars |
+| `solo_l` | Left crop of `HOST_WIDE` filling the left; info window (card) on the right |
+| `solo_r` | Right crop of `HOST_WIDE` filling the right; info window (card) on the left |
 | `card_full` | `CENTER` full frame. `HOST_WIDE` may be hidden; its audio stays in the mixer |
 | `hold` | `CENTER` or a still; `BED` audible. No host face as the only picture |
 
