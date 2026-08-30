@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sqlite3
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
 import uvicorn
 import yaml
@@ -26,11 +28,139 @@ from .providers import ReferenceCopyProvider
 
 
 DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+DEFAULT_MULTIPART_OVERHEAD_BYTES = 1024 * 1024
 WEB_ROOT = Path(__file__).with_name("web")
 
 
 class UploadTooLargeError(ValidationError):
     pass
+
+
+class _RequestBodyTooLarge(Exception):
+    pass
+
+
+class RequestBodyLimitMiddleware:
+    def __init__(self, app, max_bytes: int):
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        headers = {
+            key.lower(): value
+            for key, value in scope.get("headers", ())
+        }
+        content_length = headers.get(b"content-length")
+        if content_length is not None:
+            try:
+                declared = int(content_length)
+            except ValueError:
+                await _send_asgi_error(
+                    send, 400, "malformed_request", "invalid Content-Length"
+                )
+                return
+            if declared > self.max_bytes:
+                await _send_asgi_error(
+                    send,
+                    413,
+                    "request_too_large",
+                    f"request size exceeds limit {self.max_bytes}",
+                )
+                return
+
+        received = 0
+
+        async def limited_receive():
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > self.max_bytes:
+                    raise _RequestBodyTooLarge
+            return message
+
+        try:
+            await self.app(scope, limited_receive, send)
+        except _RequestBodyTooLarge:
+            await _send_asgi_error(
+                send,
+                413,
+                "request_too_large",
+                f"request size exceeds limit {self.max_bytes}",
+            )
+
+
+class LocalRequestMiddleware:
+    _trusted_hosts = {"localhost", "127.0.0.1", "::1", "testserver"}
+    _mutating_methods = {"POST", "PUT", "PATCH", "DELETE"}
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        headers = {
+            key.decode("latin-1").lower(): value.decode("latin-1")
+            for key, value in scope.get("headers", ())
+        }
+        host_header = headers.get("host", "")
+        hostname = urlsplit(f"//{host_header}").hostname
+        if hostname not in self._trusted_hosts:
+            await _send_asgi_error(
+                send, 403, "unsafe_request", "untrusted Host header"
+            )
+            return
+        if (
+            scope["method"] in self._mutating_methods
+            and scope.get("path", "").startswith("/api/")
+        ):
+            if headers.get("x-runtime-manager") != "1":
+                await _send_asgi_error(
+                    send,
+                    403,
+                    "unsafe_request",
+                    "missing X-Runtime-Manager marker",
+                )
+                return
+            origin = headers.get("origin")
+            if origin:
+                parsed = urlsplit(origin)
+                if (
+                    parsed.scheme not in {"http", "https"}
+                    or parsed.netloc.lower() != host_header.lower()
+                    or parsed.hostname not in self._trusted_hosts
+                ):
+                    await _send_asgi_error(
+                        send,
+                        403,
+                        "unsafe_request",
+                        "cross-origin mutation rejected",
+                    )
+                    return
+        await self.app(scope, receive, send)
+
+
+async def _send_asgi_error(send, status: int, code: str, message: str) -> None:
+    content = json.dumps(
+        {"error": {"code": code, "message": message}},
+        separators=(",", ":"),
+    ).encode()
+    await send(
+        {
+            "type": "http.response.start",
+            "status": status,
+            "headers": [
+                (b"content-type", b"application/json"),
+                (b"content-length", str(len(content)).encode()),
+            ],
+        }
+    )
+    await send({"type": "http.response.body", "body": content})
 
 
 class PackCreate(BaseModel):
@@ -61,6 +191,7 @@ class GeneratedCandidateCreate(BaseModel):
 class CandidateApprove(BaseModel):
     canonical: bool = False
     review_note: str
+    invariants_verified: bool = False
 
 
 class CandidateReject(BaseModel):
@@ -72,6 +203,8 @@ class VariantCreate(BaseModel):
     hero_asset_id: str
     theme: str
     changes: dict
+    scene_pack_id: str | None = None
+    scene_version: int | None = None
 
 
 class BaselineCreate(BaseModel):
@@ -92,7 +225,14 @@ def create_app(
     data_dir: Path,
     *,
     max_upload_bytes: int = DEFAULT_MAX_UPLOAD_BYTES,
+    max_request_bytes: int | None = None,
 ) -> FastAPI:
+    if max_request_bytes is None:
+        max_request_bytes = (
+            max_upload_bytes + DEFAULT_MULTIPART_OVERHEAD_BYTES
+        )
+    if max_request_bytes <= max_upload_bytes:
+        raise ValueError("max_request_bytes must be greater than max_upload_bytes")
     data_dir = Path(data_dir)
     database = Database(data_dir / "manager.sqlite3")
     database.initialize()
@@ -105,6 +245,9 @@ def create_app(
     app = FastAPI(title="Character Pack Manager")
     app.state.services = services
     app.state.max_upload_bytes = max_upload_bytes
+    app.state.max_request_bytes = max_request_bytes
+    app.add_middleware(RequestBodyLimitMiddleware, max_bytes=max_request_bytes)
+    app.add_middleware(LocalRequestMiddleware)
 
     async def domain_error_handler(
         request: Request, error: Exception
@@ -319,6 +462,8 @@ def create_app(
             hero_asset_id=body.hero_asset_id,
             theme=body.theme,
             changes=body.changes,
+            scene_pack_id=body.scene_pack_id,
+            scene_version=body.scene_version,
         )
         return _candidate_json(
             candidate,
@@ -357,6 +502,7 @@ def create_app(
             candidate_id,
             canonical=body.canonical,
             review_note=body.review_note,
+            invariants_verified=body.invariants_verified,
         )
         return _candidate_json(
             candidate,
@@ -364,6 +510,11 @@ def create_app(
                 candidate.id
             ),
         )
+
+    @app.post("/api/candidates/{candidate_id}/canonical")
+    def set_canonical_candidate(candidate_id: str):
+        candidate = services.candidates.set_canonical(candidate_id)
+        return _candidate_json(candidate, is_current_canonical=True)
 
     @app.post("/api/candidates/{candidate_id}/reject")
     def reject_candidate(candidate_id: str, body: CandidateReject):
@@ -536,6 +687,10 @@ def main() -> None:
     port = config.get("port", 8765)
     data_dir = Path(config.get("data_dir", "data"))
     max_upload_bytes = config.get("max_upload_bytes", DEFAULT_MAX_UPLOAD_BYTES)
+    max_request_bytes = config.get(
+        "max_request_bytes",
+        max_upload_bytes + DEFAULT_MULTIPART_OVERHEAD_BYTES,
+    )
     if (
         isinstance(port, bool)
         or not isinstance(port, int)
@@ -548,7 +703,19 @@ def main() -> None:
         or max_upload_bytes <= 0
     ):
         raise SystemExit("max_upload_bytes must be a positive integer")
-    app = create_app(data_dir, max_upload_bytes=max_upload_bytes)
+    if (
+        isinstance(max_request_bytes, bool)
+        or not isinstance(max_request_bytes, int)
+        or max_request_bytes <= max_upload_bytes
+    ):
+        raise SystemExit(
+            "max_request_bytes must be an integer greater than max_upload_bytes"
+        )
+    app = create_app(
+        data_dir,
+        max_upload_bytes=max_upload_bytes,
+        max_request_bytes=max_request_bytes,
+    )
     uvicorn.run(app, host=host, port=port)
 
 

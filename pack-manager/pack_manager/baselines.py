@@ -51,6 +51,7 @@ class BaselineService:
         self.pack_service = pack_service
         self.candidate_service = candidate_service
         self.export_root = (asset_store.data_dir / "exports").absolute()
+        self._cleanup_orphan_exports()
 
     def lock_run(
         self, cast_key: str, requested_candidate_id: str | None = None
@@ -137,9 +138,14 @@ class BaselineService:
             rows = connection.execute(
                 "SELECT * FROM baselines ORDER BY created_at, rowid"
             ).fetchall()
-        return [
-            self._baseline_from_row(row, self.load(row["id"])) for row in rows
-        ]
+        baselines = []
+        for row in rows:
+            try:
+                loaded = self.load(row["id"])
+            except IntegrityError:
+                continue
+            baselines.append(self._baseline_from_row(row, loaded))
+        return baselines
 
     def read_manifest_verified(self, baseline_id: str) -> bytes:
         loaded = self.load(baseline_id)
@@ -199,6 +205,7 @@ class BaselineService:
         if referenced != set(verified_paths):
             raise IntegrityError("manifest file references do not match hash records")
         self._verify_export_contents(export_dir, set(verified_paths))
+        self._verify_runtime_metadata(manifest, verified_paths)
 
         return LoadedBaseline(
             id=baseline_id,
@@ -241,6 +248,7 @@ class BaselineService:
             payload = {
                 "kind": "character",
                 "manifest": version.manifest,
+                "name": self._pack_name(version.pack_id),
                 "pack_id": version.pack_id,
                 "slot": character.slot,
                 "version": version.version,
@@ -293,6 +301,10 @@ class BaselineService:
                 }
 
         scene_manifest = scene_version.manifest
+        display_names = {
+            character.slot: self._pack_name(character.pack_id)
+            for character in candidate.character_versions
+        }
         return {
             "assets": sorted(
                 exported_assets.values(), key=lambda item: item["asset_id"]
@@ -311,6 +323,8 @@ class BaselineService:
                 "path": hero_relative,
                 "sha256": hero.sha256,
             },
+            "host_map": {"BOT1": "host_a", "BOT2": "host_b"},
+            "display_names": display_names,
             "packs": {
                 "characters": character_records,
                 "scene": {
@@ -322,6 +336,68 @@ class BaselineService:
             "reanchor_every": scene_manifest["reanchor_every"],
             "theme": candidate.theme,
         }
+
+    def _pack_name(self, pack_id: str) -> str:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT name FROM packs WHERE id = ?", (pack_id,)
+            ).fetchone()
+        if row is None:
+            raise IntegrityError(f"missing pack: {pack_id}")
+        return row["name"]
+
+    def _verify_runtime_metadata(
+        self, manifest: dict, verified_paths: dict[str, Path]
+    ) -> None:
+        if manifest.get("host_map") != {
+            "BOT1": "host_a",
+            "BOT2": "host_b",
+        }:
+            raise IntegrityError("invalid host mapping")
+        characters = manifest.get("packs", {}).get("characters")
+        display_names = manifest.get("display_names")
+        if not isinstance(characters, list) or not isinstance(display_names, dict):
+            raise IntegrityError("invalid display names")
+        expected = {}
+        try:
+            for record in characters:
+                payload = json.loads(
+                    self._read_file(verified_paths[record["path"]])
+                )
+                expected[record["slot"]] = payload["name"]
+        except (
+            KeyError,
+            TypeError,
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ) as error:
+            raise IntegrityError("invalid character pack metadata") from error
+        if display_names != expected or not all(
+            isinstance(name, str) and name
+            for name in display_names.values()
+        ):
+            raise IntegrityError("invalid display names")
+
+    def _cleanup_orphan_exports(self) -> None:
+        if self.export_root.is_symlink():
+            return
+        self.export_root.mkdir(parents=True, exist_ok=True)
+        with self.database.connect() as connection:
+            referenced = {
+                row["id"]
+                for row in connection.execute("SELECT id FROM baselines")
+            }
+        for path in self.export_root.iterdir():
+            name = path.name
+            remove = name.startswith(".tmp-baseline_") or (
+                name.startswith("baseline_") and name not in referenced
+            )
+            if not remove:
+                continue
+            if path.is_symlink() or path.is_file():
+                path.unlink(missing_ok=True)
+            elif path.is_dir():
+                shutil.rmtree(path)
 
     @staticmethod
     def _normalized_json(value: object) -> bytes:

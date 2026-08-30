@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 
 from pack_manager.assets import AssetStore
@@ -46,6 +48,22 @@ def test_versions_are_monotonic_and_immutable(pack_service):
 
     assert (v1.version, v2.version) == (1, 2)
     assert pack_service.get_version(pack.id, 1).manifest["persona"] != "More curious."
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "UPDATE pack_versions SET manifest = '{}' WHERE pack_id = ? AND version = 1",
+        "DELETE FROM pack_versions WHERE pack_id = ? AND version = 1",
+    ],
+)
+def test_pack_versions_are_database_immutable(pack_service, statement):
+    pack = pack_service.create_pack("character", "PHASEONE[lol]")
+    pack_service.create_version(pack.id, character_manifest())
+
+    with pytest.raises(sqlite3.IntegrityError, match="immutable"):
+        with pack_service.database.connect() as connection:
+            connection.execute(statement, (pack.id,))
 
 
 def test_returned_manifest_mutation_cannot_change_version_truth(pack_service):

@@ -62,22 +62,30 @@
         <h2>2. Candidate image</h2>
         <p>Upload a finished hero above, or copy an existing reference through the local zero-cost generator.</p>
         <form id="candidate-form" class="wide-form">
-          <label>Character versions JSON
-            <textarea name="character_versions" rows="4" required>{"BOT1": ["character_pack_id", 1]}</textarea>
+          <label>BOT1 character version
+            <select name="BOT1" class="character-version-options" required></select>
           </label>
-          <label>Scene pack ID <input name="scene_pack_id" required></label>
-          <label>Scene version <input name="scene_version" type="number" min="1" value="1" required></label>
+          <label>BOT2 character version
+            <select name="BOT2" class="character-version-options"></select>
+          </label>
+          <label>Scene version
+            <select name="scene" class="scene-version-options" required></select>
+          </label>
           <label>Hero asset <select name="hero_asset_id" class="asset-options" required></select></label>
           <button>Create uploaded candidate</button>
         </form>
 
         <form id="generate-form" class="wide-form">
           <h3>Generate candidate from reference</h3>
-          <label>Character versions JSON
-            <textarea name="character_versions" rows="4" required>{"BOT1": ["character_pack_id", 1]}</textarea>
+          <label>BOT1 character version
+            <select name="BOT1" class="character-version-options" required></select>
           </label>
-          <label>Scene pack ID <input name="scene_pack_id" required></label>
-          <label>Scene version <input name="scene_version" type="number" min="1" value="1" required></label>
+          <label>BOT2 character version
+            <select name="BOT2" class="character-version-options"></select>
+          </label>
+          <label>Scene version
+            <select name="scene" class="scene-version-options" required></select>
+          </label>
           <label>Reference asset <select name="reference_asset_id" class="asset-options" required></select></label>
           <label>Prompt <input name="prompt" placeholder="Clean wide studio shot"></label>
           <label>Seed <input name="seed" type="number"></label>
@@ -94,6 +102,9 @@
           <label>Canonical candidate <select name="canonical_candidate_id" class="canonical-options" required></select></label>
           <label>Hero asset <select name="hero_asset_id" class="asset-options" required></select></label>
           <label>Theme <input name="theme" required></label>
+          <label>Alternate scene version (optional)
+            <select name="scene" class="scene-version-options optional-scene"></select>
+          </label>
           <label>Allowed changes JSON
             <textarea name="changes" rows="5" required>{"palette": ["red", "green"], "accessories": ["hat"]}</textarea>
           </label>
@@ -104,7 +115,9 @@
       <section>
         <h2>4. Lock and inspect run</h2>
         <form id="baseline-form" class="wide-form">
-          <label>Cast key <input name="cast_key" required></label>
+          <label>Canonical cast
+            <select name="cast_key" class="cast-options" required></select>
+          </label>
           <label>Requested candidate (optional)
             <select name="requested_candidate_id" class="candidate-options">
               <option value="">Canonical</option>

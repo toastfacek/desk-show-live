@@ -1,7 +1,11 @@
-const state = { packs: [], assets: [], candidates: [], baselines: [] };
+const state = { packs: [], versions: [], assets: [], candidates: [], baselines: [] };
 const notice = document.querySelector("#notice");
 
 async function api(path, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    options.headers = { ...(options.headers || {}), "X-Runtime-Manager": "1" };
+  }
   const response = await fetch(path, options);
   const contentType = response.headers.get("content-type") || "";
   const body = contentType.includes("json") ? await response.json() : await response.text();
@@ -47,11 +51,20 @@ function refill(selector, records, label, includeBlank = false) {
 }
 
 async function refresh() {
-  [state.packs, state.assets, state.candidates, state.baselines] = await Promise.all([
-    api("/api/packs"),
+  state.packs = await api("/api/packs");
+  [state.assets, state.candidates, state.baselines, state.versions] = await Promise.all([
     api("/api/assets"),
     api("/api/candidates"),
     api("/api/baselines"),
+    Promise.all(state.packs.map(async (pack) => {
+      const versions = await api(`/api/packs/${encodeURIComponent(pack.id)}/versions`);
+      return versions.map((version) => ({
+        ...version,
+        id: `${pack.id}@${version.version}`,
+        kind: pack.kind,
+        name: pack.name,
+      }));
+    })).then((groups) => groups.flat()),
   ]);
   render();
 }
@@ -60,11 +73,30 @@ function render() {
   refill(".pack-options", state.packs, (item) => `${item.name} · ${item.kind}`);
   refill(".asset-options", state.assets, (item) => `${item.id} · ${item.mime_type}`);
   refill(
+    ".character-version-options",
+    state.versions.filter((item) => item.kind === "character"),
+    (item) => `${item.name} · v${item.version}`,
+    true,
+  );
+  refill(
+    ".scene-version-options",
+    state.versions.filter((item) => item.kind === "scene"),
+    (item) => `${item.name} · v${item.version}`,
+    true,
+  );
+  refill(
     ".canonical-options",
     state.candidates.filter((item) => item.is_current_canonical),
     (item) => `${item.id} · ${item.cast_key.slice(0, 10)}`,
   );
   refill(".candidate-options", state.candidates, (item) => `${item.id} · ${item.status}`, true);
+  refill(
+    ".cast-options",
+    state.candidates
+      .filter((item) => item.is_current_canonical)
+      .map((item) => ({ ...item, id: item.cast_key })),
+    (item) => `${candidateLabel(item)} · ${item.cast_key.slice(0, 10)}`,
+  );
 
   const assets = document.querySelector("#assets");
   assets.replaceChildren(...state.assets.map(assetCard));
@@ -171,7 +203,7 @@ function candidateCard(candidate) {
   image.className = "candidate-preview";
   card.append(image);
   card.innerHTML = `
-    <h3>${escapeHtml(candidate.theme || "Canonical candidate")}</h3>
+    <h3>${escapeHtml(candidateLabel(candidate))}</h3>
     <p><code>${escapeHtml(candidate.id)}</code></p>
     <p><span class="status ${candidate.status}">${candidate.status}</span></p>
     <p>Hero: <code>${escapeHtml(candidate.hero_asset_id)}</code></p>
@@ -181,12 +213,37 @@ function candidateCard(candidate) {
     const note = document.createElement("input");
     note.placeholder = "Review note";
     note.setAttribute("aria-label", `Review note for ${candidate.id}`);
-    const approve = actionButton("Approve", () => reviewCandidate(candidate.id, "approve", note.value, false));
+    const verified = document.createElement("label");
+    verified.innerHTML = '<input type="checkbox" name="invariants_verified"> Invariants verified';
+    const approve = actionButton("Approve", () => reviewCandidate(
+      candidate.id,
+      "approve",
+      note.value,
+      false,
+      verified.querySelector("input").checked,
+    ));
     const canonical = actionButton("Approve canonical", () => reviewCandidate(candidate.id, "approve", note.value, true));
     const reject = actionButton("Reject", () => reviewCandidate(candidate.id, "reject", note.value, false));
-    card.append(note, approve, canonical, reject);
+    if (candidate.canonical_candidate_id) card.append(verified);
+    card.append(note, approve);
+    if (!candidate.canonical_candidate_id) card.append(canonical);
+    card.append(reject);
+  } else if (
+    candidate.status === "approved"
+    && !candidate.canonical_candidate_id
+    && !candidate.is_current_canonical
+  ) {
+    card.append(actionButton("Make canonical", () => makeCanonical(candidate.id)));
   }
   return card;
+}
+
+function candidateLabel(candidate) {
+  if (candidate.canonical_candidate_id) return candidate.theme || "Daily variant";
+  if (candidate.is_current_canonical) return "Current canonical";
+  if (candidate.status === "approved") return "Approved root";
+  if (candidate.status === "rejected") return "Rejected root candidate";
+  return "Draft root candidate";
 }
 
 function actionButton(label, handler) {
@@ -197,13 +254,23 @@ function actionButton(label, handler) {
   return button;
 }
 
-async function reviewCandidate(id, action, reviewNote, canonical) {
+async function reviewCandidate(id, action, reviewNote, canonical, invariantsVerified = false) {
   try {
     await api(
       `/api/candidates/${encodeURIComponent(id)}/${action}`,
-      jsonRequest("POST", action === "approve" ? { review_note: reviewNote, canonical } : { review_note: reviewNote }),
+      jsonRequest("POST", action === "approve"
+        ? { review_note: reviewNote, canonical, invariants_verified: invariantsVerified }
+        : { review_note: reviewNote }),
     );
     show(`Candidate ${action}d.`);
+    await refresh();
+  } catch (error) { show(error.message, true); }
+}
+
+async function makeCanonical(id) {
+  try {
+    await api(`/api/candidates/${encodeURIComponent(id)}/canonical`, { method: "POST" });
+    show("Canonical candidate selected.");
     await refresh();
   } catch (error) { show(error.message, true); }
 }
@@ -255,10 +322,18 @@ handle("#version-form", (form) => {
 
 function candidatePayload(form) {
   const data = new FormData(form);
+  const characterVersions = {};
+  for (const slot of ["BOT1", "BOT2"]) {
+    const selected = data.get(slot);
+    if (!selected) continue;
+    const record = state.versions.find((item) => item.id === selected);
+    characterVersions[slot] = [record.pack_id, record.version];
+  }
+  const scene = state.versions.find((item) => item.id === data.get("scene"));
   return {
-    character_versions: parseJson(form, "character_versions"),
-    scene_pack_id: data.get("scene_pack_id"),
-    scene_version: Number(data.get("scene_version")),
+    character_versions: characterVersions,
+    scene_pack_id: scene.pack_id,
+    scene_version: scene.version,
   };
 }
 
@@ -284,11 +359,14 @@ handle("#generate-form", (form) => {
 
 handle("#variant-form", (form) => {
   const data = new FormData(form);
+  const scene = state.versions.find((item) => item.id === data.get("scene"));
   return api("/api/candidates/variants", jsonRequest("POST", {
     canonical_candidate_id: data.get("canonical_candidate_id"),
     hero_asset_id: data.get("hero_asset_id"),
     theme: data.get("theme"),
     changes: parseJson(form, "changes"),
+    scene_pack_id: scene?.pack_id || null,
+    scene_version: scene?.version || null,
   }));
 });
 

@@ -12,7 +12,7 @@ from .errors import ConflictError, ValidationError
 from .packs import PackService
 
 
-_ALLOWED_VARIANT_CHANGES = {"scene", "set", "palette", "accessories"}
+_ALLOWED_VARIANT_CHANGES = {"scene", "palette", "accessories"}
 _LOCKED_CHARACTER_TRAITS = {"silhouette", "eye_design", "proportions"}
 
 
@@ -148,10 +148,18 @@ class CandidateService:
         hero_asset_id: str,
         theme: str,
         changes: dict,
+        scene_pack_id: str | None = None,
+        scene_version: int | None = None,
     ) -> Candidate:
         self._validate_hero(hero_asset_id)
         self._validate_theme(theme)
         stored_changes = self._validate_variant_changes(changes)
+        if (scene_pack_id is None) != (scene_version is None):
+            raise ValidationError(
+                "scene_pack_id and scene_version must be provided together"
+            )
+        if scene_pack_id is not None:
+            self._validate_pack_version(scene_pack_id, scene_version, "scene")
         with self.database.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             canonical = self._from_row(
@@ -180,8 +188,12 @@ class CandidateService:
                 id=f"candidate_{uuid.uuid4().hex}",
                 cast_key=canonical.cast_key,
                 character_versions=canonical.character_versions,
-                scene_pack_id=canonical.scene_pack_id,
-                scene_version=canonical.scene_version,
+                scene_pack_id=scene_pack_id or canonical.scene_pack_id,
+                scene_version=(
+                    scene_version
+                    if scene_version is not None
+                    else canonical.scene_version
+                ),
                 hero_asset_id=hero_asset_id,
                 canonical_candidate_id=canonical.id,
                 theme=theme,
@@ -200,6 +212,7 @@ class CandidateService:
         *,
         canonical: bool,
         review_note: str,
+        invariants_verified: bool = False,
     ) -> Candidate:
         self._validate_review_note(review_note)
         reviewed_at = self._now()
@@ -211,6 +224,28 @@ class CandidateService:
                 raise ConflictError("candidate is not draft")
             if canonical and candidate.canonical_candidate_id is not None:
                 raise ConflictError("a variant cannot become canonical")
+            if candidate.canonical_candidate_id is not None:
+                self._validate_variant_changes(candidate.changes)
+                if invariants_verified is not True:
+                    raise ValidationError(
+                        "invariants_verified must be true for a variant"
+                    )
+                current = connection.execute(
+                    """
+                    SELECT candidate_id
+                    FROM canonical_candidates
+                    WHERE cast_key = ?
+                    """,
+                    (candidate.cast_key,),
+                ).fetchone()
+                if (
+                    current is None
+                    or current["candidate_id"]
+                    != candidate.canonical_candidate_id
+                ):
+                    raise ConflictError(
+                        "variant has stale canonical lineage"
+                    )
             connection.execute(
                 """
                 UPDATE candidates
@@ -233,6 +268,33 @@ class CandidateService:
                 )
             row = self._require_row(connection, candidate_id)
         return self._from_row(row)
+
+    def set_canonical(self, candidate_id: str) -> Candidate:
+        updated_at = self._now()
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            candidate = self._from_row(
+                self._require_row(connection, candidate_id)
+            )
+            if (
+                candidate.status != "approved"
+                or candidate.canonical_candidate_id is not None
+            ):
+                raise ConflictError(
+                    "canonical candidate must be an approved root"
+                )
+            connection.execute(
+                """
+                INSERT INTO canonical_candidates
+                    (cast_key, candidate_id, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(cast_key) DO UPDATE SET
+                    candidate_id = excluded.candidate_id,
+                    updated_at = excluded.updated_at
+                """,
+                (candidate.cast_key, candidate.id, updated_at),
+            )
+        return candidate
 
     def reject(self, candidate_id: str, *, review_note: str) -> Candidate:
         self._validate_review_note(review_note)
@@ -392,23 +454,34 @@ class CandidateService:
     def _validate_variant_changes(changes: dict) -> dict:
         if not isinstance(changes, dict) or not changes:
             raise ValidationError("variant changes must be a non-empty object")
-        characters = changes.get("characters")
-        if isinstance(characters, dict):
-            for slot_changes in characters.values():
-                if isinstance(slot_changes, dict):
-                    for trait in _LOCKED_CHARACTER_TRAITS:
-                        if trait in slot_changes:
-                            raise ValidationError(
-                                f"variant cannot override locked trait: {trait}"
-                            )
+        locked = CandidateService._find_locked_trait(changes)
+        if locked is not None:
+            raise ValidationError(
+                f"variant cannot override locked trait: {locked}"
+            )
         unsupported = set(changes) - _ALLOWED_VARIANT_CHANGES
         if unsupported:
             raise ValidationError(
-                "variant changes may contain only scene, set, palette, "
-                "and accessories"
+                "variant changes may contain only scene, palette, and accessories"
             )
         serialized = _serialize_json(changes, "changes")
         return json.loads(serialized)
+
+    @staticmethod
+    def _find_locked_trait(value: object) -> str | None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key in _LOCKED_CHARACTER_TRAITS:
+                    return key
+                nested = CandidateService._find_locked_trait(item)
+                if nested is not None:
+                    return nested
+        elif isinstance(value, list):
+            for item in value:
+                nested = CandidateService._find_locked_trait(item)
+                if nested is not None:
+                    return nested
+        return None
 
     @staticmethod
     def _cast_key(

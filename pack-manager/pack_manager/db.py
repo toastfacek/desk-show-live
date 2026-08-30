@@ -92,6 +92,20 @@ class Database:
                 SELECT RAISE(ABORT, 'baselines are immutable');
             END
             """,
+            """
+            CREATE TRIGGER IF NOT EXISTS pack_versions_immutable_update
+            BEFORE UPDATE ON pack_versions
+            BEGIN
+                SELECT RAISE(ABORT, 'pack versions are immutable');
+            END
+            """,
+            """
+            CREATE TRIGGER IF NOT EXISTS pack_versions_immutable_delete
+            BEFORE DELETE ON pack_versions
+            BEGIN
+                SELECT RAISE(ABORT, 'pack versions are immutable');
+            END
+            """,
         )
 
         with self.connect() as connection:

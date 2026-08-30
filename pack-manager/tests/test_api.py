@@ -6,6 +6,13 @@ from pack_manager.app import create_app
 
 
 PNG = b"\x89PNG\r\n\x1a\napi-test"
+MUTATION_HEADERS = {"X-Runtime-Manager": "1"}
+
+
+def manager_client(app):
+    return TestClient(
+        app, base_url="http://localhost", headers=MUTATION_HEADERS
+    )
 
 
 def character_manifest(asset_id):
@@ -41,7 +48,7 @@ def upload(client, name, content=PNG, mime_type="image/png"):
 
 
 def test_complete_fallback_workflow(tmp_path):
-    with TestClient(create_app(tmp_path / "data", max_upload_bytes=1024)) as client:
+    with manager_client(create_app(tmp_path / "data", max_upload_bytes=1024)) as client:
         packs = [
             client.post("/api/packs", json={"kind": "character", "name": "BOT1"}),
             client.post("/api/packs", json={"kind": "character", "name": "BOT2"}),
@@ -138,7 +145,9 @@ def test_complete_fallback_workflow(tmp_path):
 
 
 def test_upload_validation_and_stable_errors(tmp_path):
-    with TestClient(create_app(tmp_path / "data", max_upload_bytes=16)) as client:
+    with manager_client(
+        create_app(tmp_path / "data", max_upload_bytes=16, max_request_bytes=256)
+    ) as client:
         unsupported = client.post(
             "/api/assets", files={"file": ("payload.txt", b"x", "text/plain")}
         )
@@ -162,9 +171,64 @@ def test_upload_validation_and_stable_errors(tmp_path):
         assert missing.json()["error"]["code"] == "not_found"
 
 
+def test_request_limiter_rejects_content_length_and_streaming_bodies(tmp_path):
+    app = create_app(
+        tmp_path / "data", max_upload_bytes=16, max_request_bytes=64
+    )
+    with manager_client(app) as client:
+        declared = client.post(
+            "/api/packs",
+            content=b"x" * 65,
+            headers={"content-type": "application/json"},
+        )
+        streamed = client.post(
+            "/api/packs",
+            content=(chunk for chunk in (b"x" * 40, b"y" * 40)),
+            headers={
+                "content-type": "application/json",
+                "transfer-encoding": "chunked",
+            },
+        )
+
+    for response in (declared, streamed):
+        assert response.status_code == 413
+        assert response.json()["error"]["code"] == "request_too_large"
+
+
+def test_localhost_host_header_and_mutation_hardening(tmp_path):
+    app = create_app(tmp_path / "data")
+    with TestClient(app, base_url="http://localhost") as client:
+        readable = client.get("/api/packs")
+        missing_marker = client.post(
+            "/api/packs", json={"kind": "character", "name": "BOT1"}
+        )
+        hostile_host = client.get(
+            "/api/packs", headers={"host": "attacker.example"}
+        )
+        hostile_origin = client.post(
+            "/api/packs",
+            json={"kind": "character", "name": "BOT1"},
+            headers={
+                **MUTATION_HEADERS,
+                "origin": "https://attacker.example",
+            },
+        )
+        accepted = client.post(
+            "/api/packs",
+            json={"kind": "character", "name": "BOT1"},
+            headers=MUTATION_HEADERS,
+        )
+
+    assert readable.status_code == 200
+    assert accepted.status_code == 201
+    for response in (missing_marker, hostile_host, hostile_origin):
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "unsafe_request"
+
+
 def test_asset_content_is_verified_and_available_for_previews(tmp_path):
     app = create_app(tmp_path / "data")
-    with TestClient(app) as client:
+    with manager_client(app) as client:
         asset = upload(client, "preview.png")
 
         content = client.get(f"/api/assets/{asset['id']}/content")
@@ -179,7 +243,7 @@ def test_asset_content_is_verified_and_available_for_previews(tmp_path):
 
 
 def test_rejects_image_mime_with_forged_file_signature(tmp_path):
-    with TestClient(create_app(tmp_path / "data")) as client:
+    with manager_client(create_app(tmp_path / "data")) as client:
         forged = client.post(
             "/api/assets",
             files={"file": ("forged.png", b"not a png", "image/png")},
@@ -195,7 +259,7 @@ def test_rejects_image_mime_with_forged_file_signature(tmp_path):
 
 
 def test_all_request_and_routing_failures_have_stable_envelopes(tmp_path):
-    with TestClient(create_app(tmp_path / "data")) as client:
+    with manager_client(create_app(tmp_path / "data")) as client:
         cases = [
             (
                 client.post("/api/packs", json={"kind": "character"}),
@@ -232,7 +296,7 @@ def test_all_request_and_routing_failures_have_stable_envelopes(tmp_path):
 
 
 def test_conflicts_and_locked_mutation(tmp_path):
-    with TestClient(create_app(tmp_path / "data")) as client:
+    with manager_client(create_app(tmp_path / "data")) as client:
         hero = upload(client, "hero.png")
         character_asset = upload(client, "character.png", PNG + b"character")
         scene_asset = upload(client, "scene.png", PNG + b"scene")
@@ -283,7 +347,7 @@ def test_conflicts_and_locked_mutation(tmp_path):
 
 def test_verified_manifest_download_rechecks_in_memory_bytes(tmp_path):
     app = create_app(tmp_path / "data")
-    with TestClient(app) as client:
+    with manager_client(app) as client:
         hero = upload(client, "hero.png")
         character = client.post(
             "/api/packs", json={"kind": "character", "name": "BOT1"}
@@ -334,7 +398,7 @@ def test_verified_manifest_download_rechecks_in_memory_bytes(tmp_path):
 
 
 def test_browser_ui_exposes_asset_inventory_and_image_previews(tmp_path):
-    with TestClient(create_app(tmp_path / "data")) as client:
+    with manager_client(create_app(tmp_path / "data")) as client:
         html = client.get("/").text
         javascript = client.get("/static/app.js").text
 
@@ -347,7 +411,7 @@ def test_browser_ui_exposes_asset_inventory_and_image_previews(tmp_path):
 
 
 def test_only_current_root_is_serialized_and_selectable_as_canonical(tmp_path):
-    with TestClient(create_app(tmp_path / "data")) as client:
+    with manager_client(create_app(tmp_path / "data")) as client:
         hero = upload(client, "hero.png")
         character = client.post(
             "/api/packs", json={"kind": "character", "name": "BOT1"}
@@ -386,6 +450,9 @@ def test_only_current_root_is_serialized_and_selectable_as_canonical(tmp_path):
             f"/api/candidates/{current['id']}/approve",
             json={"canonical": True, "review_note": "replacement canonical"},
         )
+        made_canonical = client.post(
+            f"/api/candidates/{never_canonical['id']}/canonical"
+        )
 
         by_id = {
             candidate["id"]: candidate
@@ -393,11 +460,40 @@ def test_only_current_root_is_serialized_and_selectable_as_canonical(tmp_path):
         }
         javascript = client.get("/static/app.js").text
 
-    assert by_id[never_canonical["id"]]["is_current_canonical"] is False
+    assert made_canonical.status_code == 200
+    assert made_canonical.json()["is_current_canonical"] is True
+    assert by_id[never_canonical["id"]]["is_current_canonical"] is True
     assert by_id[superseded["id"]]["is_current_canonical"] is False
-    assert by_id[current["id"]]["is_current_canonical"] is True
+    assert by_id[current["id"]]["is_current_canonical"] is False
     assert current_response.json()["is_current_canonical"] is True
     assert (
         "state.candidates.filter((item) => item.is_current_canonical)"
         in javascript
     )
+
+
+def test_browser_ui_has_safe_mutations_practical_selectors_and_variant_review(tmp_path):
+    with manager_client(create_app(tmp_path / "data")) as client:
+        html = client.get("/").text
+        javascript = client.get("/static/app.js").text
+
+    assert 'name="invariants_verified"' in html or "invariants_verified" in javascript
+    assert "X-Runtime-Manager" in javascript
+    assert "Make canonical" in javascript
+    assert "Current canonical" in javascript
+    assert "Approved root" in javascript
+    assert "character-version-options" in html
+    assert "scene-version-options" in html
+    assert "cast-options" in html
+
+
+def test_web_assets_are_declared_as_wheel_package_data():
+    pyproject = (
+        __import__("pathlib").Path(__file__).parents[1] / "pyproject.toml"
+    ).read_text()
+
+    assert '[tool.setuptools.package-data]' in pyproject
+    assert '"pack_manager"' in pyproject
+    assert '"web/*.html"' in pyproject
+    assert '"web/*.js"' in pyproject
+    assert '"web/*.css"' in pyproject

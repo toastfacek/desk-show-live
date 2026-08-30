@@ -167,7 +167,10 @@ def test_approved_variant_resolves_without_fallback(
     candidate_service, approved_canonical, draft_variant
 ):
     approved_variant = candidate_service.approve(
-        draft_variant.id, canonical=False, review_note="Theme passed"
+        draft_variant.id,
+        canonical=False,
+        review_note="Theme passed",
+        invariants_verified=True,
     )
 
     resolution = candidate_service.resolve(
@@ -189,7 +192,7 @@ def test_variant_inherits_canonical_lineage(
     assert draft_variant.scene_version == approved_canonical.scene_version
 
 
-@pytest.mark.parametrize("changes", [{"characters": {}}, {"lighting": "dark"}])
+@pytest.mark.parametrize("changes", [{"characters": {}}, {"lighting": "dark"}, {"set": "dark"}])
 def test_variant_rejects_changes_outside_allowlist(
     candidate_service, approved_canonical, changes
 ):
@@ -200,6 +203,143 @@ def test_variant_rejects_changes_outside_allowlist(
             theme="Christmas",
             changes=changes,
         )
+
+
+@pytest.mark.parametrize("trait", ["silhouette", "eye_design", "proportions"])
+def test_variant_recursively_rejects_locked_trait_keys(
+    candidate_service, approved_canonical, trait
+):
+    with pytest.raises(ValidationError, match=trait):
+        candidate_service.create_variant(
+            canonical_candidate_id=approved_canonical.id,
+            hero_asset_id=approved_canonical.hero_asset_id,
+            theme="Nested bypass",
+            changes={"scene": {"nested": [{"metadata": {trait: "different"}}]}},
+        )
+
+
+def test_variant_can_use_alternate_scene_without_changing_cast_lineage(
+    candidate_setup, approved_canonical
+):
+    service = candidate_setup["candidate_service"]
+    alternate = candidate_setup["pack_service"].create_pack("scene", "Snow set")
+    alternate_version = candidate_setup["pack_service"].create_version(
+        alternate.id, scene_manifest()
+    )
+
+    variant = service.create_variant(
+        canonical_candidate_id=approved_canonical.id,
+        hero_asset_id=approved_canonical.hero_asset_id,
+        theme="Snow",
+        changes={"scene": {"weather": "snow"}},
+        scene_pack_id=alternate.id,
+        scene_version=alternate_version.version,
+    )
+
+    assert (variant.scene_pack_id, variant.scene_version) == (alternate.id, 1)
+    assert variant.cast_key == approved_canonical.cast_key
+    assert variant.canonical_candidate_id == approved_canonical.id
+
+
+def test_variant_rejects_non_scene_alternate_version(
+    candidate_setup, approved_canonical
+):
+    with pytest.raises(ValidationError, match="not a scene"):
+        candidate_setup["candidate_service"].create_variant(
+            canonical_candidate_id=approved_canonical.id,
+            hero_asset_id=approved_canonical.hero_asset_id,
+            theme="Bad scene",
+            changes={"scene": {}},
+            scene_pack_id=candidate_setup["bot1"].pack_id,
+            scene_version=1,
+        )
+
+
+def test_variant_approval_requires_explicit_invariant_verification(
+    candidate_service, draft_variant
+):
+    with pytest.raises(ValidationError, match="invariants_verified"):
+        candidate_service.approve(
+            draft_variant.id, canonical=False, review_note="Looks good"
+        )
+
+
+def test_variant_approval_revalidates_stored_changes(
+    candidate_setup, draft_variant
+):
+    with candidate_setup["database"].connect() as connection:
+        connection.execute(
+            "UPDATE candidates SET changes = ? WHERE id = ?",
+            ('{"scene":{"silhouette":"bypass"}}', draft_variant.id),
+        )
+
+    with pytest.raises(ValidationError, match="silhouette"):
+        candidate_setup["candidate_service"].approve(
+            draft_variant.id,
+            canonical=False,
+            review_note="Looks good",
+            invariants_verified=True,
+        )
+
+
+def test_stale_variant_cannot_be_approved_after_canonical_replacement(
+    candidate_setup, approved_canonical, draft_variant
+):
+    service = candidate_setup["candidate_service"]
+    replacement = service.create(
+        character_versions={
+            "BOT1": (candidate_setup["bot1"].pack_id, 1),
+            "BOT2": (candidate_setup["bot2"].pack_id, 1),
+        },
+        scene_pack_id=candidate_setup["scene"].pack_id,
+        scene_version=1,
+        hero_asset_id=candidate_setup["hero"].id,
+    )
+    service.approve(replacement.id, canonical=True, review_note="replacement")
+
+    with pytest.raises(ConflictError, match="stale"):
+        service.approve(
+            draft_variant.id,
+            canonical=False,
+            review_note="late approval",
+            invariants_verified=True,
+        )
+
+
+def test_approved_root_can_be_made_canonical_later(
+    candidate_setup, approved_canonical
+):
+    service = candidate_setup["candidate_service"]
+    root = service.create(
+        character_versions={
+            "BOT1": (candidate_setup["bot1"].pack_id, 1),
+            "BOT2": (candidate_setup["bot2"].pack_id, 1),
+        },
+        scene_pack_id=candidate_setup["scene"].pack_id,
+        scene_version=1,
+        hero_asset_id=candidate_setup["hero"].id,
+    )
+    approved = service.approve(root.id, canonical=False, review_note="approved")
+
+    selected = service.set_canonical(approved.id)
+
+    assert selected == approved
+    assert service.resolve(approved.cast_key).candidate == approved
+
+
+def test_set_canonical_rejects_variant_and_nonapproved_root(
+    candidate_service, canonical_candidate, approved_canonical, draft_variant
+):
+    with pytest.raises(ConflictError, match="approved root"):
+        candidate_service.set_canonical(canonical_candidate.id)
+    approved_variant = candidate_service.approve(
+        draft_variant.id,
+        canonical=False,
+        review_note="verified",
+        invariants_verified=True,
+    )
+    with pytest.raises(ConflictError, match="approved root"):
+        candidate_service.set_canonical(approved_variant.id)
 
 
 def test_candidate_requires_existing_versions_and_hero(candidate_setup):
@@ -331,7 +471,10 @@ def test_wrong_cast_requested_candidate_falls_back(
         changes={"palette": ["red", "green"]},
     )
     approved_other_variant = service.approve(
-        other_variant.id, canonical=False, review_note="Other theme passed"
+        other_variant.id,
+        canonical=False,
+        review_note="Other theme passed",
+        invariants_verified=True,
     )
 
     resolution = service.resolve(

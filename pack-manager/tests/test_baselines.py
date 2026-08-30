@@ -123,7 +123,10 @@ def draft_variant(baseline_setup):
 @pytest.fixture
 def approved_variant(baseline_setup, draft_variant):
     return baseline_setup["candidate_service"].approve(
-        draft_variant.id, canonical=False, review_note="Theme passed"
+        draft_variant.id,
+        canonical=False,
+        review_note="Theme passed",
+        invariants_verified=True,
     )
 
 
@@ -174,6 +177,8 @@ def test_export_is_self_contained_normalized_and_uses_relative_paths(
     ).encode()
     assert manifest["frame"] == {"fps": 30, "h": 1080, "w": 1920}
     assert manifest["reanchor_every"] == 60
+    assert manifest["host_map"] == {"BOT1": "host_a", "BOT2": "host_b"}
+    assert manifest["display_names"] == {"BOT1": "BOT1", "BOT2": "BOT2"}
     assert len(manifest["packs"]["characters"]) == 2
     assert len(manifest["assets"]) == 3
     for file_record in manifest["files"]:
@@ -190,6 +195,37 @@ def test_export_is_self_contained_normalized_and_uses_relative_paths(
     assert loaded.hero_path.read_bytes() == b"canonical hero"
     assert len(loaded.pack_paths) == 3
     assert len(loaded.asset_paths) == 3
+    assert loaded.manifest["host_map"] == {"BOT1": "host_a", "BOT2": "host_b"}
+    assert loaded.manifest["display_names"] == {"BOT1": "BOT1", "BOT2": "BOT2"}
+
+
+def test_variant_export_uses_alternate_scene_pack(baseline_setup):
+    packs = baseline_setup["pack_service"]
+    candidates = baseline_setup["candidate_service"]
+    alternate = packs.create_pack("scene", "Snow")
+    alternate_version = packs.create_version(alternate.id, scene_manifest([]))
+    variant = candidates.create_variant(
+        canonical_candidate_id=baseline_setup["approved_canonical"].id,
+        hero_asset_id=baseline_setup["approved_canonical"].hero_asset_id,
+        theme="Snow",
+        changes={"scene": {"weather": "snow"}},
+        scene_pack_id=alternate.id,
+        scene_version=alternate_version.version,
+    )
+    variant = candidates.approve(
+        variant.id,
+        canonical=False,
+        review_note="verified",
+        invariants_verified=True,
+    )
+
+    baseline = baseline_setup["baseline_service"].lock_run(
+        variant.cast_key, requested_candidate_id=variant.id
+    )
+    manifest = json.loads(baseline.manifest_path.read_text())
+
+    assert manifest["packs"]["scene"]["pack_id"] == alternate.id
+    assert manifest["packs"]["scene"]["version"] == 1
 
 
 def test_locked_export_rejects_tampering(baseline_service, locked_baseline):
@@ -290,3 +326,37 @@ def test_locked_baseline_cannot_be_deleted(database, locked_baseline):
             connection.execute(
                 "DELETE FROM baselines WHERE id = ?", (locked_baseline.id,)
             )
+
+
+def test_list_baselines_skips_one_corrupt_export(
+    baseline_service, approved_canonical
+):
+    corrupt = baseline_service.lock_run(approved_canonical.cast_key)
+    healthy = baseline_service.lock_run(approved_canonical.cast_key)
+    corrupt.hero_path.write_bytes(b"corrupt")
+
+    listed = baseline_service.list_baselines()
+
+    assert [item.id for item in listed] == [healthy.id]
+
+
+def test_initialization_cleans_crash_orphans_safely(baseline_setup):
+    export_root = baseline_setup["data_dir"] / "exports"
+    temporary = export_root / ".tmp-baseline_crash"
+    orphan = export_root / "baseline_orphan"
+    unrelated = export_root / "operator-notes"
+    temporary.mkdir(parents=True)
+    orphan.mkdir()
+    unrelated.mkdir()
+    (unrelated / "keep.txt").write_text("keep")
+
+    BaselineService(
+        baseline_setup["database"],
+        baseline_setup["asset_store"],
+        baseline_setup["pack_service"],
+        baseline_setup["candidate_service"],
+    )
+
+    assert not temporary.exists()
+    assert not orphan.exists()
+    assert (unrelated / "keep.txt").read_text() == "keep"
