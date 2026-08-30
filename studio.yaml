@@ -1,4 +1,4 @@
-# Desk Show — studio bible
+# Runtime — studio bible
 #
 # The single source of truth for what the generated frame contains.
 # Read by the generator to assemble every take prompt (see the architecture

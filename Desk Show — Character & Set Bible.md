@@ -1,4 +1,4 @@
-# Desk Show — Character & Set Bible
+# Runtime — Character & Set Bible
 
 **Status:** First draft, for reaction · Companion to "Two-Host Architecture & Harness" (§5)
 
@@ -127,6 +127,5 @@ Once it passes, `hero_wide.png` is frozen. Changing it later invalidates every c
 
 ## 6. Open
 
-- **Show name.** Still nothing. Needed for the logo bug, the cold open, and the lower-third bar.
-- **Display names.** `BOT1` and `BOT2` are working identifiers, not necessarily what the name bar says. `display_name` in `studio.yaml` is a separate field for exactly this reason.
+- **Host display names.** The show is **Runtime**. What the name bars say is still open — `display_name` in `studio.yaml` exists precisely so this is a one-line change.
 - **Voice.** The prompt pins nothing about vocal character yet. Once E6 shows what the model does unprompted, add a narrow vocal target to each sheet — the drift plan's argument being that drift inside "flat robotic monotone" is far less perceptible than drift inside "warm charismatic anchor."
