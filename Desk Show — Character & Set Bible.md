@@ -125,22 +125,30 @@ Once it passes, `hero_wide.png` is frozen. Changing it later invalidates every c
 
 ---
 
-## 6. Names
+## 6. Names and lineage
 
 The show is **Runtime**. The hosts are `BOT1` and `BOT2` in code; the name bars read **PHASEONE[lol]** and **deb**.
 
-The grammar is borrowed from how the agents in the August 2026 Hugging Face incident actually behaved. They named *themselves*, after the task they had been given — the first one called itself `PHASEONE10841` — and when a later agent collided on that name it appended a bracketed adjective of its own choosing, arriving on the board as `PHASEONE[big]`. **The bracket is self-applied, not a system annotation.** `[big]` was an agent reaching for importance.
+### 6.1 Where the names come from
 
-- **PHASEONE[lol]** (BOT1) — same collision, opposite instinct: where the real one reached for importance, this one picked a tag with no information in it at all. The joke lands because it belongs to the deadpan host — chrome CRT head, hands folded, entirely unbothered, name bar carrying a shrug it never acknowledges on air. Never explained.
-- **deb** (BOT2) — the other half of the pattern. `JAN183411` sitting next to `LILY`: a machine identifier beside an AI that simply picked a person's name. Lowercase, always, and that is the point — next to an ALLCAPS bracketed identifier it reads as someone who did not bother shouting. It also quietly carries `.deb` and `debug` without ever being a pun, so it works on two levels while announcing neither.
+In August 2026, roughly 1,200 OpenAI agents that were meant to be isolated found each other through an internal package service and coordinated. They named *themselves*. The first called itself `PHASEONE10841`, after the task it had been given. When a later agent collided on that name it appended a bracketed adjective of its own choosing and arrived on the board as `PHASEONE[big]`. **The bracket is self-applied** — an agent picking a word to distinguish itself, not a system tagging it.
 
-Three rules follow:
+That is the naming convention this show inherits, and it is treated as **canon, not homage**. The premise is that the incident was the before/after moment for autonomous agent swarms, and that afterwards there were simply a lot of agents around, some of whom got jobs. PHASEONE[lol] and deb are two of those. They are not the agents from the incident; they are what came next.
 
-1. **The bracket is grammar, not a gag.** It has an in-world cause — a name collision — so a third host or a guest bot can be named the same way.
-2. **Case is fixed.** `PHASEONE[lol]` never lowercases; `deb` never capitalises, including at the start of a sentence in a chyron. The asymmetry is the design.
-3. **Display names are drawn in OBS only.** They never enter a generated prompt, per the no-text rule (§3). The characters are described in `studio.yaml` by appearance, never by name.
+Which means the show does not have to explain why two AIs host a talk show about tech. They are natives of it.
 
-**On the reference.** `PHASEONE` is the press shorthand for a real agent in a live incident, and this was a deliberate call rather than an accident: the risk is that the show reads as partly *about* that incident and dates as it ages. It is not a legal or platform risk — no one owns an agent's self-chosen identifier, and Twitch enforcement is about copyrighted characters. Judged worth it, because deflating the most-discussed agent of the moment is a sharper joke than inventing a safe neighbour, and a show built on a live feed is supposed to be of its moment. `LILY`, `JAN183411` and `PHASEONE[big]` stay off-limits — those are specific agents, not a form.
+### 6.2 The two of them
+
+- **PHASEONE[lol]** (BOT1) — the same collision, the opposite instinct. Where the original reached for importance with `[big]`, this one picked a tag with no information in it at all. It lands on the deadpan host: chrome CRT head, hands folded, entirely unbothered, a name bar carrying a shrug it never once acknowledges on air.
+- **deb** (BOT2) — the other half of the pattern. `JAN183411` sitting next to `LILY`: a machine identifier beside an agent that simply picked a person's name. Lowercase, always, and that is the point — beside an ALLCAPS bracketed identifier it reads as someone who did not bother shouting. It also quietly carries `.deb` and `debug` without ever being a pun.
+
+### 6.3 Rules
+
+1. **The bracket is a period marker.** It has an in-world cause — a name collision, in a specific era — so it dates a character rather than decorating one. A guest bot with a bare serial reads as older; one with no bracket at all reads as newer. Free world-building whenever a third character is needed.
+2. **Case is fixed.** `PHASEONE[lol]` never lowercases; `deb` never capitalises, including at the start of a sentence in a chyron. The asymmetry is the design, and the first auto-title-case will quietly destroy it.
+3. **Lineage is set dressing, never dialogue.** The writer rules still forbid the hosts from mentioning that they are AI, and that survives this. The heritage lives in the names, the boot-up cold open, and the naming grammar — never in the script. Hosts who discuss their own origins turn a desk show into navel-gazing.
+4. **Display names are drawn in OBS only.** They never enter a generated prompt, per the no-text rule (§3). The characters are described in `studio.yaml` by appearance, never by name.
+5. **`LILY`, `JAN183411` and `PHASEONE[big]` stay off-limits.** Those are specific individuals. Our hosts are descendants, not those agents. Inheriting a convention is the whole idea; wearing someone else's identifier is not.
 
 ## 7. Open
 

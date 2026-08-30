@@ -25,7 +25,7 @@ Still a requirements doc. No code yet.
 Two decisions from the older docs were re-litigated and **held**:
 
 - **Welded audio.** H3's own audio, generated with the picture. TTS was considered and rejected: fal's H3 Max endpoints accept a prompt and an image, not an audio track, so there is no way to make the model lip-sync to an external voice. TTS would also add a serial call before every video call. Clip length stays the show's clock.
-- **Archetype, not persona.** Original characters only. No named IP in any prompt, ever (see §3).
+- **Archetype, not persona.** Original characters only. No named IP in any prompt, ever (see §3). The hosts inherit a naming convention from the August 2026 agent swarm as canon — see the Character & Set Bible §6 — but are never specific agents from it.
 
 **Pricing note:** the 50% promo (768p at $0.04/s) runs through **1 Sep 2026**. From 2 Sep it is $0.08/s. Every number below is given at both rates. Bake assets and run experiments before Monday.
 
