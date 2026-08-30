@@ -2,6 +2,8 @@
 
 **Status:** Architecture, agreed in conversation 30 Aug 2026 · **Owner:** Jesse
 
+**See also:** `Agentic Live Streaming Harness — Plan.md` — who is in charge if agents run the show, which jobs collapse, and what the later public runner would be. That plan does not replace this file.
+
 This supersedes parts of the two earlier docs. Read the amendment list in §1 before trusting anything in "H3 Max Spec + Review + Drift Plan", the "MVP TDD", or the "Conductor Layer Brief". Everything not amended still stands.
 
 Still a requirements doc. No code yet.
