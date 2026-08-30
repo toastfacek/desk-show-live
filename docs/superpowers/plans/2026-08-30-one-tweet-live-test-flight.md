@@ -35,6 +35,31 @@
 - Text calls have a separate request-count limit: 4 for smoke, 24 for the full flight.
 - Secrets exist only in environment variables and never appear in logs, errors, evidence, prompts, or manifests.
 - Paid Tasks require explicit operator confirmation and are not delegated as unattended work.
+- No ffmpeg voice treatment runs on the flight path; the root scaffold’s robot filtergraph is historical MVP code.
+
+## Prior art: merged root MVP scaffold
+
+The repository root now contains `run_live.py`, `generator.py`, `writer.py`, `post.py`, `playhead.py`, `spend.py`, `bake_assets.py`, `config.yaml`, `requirements.txt`, and `experiments/`. That is a single-host mpv research scaffold. `runtime-flight` must not import it.
+
+Reusable ideas:
+
+- `post.py`: async ffmpeg subprocess and PNG upload pattern, after replacing its frame extraction and adding validation.
+- `spend.py`: the idea `rate × duration` only. Reimplement with `Decimal`; do not import or port its float/round accounting.
+- `obs-harness/loop.py` and `director.py`: ready/cooking/hold orchestration reference.
+
+Unsafe patterns that must not enter the flight:
+
+- root `generator.py` calls `fal_client.submit_async`, whose internal retries are incompatible with one reservation per paid POST;
+- root `run_live.py` does not reserve spend before every submission and does not count ambiguous non-422 failures;
+- root post failure copies unvalidated raw media into ready;
+- root `post.py` uses `-sseof -0.1 -frames:v 1`, not true tail-through-EOF extraction;
+- root `writer.py` is single-host, silently truncates output, and its claimed look-ahead is not implemented;
+- root `playhead.py` uses mpv instead of OBS;
+- root `bake_assets.py` and `identity.hero_still` bypass locked Pack Manager provenance;
+- root `studio.yaml` remains an editable visual-research draft and is not runtime truth; flight prompts use only locked Character/Scene Pack v2 exports;
+- root `experiments/` are manual historical probes, not CI or flight evidence.
+
+The root scaffold remains available for historical experiments but is deprecated for this flight. No flight command delegates to `run_live.py`.
 
 ## Flight acceptance criteria
 
@@ -248,6 +273,7 @@ class BaselineContext:
 - [ ] Create the installable `runtime-flight` package with Python ≥3.11, Pillow ≥12.3,<13, and pytest ≥9.1.1 in the dev extra. Install `obs-harness`, `pack-manager`, and `runtime-flight` editable in a fresh venv.
 - [ ] Construct existing Pack Manager services against `data_dir / "manager.sqlite3"` and call `BaselineService.load`.
 - [ ] Decode and verify hero with Pillow; do not trust MIME or extension.
+- [ ] Reject a root `assets/hero.png`, `config.yaml` hero path, or any image not reached through the database-verified locked export.
 - [ ] Return exact pack truth, hero path/hash, scene, mappings, and reset interval.
 - [ ] Run Pack Manager and baseline tests.
 - [ ] Commit:
@@ -319,6 +345,7 @@ dependencies = [
 
 `obs-harness` declares `obsws-python>=1.8.0,<2`.
 
+- [ ] Document that root `config.yaml` and `requirements.txt` are not flight configuration. Do not copy their `fal-client>=0.5`, `httpx`, mpv, hero-path, or single-host settings.
 - [ ] Write failing config tests for missing env, invalid caps, streaming enabled, and secret redaction.
 - [ ] Write a clean-venv import test for all three local distributions.
 - [ ] Confirm RED.
@@ -428,6 +455,8 @@ git commit -m "Add no-video live flight preflight"
 async def complete_json(self, *, system: str, user: dict) -> dict: ...
 async def plan(self, source: SourcePacket, baseline: BaselineContext) -> SegmentPackage: ...
 ```
+
+Root `writer.py` is not a port target; it lacks SegmentPackage grounding, BOT1/BOT2 output, request counting, and the required validated JSON contract.
 
 `models.py` defines immutable bounded models:
 
@@ -543,6 +572,7 @@ async def write(
 - [ ] Write tests for alternating speakers, full planned transcript, facts, thought completion, JSON validation, timeout, cancellation, and three-failure stop.
 - [ ] Prove only one Writer request runs at once.
 - [ ] Maintain an `asyncio.Queue(maxsize=2)` of completed thoughts, not two concurrent requests.
+- [ ] Do not copy root `writer.py`’s unwired `beats_ahead` claim or its canned-line fallback.
 - [ ] Keep separate `planned_transcript` and `aired_transcript`.
 - [ ] When a take is dropped, invalidate later queued thoughts that assumed it aired; regenerate from `aired_transcript` with `reissue="shorter, blander"`.
 - [ ] Harness computes `remaining_submit_slots = max(0, floor((target_duration_s - elapsed_s) / 5) - 1)` and passes only the derived phase to Writer: `close` when the value is ≤2, `develop` after the opener, otherwise `open`. Writer never receives raw OBS timing.
@@ -588,6 +618,8 @@ No readable text, letters, numbers, logos, captions, lower thirds, or UI inside 
 - Create: `runtime-flight/tests/test_fal_gateway.py`
 
 **Interfaces:**
+
+Do not reuse root `generator.py` or root `run_live.py`: they have no QueueHandle, AttemptReservation, unknown-submission state, or reservation-before-POST ledger.
 
 ```python
 @dataclass(frozen=True)
@@ -661,6 +693,7 @@ ffmpeg -y -sseof -1 -i take.mp4 -map 0:v:0 -fps_mode passthrough -update 1 frame
 - [ ] Record the final decoded frame timestamp from ffprobe and validate PNG decode/dimensions.
 - [ ] Upload frame PNG and return its exact URL.
 - [ ] A failed media check never enters the ready queue.
+- [ ] Do not port root `post.py`’s robot voice filtergraph.
 - [ ] Run tests and commit.
 
 ---
@@ -713,6 +746,7 @@ class ReadyTake:
 ```
 
 - [ ] Cache one uploaded hero URL per baseline.
+- [ ] Reserve only inside `FalPerformer.start`, immediately before its single queue POST; do not copy root `run_live.py`’s harness-level `spend.check`.
 - [ ] 422: mark dropped, keep reservation, no retry.
 - [ ] Other/ambiguous failure: reconcile; never create an unreserved retry.
 - [ ] Three consecutive terminal failures signal graceful flight stop.
@@ -750,6 +784,8 @@ class ReadyTake:
 - Modify: `obs-harness/obs_harness/director.py`
 - Modify: `obs-harness/tests/test_director.py`
 
+Use `obs-harness/loop.py` as the state/reference model. Do not use root `run_live.py` or `playhead.py`; they have the wrong clock, player, speaker model, and failure behavior.
+
 - [ ] Use fake monotonic clock, fake OBS, sequential Writer, and fake Performer; never sleep in tests.
 - [ ] Test:
   - play current while next cooks;
@@ -763,6 +799,7 @@ class ReadyTake:
   - baseline ID never changes.
 - [ ] Simplify Director submit payload to exactly `take`, `line`, and `speaker`; remove rehearsal-only `anchor: stub`. The live harness owns anchor enrichment.
 - [ ] Keep BOT1/BOT2 through Planner, Writer, Director, and logs. Map through `BaselineContext.host_map` only when calling `player.set_speaking`.
+- [ ] Do not copy obs-harness test-script `host_a`/`host_b` speaker values into flight Writer tests.
 - [ ] Wall-clock loop polls OBS no slower than 200ms.
 - [ ] OBS media remaining owns host cut timing.
 - [ ] Director is called only at clip edge or when ready media arrives during hold.
@@ -906,6 +943,8 @@ git commit -m "Add safe live flight operator commands"
   - real ffmpeg/ffprobe fixture MP4;
   - fake OBS and fake monotonic clock;
   - complete evidence verification.
+- [ ] Add an isolation test that AST-scans `runtime-flight` and rejects imports of root modules named `writer`, `post`, `spend`, `generator`, `playhead`, `run_live`, and `studio`.
+- [ ] Root `experiments/` do not count as tests. Do not port their implicit retry or “retry overhead” acceptance rules.
 - [ ] Install in a new venv and run:
 
 ```bash
@@ -954,6 +993,7 @@ python3 -m runtime_flight smoke \
 - [ ] Pass only if:
   - exactly two or fewer request reservations exist;
   - every submission has one reservation and request ID or explicit unknown-submission state;
+  - no submission used `fal_client.submit_async`;
   - both returned clips validate;
   - take 1 uses hero;
   - take 2 uses take 1’s exact frame URL;
