@@ -1,5 +1,8 @@
 """Copy a local clip after a fake delay. Never talks to a video vendor."""
 
+from __future__ import annotations
+
+import random
 from pathlib import Path
 
 
@@ -13,6 +16,7 @@ class StubPerformer:
         forced_late_takes: list[int] | None = None,
         forced_late_delay_s: float = 8.0,
         clip_duration_s: float = 5.0,
+        rng: random.Random | None = None,
     ) -> None:
         self.clip_pool = Path(clip_pool)
         self.ready_dir = Path(ready_dir)
@@ -22,6 +26,7 @@ class StubPerformer:
         self.forced_late_takes = set(forced_late_takes or [])
         self.forced_late_delay_s = forced_late_delay_s
         self.clip_duration_s = clip_duration_s
+        self._rng = rng if rng is not None else random.Random()
         self._pool = sorted(self.clip_pool.glob("*.mp4"))
         if not self._pool:
             raise FileNotFoundError(f"no mp4 files in {clip_pool}")
@@ -30,7 +35,10 @@ class StubPerformer:
     def delay_for(self, take: int) -> float:
         if take in self.forced_late_takes:
             return self.forced_late_delay_s
-        return self.delay_s
+        jitter = self.delay_jitter_s
+        if jitter <= 0:
+            return self.delay_s
+        return max(0.0, self._rng.uniform(self.delay_s - jitter, self.delay_s + jitter))
 
     def materialize(self, submit: dict) -> dict:
         src = self._pool[self._i % len(self._pool)]

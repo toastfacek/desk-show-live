@@ -95,3 +95,48 @@ def test_t9_script_slot_stays_at_two(tmp_path):
 def test_t10_director_does_not_import_player_obs():
     text = Path(__file__).resolve().parents[1].joinpath("director.py").read_text()
     assert "player_obs" not in text
+
+
+def test_panic_with_ready_clip_exits_instead_of_spinning(tmp_path):
+    h = Harness.from_rundown(
+        _pack(tmp_path),
+        stub={"delay_s": 0.0, "delay_jitter_s": 0.0, "forced_late_takes": []},
+        clip_duration_s=5.0,
+    )
+    h.run_simulated(until_takes_on_air=1)
+    h.flags["panic"] = True
+    h.run_simulated(max_t=30.0)
+    assert h.done
+    assert h.t < 6.0
+    aired = [row for row in h.log if row.get("t_on_air") is not None]
+    assert len(aired) == 1
+
+
+def test_panic_does_not_spin_after_cooking_lands(tmp_path):
+    h = Harness.from_rundown(
+        _pack(tmp_path),
+        stub={"delay_s": 4.0, "delay_jitter_s": 0.0, "forced_late_takes": []},
+        clip_duration_s=5.0,
+    )
+    h.step()
+    h.flags["panic"] = True
+    h.run_simulated(max_t=30.0)
+    assert h.done
+    assert h.t < 5.0
+    assert all(row.get("t_on_air") is None for row in h.log)
+
+
+def test_unfinished_cooking_is_skipped_end(tmp_path):
+    h = Harness.from_rundown(
+        _pack(tmp_path),
+        stub={"delay_s": 10.0, "delay_jitter_s": 0.0, "forced_late_takes": []},
+        clip_duration_s=5.0,
+    )
+    h.run_simulated(max_t=2.0)
+    path = h.write_log()
+    take1 = next(row for row in h.log if row["take"] == 1)
+    assert take1["status"] == "skipped_end"
+    assert take1["clip"] is None
+    assert take1["t_ready"] is None
+    logged = path.read_text()
+    assert "skipped_end" in logged

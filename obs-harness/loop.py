@@ -171,6 +171,12 @@ class Harness:
     def _should_cut(self) -> bool:
         if self.done:
             return False
+        if self.flags.get("panic"):
+            if self.on_air and self.on_air.get("kind") == "host":
+                ends = self.on_air.get("ends_at")
+                if ends is not None and self.t + 1e-9 < ends:
+                    return False
+            return True
         if self.on_air is None:
             return True
         ends = self.on_air.get("ends_at")
@@ -216,7 +222,9 @@ class Harness:
                 "ends_at": None,
             }
         else:
-            if beat["layout"] == "hold" and not self.ready and not self.cooking:
+            if beat.get("why") == "panic" or (
+                beat["layout"] == "hold" and not self.ready and not self.cooking
+            ):
                 self.done = True
             self.on_air = {
                 "kind": "hold" if beat["layout"] == "hold" else "card",
@@ -274,8 +282,15 @@ class Harness:
             aired = sum(1 for row in self.log if row.get("t_on_air") is not None)
             if until_takes_on_air is not None and aired >= until_takes_on_air:
                 return
+        self._finalize_unfinished()
+
+    def _finalize_unfinished(self) -> None:
+        for row in self.log:
+            if row.get("clip") is None and row.get("t_ready") is None and row.get("status") == "ready":
+                row["status"] = "skipped_end"
 
     def write_log(self, path: Path | None = None) -> Path:
+        self._finalize_unfinished()
         path = Path(path or self.base_dir / "out" / "takes.jsonl")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("".join(json.dumps(row) + "\n" for row in self.log))
