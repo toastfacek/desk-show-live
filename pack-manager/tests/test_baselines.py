@@ -423,6 +423,82 @@ def test_loader_rejects_corrupt_runtime_slot_metadata(
         service.load(malicious_id)
 
 
+@pytest.mark.parametrize(
+    ("payload_kind", "field", "value"),
+    [
+        ("character", "slot", "BOT2"),
+        ("character", "pack_id", "character_wrong"),
+        ("character", "version", 999),
+        ("scene", "pack_id", "scene_wrong"),
+        ("scene", "version", 999),
+    ],
+)
+def test_loader_rejects_rehashed_pack_payload_metadata_tampering(
+    baseline_setup,
+    locked_baseline,
+    payload_kind,
+    field,
+    value,
+):
+    service = baseline_setup["baseline_service"]
+    malicious_id = f"baseline_payload_{payload_kind}_{field}"
+    malicious_dir = service.export_root / malicious_id
+    shutil.copytree(locked_baseline.manifest_path.parent, malicious_dir)
+    manifest_path = malicious_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["baseline_id"] = malicious_id
+    record = (
+        manifest["packs"]["characters"][0]
+        if payload_kind == "character"
+        else manifest["packs"]["scene"]
+    )
+    payload_path = malicious_dir / record["path"]
+    payload = json.loads(payload_path.read_text())
+    payload[field] = value
+    payload_bytes = service._normalized_json(payload)
+    payload_path.write_bytes(payload_bytes)
+    for file_record in manifest["files"]:
+        if file_record["path"] == record["path"]:
+            file_record["sha256"] = hashlib.sha256(payload_bytes).hexdigest()
+            break
+    manifest_bytes = service._normalized_json(manifest)
+    manifest_path.write_bytes(manifest_bytes)
+    with baseline_setup["database"].connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO baselines (
+                id, cast_key, candidate_id, canonical_candidate_id,
+                fallback_reason, manifest_path, manifest_sha256, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                malicious_id,
+                locked_baseline.cast_key,
+                locked_baseline.candidate_id,
+                locked_baseline.canonical_candidate_id,
+                None,
+                str(manifest_path),
+                hashlib.sha256(manifest_bytes).hexdigest(),
+                locked_baseline.created_at,
+            ),
+        )
+
+    with pytest.raises(IntegrityError, match="pack metadata"):
+        service.load(malicious_id)
+
+
+def test_blank_pack_name_cannot_reach_baseline_export(baseline_setup):
+    candidate = baseline_setup["approved_canonical"]
+    with baseline_setup["database"].connect() as connection:
+        connection.execute(
+            "UPDATE packs SET name = '   ' WHERE id = ?",
+            (candidate.character_versions[0].pack_id,),
+        )
+
+    with pytest.raises(IntegrityError, match="missing pack"):
+        baseline_setup["baseline_service"].lock_run(candidate.cast_key)
+
+
 def test_concurrent_same_cast_locks_are_separate_and_valid(
     baseline_service, approved_canonical
 ):

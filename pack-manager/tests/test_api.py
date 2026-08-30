@@ -226,6 +226,27 @@ def test_localhost_host_header_and_mutation_hardening(tmp_path):
         assert response.json()["error"]["code"] == "unsafe_request"
 
 
+def test_api_rejects_blank_pack_names_and_normalizes_surrounding_space(tmp_path):
+    with manager_client(create_app(tmp_path / "data")) as client:
+        blank = client.post(
+            "/api/packs", json={"kind": "character", "name": "   "}
+        )
+        normalized = client.post(
+            "/api/packs",
+            json={"kind": "character", "name": "  PHASEONE[lol] Host  "},
+        )
+        listed = client.get("/api/packs").json()
+
+    assert blank.status_code == 422
+    assert blank.json()["error"]["code"] in {
+        "request_validation",
+        "validation_error",
+    }
+    assert normalized.status_code == 201
+    assert normalized.json()["name"] == "PHASEONE[lol] Host"
+    assert [pack["name"] for pack in listed] == ["PHASEONE[lol] Host"]
+
+
 def test_asset_content_is_verified_and_available_for_previews(tmp_path):
     app = create_app(tmp_path / "data")
     with manager_client(app) as client:
@@ -515,6 +536,11 @@ def test_browser_ui_has_safe_mutations_practical_selectors_and_variant_review(tm
     assert "character-version-options" in html
     assert "scene-version-options" in html
     assert "cast-options" in html
+    assert (
+        '{"palette": ["red", "green"], '
+        '"accessories": {"BOT1": ["hat"]}}'
+    ) in html
+    assert '"accessories": ["hat"]' not in html
 
 
 def test_web_assets_are_declared_as_wheel_package_data():

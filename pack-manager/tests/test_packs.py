@@ -51,6 +51,21 @@ def test_versions_are_monotonic_and_immutable(pack_service):
     assert pack_service.get_version(pack.id, 1).manifest["persona"] != "More curious."
 
 
+@pytest.mark.parametrize("name", ["", " ", "\t\n"])
+def test_pack_name_rejects_blank_before_persistence(pack_service, name):
+    with pytest.raises(ValidationError, match="name"):
+        pack_service.create_pack("character", name)
+
+    assert pack_service.list_packs() == []
+
+
+def test_pack_name_strips_surrounding_whitespace(pack_service):
+    pack = pack_service.create_pack("character", "  PHASEONE[lol] Host  ")
+
+    assert pack.name == "PHASEONE[lol] Host"
+    assert pack_service.list_packs() == [pack]
+
+
 def test_concurrent_version_allocation_is_unique_and_monotonic(pack_service):
     pack = pack_service.create_pack("character", "PHASEONE[lol]")
 

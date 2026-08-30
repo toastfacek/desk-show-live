@@ -53,6 +53,9 @@ class PackService:
 
     def create_pack(self, kind: str, name: str) -> Pack:
         self._validate_kind(kind)
+        if not isinstance(name, str) or not name.strip():
+            raise ValidationError("pack name must be a non-empty string")
+        name = name.strip()
         pack = Pack(
             id=f"{kind}_{uuid.uuid4().hex}",
             kind=kind,

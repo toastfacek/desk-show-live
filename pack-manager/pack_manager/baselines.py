@@ -374,7 +374,23 @@ class BaselineService:
                 payload = json.loads(
                     self._read_file(verified_paths[record["path"]])
                 )
+                if any(
+                    payload.get(field) != record.get(field)
+                    for field in ("slot", "pack_id", "version")
+                ):
+                    raise IntegrityError(
+                        "character pack metadata mismatch"
+                    )
                 expected[record["slot"]] = payload["name"]
+            scene_record = manifest["packs"]["scene"]
+            scene_payload = json.loads(
+                self._read_file(verified_paths[scene_record["path"]])
+            )
+            if any(
+                scene_payload.get(field) != scene_record.get(field)
+                for field in ("pack_id", "version")
+            ):
+                raise IntegrityError("scene pack metadata mismatch")
         except (
             KeyError,
             TypeError,
@@ -383,7 +399,7 @@ class BaselineService:
         ) as error:
             raise IntegrityError("invalid character pack metadata") from error
         if display_names != expected or not all(
-            isinstance(name, str) and name
+            isinstance(name, str) and name.strip()
             for name in display_names.values()
         ):
             raise IntegrityError("invalid display names")

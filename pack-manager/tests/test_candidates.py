@@ -144,7 +144,9 @@ def test_variant_cannot_override_locked_character_trait(
         )
 
 
-def test_cast_key_preserves_character_slot_order(candidate_setup):
+def test_cast_key_normalizes_named_slots_but_detects_assignment_swaps(
+    candidate_setup,
+):
     service = candidate_setup["candidate_service"]
     common = {
         "scene_pack_id": candidate_setup["scene"].pack_id,
@@ -158,15 +160,23 @@ def test_cast_key_preserves_character_slot_order(candidate_setup):
         },
         **common,
     )
-    swapped = service.create(
+    reordered_json = service.create(
         character_versions={
             "BOT2": (candidate_setup["bot2"].pack_id, 1),
             "BOT1": (candidate_setup["bot1"].pack_id, 1),
         },
         **common,
     )
+    swapped_assignments = service.create(
+        character_versions={
+            "BOT1": (candidate_setup["bot2"].pack_id, 1),
+            "BOT2": (candidate_setup["bot1"].pack_id, 1),
+        },
+        **common,
+    )
 
-    assert first.cast_key != swapped.cast_key
+    assert first.cast_key == reordered_json.cast_key
+    assert first.cast_key != swapped_assignments.cast_key
 
 
 def test_approved_variant_resolves_without_fallback(

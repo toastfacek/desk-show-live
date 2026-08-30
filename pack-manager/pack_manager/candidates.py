@@ -400,7 +400,8 @@ class CandidateService:
                 "character_versions must contain exactly BOT1 and BOT2"
             )
         versions = []
-        for slot, reference in character_versions.items():
+        for slot in ("BOT1", "BOT2"):
+            reference = character_versions[slot]
             if not isinstance(slot, str) or not slot.strip():
                 raise ValidationError("character slot must be a non-empty string")
             if (
