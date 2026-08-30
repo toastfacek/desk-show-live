@@ -2,7 +2,9 @@
 
 **Status:** Draft for build · **Date:** 29 Aug 2026 · **Owner:** Jesse · **Author:** Claude (from Forge spec \+ 29 Aug Q\&A)
 
-**Parent docs:** "Desk Show — H3 Max Spec \+ Review \+ Drift Plan" (Drive \+ project). This TDD covers only the confirmed first-build slice.
+**Parent docs:** "Desk Show — H3 Max Spec \+ Review \+ Drift Plan" (Drive \+ project). This TDD covers only the confirmed first-build slice (one host, simple player, real fal).
+
+The harness / OBS runner is a different slice: `Harness MVP — TDD (OBS sidecar, rehearse).md`.
 
 ---
 

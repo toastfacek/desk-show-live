@@ -2,7 +2,7 @@
 
 **Status:** Architecture, agreed in conversation 30 Aug 2026 · **Owner:** Jesse
 
-**See also:** `Agentic Live Streaming Harness — Plan.md` — who is in charge if agents run the show, which jobs collapse, and what the later public runner would be. That plan does not replace this file.
+**See also:** `Agentic Live Streaming Harness — Plan.md` — who is in charge if agents run the show. `Harness MVP — TDD (OBS sidecar, rehearse).md` — first build slice of the runner (OBS beside us, fake clips, $0). Neither replaces this file.
 
 This supersedes parts of the two earlier docs. Read the amendment list in §1 before trusting anything in "H3 Max Spec + Review + Drift Plan", the "MVP TDD", or the "Conductor Layer Brief". Everything not amended still stands.
 
@@ -464,8 +464,8 @@ One tweet in the center slot, both hosts in their boxes, roughly 10 beats of bac
 | **M0** | Studio bible written. `hero_wide.png` baked and approved by eye. OBS scene collection built by hand: `wide`, `split`, `hold`, furniture. **Crop-sync verified.** | ~3h |
 | **M1** | Single-take path: assemble prompt from bible → fal → mp4 → last-frame PNG → upload → manifest row. Second run chains off the first. | ~2h |
 | **M2** | **E1 and E2.** Stop here if E1 fails. | ~1h + ~$3 |
-| **M3** | OBS MCP surface: layouts, clip swap, speaking highlight, chyron, tickers. Drivable by hand. | ~3h |
-| **M4** | Harness in `rehearse` mode: rundown → segment loop → beat loop → OBS, stub performer, $0. Tune the director here. | ~4h |
+| **M3** | OBS command list, drivable by hand. Specified in `Harness MVP — TDD` (H3). | ~3h |
+| **M4** | Harness in `rehearse`: show list → short loop → OBS, stub performer, $0. See that TDD (H4). | ~4h |
 | **M5** | Live: writer + segmenter + generator wired in, spend meter armed, operator panel. **E3–E9.** | ~3h |
 | **M6** | Twitch: RTMP out, one 90s segment on a real stream. | ~1h |
 
