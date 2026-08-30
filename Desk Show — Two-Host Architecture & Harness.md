@@ -131,6 +131,8 @@ The `wide` layout is the harder case, since the full frame stretches across the 
 
 A data file plus baked assets. Built once, offline. This is what gives the system spatial knowledge — the model does not need to "know" the room, the bible tells it, identically, every take.
 
+The drafted bible lives in `studio.yaml`, with the art-direction reasoning, bake prompts and the M0 approval gate in "Character & Set Bible".
+
 ### 5.1 Schema
 
 ```yaml
@@ -469,7 +471,7 @@ One tweet in the center slot, both hosts in their boxes, roughly 10 beats of bac
 
 ## 15. Open items
 
-1. **Show name and visual design.** Host working names are settled (`BOT1`, `BOT2`); the character sheets, set art and show name are not.
+1. **Show name.** Still open. Needed for the logo bug, cold open and lower-third bar. Character sheets and set are drafted in `studio.yaml`; the hero still has not been baked or approved.
 2. **Live feed source.** Resolved for the MVP: **no X API at all.** Ingest reads a hand-pasted JSON file of ~20 posts. It exercises every downstream stage, costs nothing, and is byte-identical across runs — which `rehearse` and `replay` both need. Whose timeline (or list, or search) it eventually pulls from is deferred until the show works; live ingest is then a swap of one function.
 3. **Second generated framing.** v1 generates exactly one composition. A tighter two-shot as a "push in" for heated moments would need its own hero still and its own chain. Deferred until E1 says the first chain holds.
 4. **Twitch chat.** Displaying it is nearly free and can land any time. Letting it *influence* the show is v2 and comes with the full adversarial-input problem.
