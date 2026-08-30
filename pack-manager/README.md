@@ -19,7 +19,8 @@ only. The CLI rejects any host other than `127.0.0.1`.
 
 Data is written below `data/`, which is git-ignored. Uploaded image names never
 become filesystem paths: PNG, JPEG, and WebP content is size-limited, hashed,
-and stored by SHA-256. Do not place secrets in `config.yaml` or pack manifests.
+checked against the claimed format's file signature, and stored by SHA-256.
+Do not place secrets in `config.yaml` or pack manifests.
 
 ## Browser workflow
 
@@ -45,6 +46,7 @@ The interactive OpenAPI reference is available at `/docs`.
 - `GET|POST /api/packs`
 - `GET|POST /api/packs/{pack_id}/versions`
 - `GET|POST /api/assets`
+- `GET /api/assets/{id}/content` (hash-verified image bytes for previews)
 - `GET|POST /api/candidates`
 - `POST /api/candidates/generate`
 - `POST /api/candidates/variants`
@@ -60,8 +62,11 @@ Domain failures have a stable envelope:
 {"error":{"code":"conflict","message":"candidate is not draft"}}
 ```
 
-The codes are `validation_error`, `upload_too_large`, `not_found`, `conflict`,
-and `integrity_error`. API responses never expose local absolute paths.
+The codes include `request_validation`, `malformed_request`,
+`validation_error`, `upload_too_large`, `not_found`, `method_not_allowed`,
+`conflict`, `integrity_error`, and `internal_error`. Framework routing, parsing,
+and request-model failures use the same envelope. API responses never expose
+local absolute paths.
 
 ## Test
 
