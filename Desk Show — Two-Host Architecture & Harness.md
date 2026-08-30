@@ -46,7 +46,7 @@ Flat-color 2D cartoon animation. Heavy uniform linework. Simplified geometric fa
 This is an engineering decision as much as an art one:
 
 1. **Drift tolerance.** Flat art has few facial degrees of freedom. Take-to-take drift reads as animation inconsistency, which cartoons have anyway. Photoreal human faces drift worst; viewers track every parameter.
-2. **Upscale tolerance.** A left-third crop of a 1344×768 frame gets scaled up to fill a box (§4). Flat art survives that. Photoreal would look like a bad webcam.
+2. **Scaling tolerance.** Half-frame crops get rescaled into the canvas, and at 480p that means real upscaling (§4.4). Flat art survives it. Photoreal would look like a bad webcam.
 
 **Prompt rule, non-negotiable:** never name a show, studio, artist, or character in a prompt. Describe the style in our own words. Naming IP invites both a safety-checker 422 and the exact Twitch DMCA outcome that got the original inspiration for this project banned.
 
@@ -60,19 +60,21 @@ Hosts are `BOT1` (camera-left) and `BOT2` (camera-right). Working names, deliber
 
 Every take is the same shot: **a wide two-shot of both hosts at the desk.** `BOT1` sits camera-left and faces slightly right. `BOT2` sits camera-right and faces slightly left. That never changes.
 
-The wide is composed so it can be cut apart:
+The wide splits straight down the middle:
 
 ```
-  0%            34%            66%           100%
-  |--------------|--------------|--------------|
-  |   LEFT ZONE  | CENTER ZONE  |  RIGHT ZONE  |
-  |     BOT1     | desk / wall  |     BOT2     |
-  |--------------|--------------|--------------|
+  0%                    50%                   100%
+  |----------------------|----------------------|
+  |      LEFT HALF       |      RIGHT HALF      |
+  |         BOT1         |         BOT2         |
+  |----------------------|----------------------|
 ```
 
-The center zone is deliberately empty of anything important — desk, monitor wall, background. In the split layout it gets covered by the card.
+In the `split` layout, each half is cropped and placed on its side of the canvas, and the **card sits on top** of the middle, covering the seam where they meet. The card is a layer, not a third box.
 
-This composition is a hard contract. It is defined by the hero still (§5.2), enforced by the chain, and it is the thing the day-one experiments are mostly testing.
+That keeps the art brief ordinary: it is just a two-shot of two people at a desk, one on each side. The only soft constraint is that each host sits a little outboard of centre in their own half, so the card does not cover them — which is how people sit at a desk anyway.
+
+The composition contract is therefore weak: **one host per half, and they do not swap sides.** It is set by the hero still (§5.2) and held by the chain. E1 tests it.
 
 ### 4.2 Layouts
 
@@ -81,7 +83,7 @@ A layout is an OBS scene. All of them are free and instant — they are transfor
 | Layout | What is on screen |
 | :---- | :---- |
 | `wide` | The generated frame, full width, one box. Both hosts. |
-| `split` | Two cropped instances of the **same source** — left zone in a left box, right zone in a right box — with the center card between them. |
+| `split` | Two cropped instances of the **same source** — left half, right half — placed either side of the canvas, with the centre card layered on top of the seam. |
 | `solo_l` / `solo_r` | One crop, enlarged. For when one host is on a run. |
 | `card_full` | Center content full-frame, host audio still playing underneath. |
 | `hold` | Card or bumper up, tickers running, music bed up. The failure layout. |
@@ -110,18 +112,18 @@ Canvas and generation are separate decisions, and the crop matters more than eit
 
 **H3 Max outputs 480p or 768p only.** There is no 1080 or 2K on this endpoint. 768p 16:9 is 1344×768 at 24 fps.
 
-**Stream the canvas at 1920×1080 regardless.** The chyron, tickers, name bars, sponsor bar and centre card all render at true 1080 and stay razor sharp. That is most of the pixels on screen and most of what makes the frame read as a real broadcast. Only the host boxes are upscaled.
+**Stream the canvas at 1920×1080 regardless.** The chyron, tickers, name bars, sponsor bar and centre card all render at true 1080 and stay razor sharp. That is most of the pixels on screen and most of what makes the frame read as a real broadcast. Only the host boxes are ever scaled.
 
-The split crop is the real quality constraint, because it throws away two thirds of the frame before scaling:
+The `split` crop is what sets host-box quality, and a 50/50 crop is generous — each half keeps 672 of the 1344 px. Against a canvas where the card takes the middle ~35% and each host box gets roughly 620×700:
 
-| Generated at | Left-zone crop | Into a ~550×920 box | Cost/min (promo / list) |
+| Generated at | Half-frame crop | Into a ~620×700 box | Cost/min (promo / list) |
 | :---- | :---- | :---- | :---- |
-| 768p (1344×768) | ~457×768 | **1.2×** | $2.40 / $4.80 |
-| 480p (854×480) | ~290×480 | **1.9×** | $1.50 / $3.00 |
+| 768p (1344×768) | 672×768 | **no upscale** — slight downscale | $2.40 / $4.80 |
+| 480p (854×480) | 427×480 | **~1.45×** | $1.50 / $3.00 |
 
-768p into a TBPN-sized box is barely an upscale — the aspect happens to match well. 480p is nearly double and will be visibly soft, but flat 2D art hides softness better than any other style would. 480p is a 38% discount, so it is worth the $3 to find out (E7).
+768p needs no upscaling at all in `split`. 480p is a mild 1.45× and, on flat 2D art, may well be indistinguishable — which makes the 38% discount genuinely worth testing (E7).
 
-The `wide` layout is gentler on both: the full frame scaled into a 1080 canvas is 1.43× from 768p.
+The `wide` layout is the harder case, since the full frame stretches across the canvas: 1.43× from 768p, 2.25× from 480p. If 480p fails anywhere it will fail here first, so E7 must judge both layouts, not just `split`.
 
 **Baked assets are not capped.** The hero still, bumpers, ad reads and stings are made off-air, where slow is fine. Generate them large and downscale. The anchor PNG must match the live frame size, but the art it is derived from does not have to.
 
@@ -135,9 +137,9 @@ A data file plus baked assets. Built once, offline. This is what gives the syste
 studio:
   frame: {w: 1344, h: 768, fps: 24}
   zones:
-    left:   [0.00, 0.34]
-    center: [0.34, 0.66]
-    right:  [0.66, 1.00]
+    left:   [0.00, 0.50]
+    # centre is a card layer on top, not a zone
+    right:  [0.50, 1.00]
   hosts:
     BOT1:
       seat: left
@@ -424,13 +426,13 @@ Ordered by what kills the design. Each is a script in `experiments/`. E1–E6 ca
 
 | # | Experiment | Pass |
 | :---- | :---- | :---- |
-| **E1** | **Composition stability.** 8-take chain, contact sheet of every frame 0. Do the hosts hold their zones? | Both hosts stay inside their crop zones for 8 takes. **Fail → the split layout does not work as designed; fall back to generated singles and re-cost.** |
+| **E1** | **Composition stability.** 8-take chain, contact sheet of every frame 0. Does each host stay in their own half? | One host per half for 8 takes, no side-swapping, neither buried under where the card sits. **Fail → the split layout does not work as designed; fall back to generated singles and re-cost.** |
 | **E2** | **Speaker attribution.** Scripted lines alternating hosts. Does the *correct* mouth move? | ≥ 7/8 correct. Fail → lean on the on-air highlight, or go to singles. |
 | **E3** | **Verbatim delivery.** Transcribe and diff against the script. | ≥ 7/8 word-accurate. Fail → the writer is scripting a show the hosts are not performing. |
 | **E4** | **Listener behavior.** Does the non-speaking host sit plausibly — not frozen, not lip-syncing, not leaving frame? | Subjective 1–5, ≥ 3 on all 8. |
 | **E5** | **End-frame pinning.** Same 8 takes with `end_image_url` = hero. Compare drift and motion quality against E1. | Drift lower, motion not visibly snapped-back. Pass → drift is solved. |
 | **E6** | **Voice consistency, two hosts.** Blind listen. | Two distinguishable voices, each recognizable across 8 takes. |
-| **E7** | **Crop quality.** Same take at 480p and 768p, each cropped and composited into the real 1080 canvas at real box size. Compare side by side. | 768p acceptable by eye in `split`. Tells us whether 480p is viable, which is a 38% discount (§4.4). |
+| **E7** | **Crop quality.** Same take at 480p and 768p, composited into the real 1080 canvas at real box size, in **both** `split` and `wide`. Compare side by side. | 768p acceptable by eye in both. Tells us whether 480p is viable — a 38% discount, and `wide` is where it will break first (§4.4). |
 | **E8** | **90s segment.** Full harness, live. | No dead air; hold fires on purpose at least once; manifest complete. |
 | **E9** | **$/segment.** From the manifest, including drops and retries. | A real number with retry overhead as a percentage. |
 
