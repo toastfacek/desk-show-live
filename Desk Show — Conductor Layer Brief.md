@@ -1,6 +1,12 @@
 # How the show is run
 
-One page. No code. The old long brief is gone on purpose.
+This is a plan, not an app. No code. Nothing here spends money.
+
+This repo is for a fake live desk show: a cartoon host sits at a desk and talks about posts from a feed (like Twitter). We buy short talking clips from a video service, then play them in a row so it feels live. The host has to look like the same person from clip to clip, so each new clip starts on the last picture of the last clip.
+
+This page is about the extra piece we need around those clips: a picker (the conductor) that decides what is on screen when a clip is late or we want a breath. It does not write the jokes. It only picks the picture and how long it stays.
+
+The rest of this repo still has the older, longer notes. This page is the short version you can decide from.
 
 ## The whole thing
 
@@ -77,6 +83,6 @@ First job is still the same: sixty seconds of one host that does not stall. The 
 
 ## Two cheap tests worth a couple dollars
 
-Try 8-second and 10-second clips once (~$1.20). Longer clips might give us more slack for the same money.
+Try 8-second and 10-second clips once (about $1.20). Longer clips might give us more slack for the same money.
 
-Try the new "pin this face" video call once (~$2). If a pinned still is enough, we may not need the last-frame chain at all, and a lot of this page gets simpler.
+Try the new "pin this face" video call once (about $2). If a pinned still is enough, we may not need the last-frame chain at all, and a lot of this page gets simpler.
