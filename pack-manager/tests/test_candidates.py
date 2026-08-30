@@ -1,3 +1,6 @@
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
 import pytest
 
 from pack_manager.assets import AssetStore
@@ -304,6 +307,55 @@ def test_stale_variant_cannot_be_approved_after_canonical_replacement(
             review_note="late approval",
             invariants_verified=True,
         )
+
+
+def test_concurrent_variant_approval_and_canonical_replacement_are_serialized(
+    candidate_setup, approved_canonical, draft_variant
+):
+    service = candidate_setup["candidate_service"]
+    replacement = service.create(
+        character_versions={
+            "BOT1": (candidate_setup["bot1"].pack_id, 1),
+            "BOT2": (candidate_setup["bot2"].pack_id, 1),
+        },
+        scene_pack_id=candidate_setup["scene"].pack_id,
+        scene_version=1,
+        hero_asset_id=candidate_setup["hero"].id,
+    )
+    gate = threading.Barrier(2)
+
+    def approve_variant():
+        gate.wait()
+        try:
+            return service.approve(
+                draft_variant.id,
+                canonical=False,
+                review_note="concurrent variant",
+                invariants_verified=True,
+            )
+        except ConflictError as error:
+            return error
+
+    def replace_canonical():
+        gate.wait()
+        return service.approve(
+            replacement.id,
+            canonical=True,
+            review_note="concurrent replacement",
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        variant_result = executor.submit(approve_variant)
+        replacement_result = executor.submit(replace_canonical)
+        replacement_result.result()
+        result = variant_result.result()
+
+    assert service.resolve(replacement.cast_key).candidate.id == replacement.id
+    if isinstance(result, ConflictError):
+        assert "stale" in str(result)
+        assert service.get(draft_variant.id).status == "draft"
+    else:
+        assert result.status == "approved"
 
 
 def test_approved_root_can_be_made_canonical_later(
