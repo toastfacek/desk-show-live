@@ -52,27 +52,40 @@ class AssetStore:
             )
 
         digest = hashlib.sha256(content).hexdigest()
-        blob_dir = self.data_dir / "blobs"
-        blob_dir.mkdir(parents=True, exist_ok=True)
-        path = blob_dir / f"{digest}{extension}"
-        self._write_once(path, content)
-
-        asset_id = f"asset_{uuid.uuid4().hex}"
-        created_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         with self.database.connect() as connection:
-            connection.execute(
-                """
-                INSERT OR IGNORE INTO assets
-                    (id, sha256, mime_type, size, path, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (asset_id, digest, mime_type, len(content), str(path), created_at),
-            )
+            connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT * FROM assets WHERE sha256 = ?", (digest,)
             ).fetchone()
+            if row is not None:
+                return self._from_row(row)
+
+            blob_dir = self.data_dir / "blobs"
+            blob_dir.mkdir(parents=True, exist_ok=True)
+            path = blob_dir / f"{digest}{extension}"
+            created_blob = self._write_once(path, content)
+            asset_id = f"asset_{uuid.uuid4().hex}"
+            created_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            try:
+                connection.execute(
+                    """
+                    INSERT OR IGNORE INTO assets
+                        (id, sha256, mime_type, size, path, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (asset_id, digest, mime_type, len(content), str(path), created_at),
+                )
+                row = connection.execute(
+                    "SELECT * FROM assets WHERE sha256 = ?", (digest,)
+                ).fetchone()
+            except Exception:
+                if created_blob:
+                    path.unlink(missing_ok=True)
+                raise
 
         if row is None:  # Defensive: the insert and select occur in one transaction.
+            if created_blob:
+                path.unlink(missing_ok=True)
             raise RuntimeError("asset metadata was not stored")
         return self._from_row(row)
 
@@ -86,11 +99,12 @@ class AssetStore:
         return self._from_row(row)
 
     @staticmethod
-    def _write_once(path: Path, content: bytes) -> None:
+    def _write_once(path: Path, content: bytes) -> bool:
         descriptor, temporary_name = tempfile.mkstemp(
             dir=path.parent, prefix=".upload-"
         )
         temporary_path = Path(temporary_name)
+        created = False
         try:
             with os.fdopen(descriptor, "wb") as temporary_file:
                 temporary_file.write(content)
@@ -98,10 +112,12 @@ class AssetStore:
                 os.fsync(temporary_file.fileno())
             try:
                 os.link(temporary_path, path)
+                created = True
             except FileExistsError:
                 pass
         finally:
             temporary_path.unlink(missing_ok=True)
+        return created
 
     @staticmethod
     def _from_row(row: sqlite3.Row) -> Asset:
