@@ -238,6 +238,43 @@ def test_loader_rejects_relative_path_escape(baseline_setup, locked_baseline):
         baseline_setup["baseline_service"].load(malicious_id)
 
 
+@pytest.mark.parametrize("symlink_level", ["exports", "baseline"])
+def test_loader_rejects_symlinked_export_root(
+    baseline_setup, locked_baseline, symlink_level
+):
+    baseline_dir = locked_baseline.manifest_path.parent
+    exports_dir = baseline_dir.parent
+    original_root = exports_dir if symlink_level == "exports" else baseline_dir
+    moved_root = baseline_setup["data_dir"] / f"moved-{symlink_level}"
+    original_root.rename(moved_root)
+    original_root.symlink_to(moved_root, target_is_directory=True)
+
+    with pytest.raises(IntegrityError, match="symlink"):
+        baseline_setup["baseline_service"].load(locked_baseline.id)
+
+
+def test_loader_allows_symlinked_configured_data_directory(
+    baseline_setup, locked_baseline, tmp_path
+):
+    linked_data_dir = tmp_path / "linked-data"
+    linked_data_dir.symlink_to(
+        baseline_setup["data_dir"], target_is_directory=True
+    )
+    linked_asset_store = AssetStore(
+        linked_data_dir, baseline_setup["database"]
+    )
+    linked_service = BaselineService(
+        baseline_setup["database"],
+        linked_asset_store,
+        baseline_setup["pack_service"],
+        baseline_setup["candidate_service"],
+    )
+
+    loaded = linked_service.load(locked_baseline.id)
+
+    assert loaded.hero_path.read_bytes() == b"canonical hero"
+
+
 def test_locked_baseline_cannot_be_updated(database, locked_baseline):
     with pytest.raises(sqlite3.IntegrityError, match="immutable"):
         with database.connect() as connection:
