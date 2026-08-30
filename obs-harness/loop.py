@@ -8,6 +8,7 @@ from pathlib import Path
 import yaml
 
 from director import decide
+from overlay import DEFAULT_HOSTS, build_state, load_posts, write_state
 from performer_stub import StubPerformer
 from player_fake import FakePlayer
 
@@ -21,6 +22,8 @@ class Harness:
         player: FakePlayer,
         clip_duration_s: float = 5.0,
         base_dir: Path | None = None,
+        posts: dict | None = None,
+        hosts: dict | None = None,
     ) -> None:
         self.rundown = rundown
         self.script_lines = list(script_lines)
@@ -29,6 +32,8 @@ class Harness:
         self.player = player
         self.clip_duration_s = clip_duration_s
         self.base_dir = Path(base_dir or ".")
+        self.posts = posts or {}
+        self.hosts = hosts or DEFAULT_HOSTS
         self.t = 0.0
         self.written_ahead: list[dict] = []
         self.ready: list[dict] = []
@@ -44,6 +49,9 @@ class Harness:
         self._refill_script()
         self.segment = rundown["segments"][0]
         self.package = self.segment["package"]
+        for slot, row in self.hosts.items():
+            self.player.set_name_bar(slot, row["name"], row["handle"])
+        self._write_overlay()
 
     @classmethod
     def from_rundown(
@@ -79,6 +87,14 @@ class Harness:
         )
         fake = player or FakePlayer()
         fake.set_clip_duration(clip_duration_s)
+        posts: dict = {}
+        posts_file = data.get("posts_file")
+        if posts_file:
+            post_path = Path(posts_file)
+            if not post_path.is_absolute():
+                post_path = base / post_path
+            if post_path.exists():
+                posts = load_posts(post_path)
         return cls(
             rundown=data,
             script_lines=lines,
@@ -86,6 +102,7 @@ class Harness:
             player=fake,
             clip_duration_s=clip_duration_s,
             base_dir=base,
+            posts=posts,
         )
 
     def _refill_script(self) -> None:
@@ -252,6 +269,20 @@ class Harness:
                 self.written_ahead.pop(0)
             self._refill_script()
             self.next_take = submit["take"] + 1
+        self._write_overlay()
+
+    def _write_overlay(self) -> None:
+        write_state(
+            self.base_dir / "out" / "overlay_state.json",
+            build_state(
+                layout=self.player.layout,
+                headline=self.player.headline or (self.package.get("chyron") or ""),
+                speaking=self.player.speaking,
+                package=self.package,
+                posts=self.posts,
+                hosts=self.hosts,
+            ),
+        )
 
     def step(self) -> None:
         self.player.t = self.t

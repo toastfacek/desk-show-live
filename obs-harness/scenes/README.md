@@ -2,6 +2,8 @@
 
 Code may switch these scenes and fill these inputs. Code may not create, delete, or rename them.
 
+Furniture (chyron, tickers, LIVE, clock, card, host frames) is HTML in `../graphics/`. Add one Browser source named `FRAME`, 1920×1080, transparent, on every scene, above `HOST_WIDE`. See `../graphics/README.md`.
+
 ## Scenes
 
 | Scene | Must contain |

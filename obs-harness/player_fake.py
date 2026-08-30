@@ -6,6 +6,10 @@ class FakePlayer:
         self.t = 0.0
         self.layout = "hold"
         self.connected = True
+        self.headline = ""
+        self.speaking = None
+        self.center_kind = "none"
+        self.center_data: dict | None = None
         self.calls: list[tuple] = []
         self._path: str | None = None
         self._clip_started_at: float | None = None
@@ -41,12 +45,16 @@ class FakePlayer:
 
     def set_speaking(self, host: str | None) -> None:
         self.calls.append(("set_speaking", host))
+        self.speaking = host
 
     def set_center(self, kind: str, data: dict | None) -> None:
         self.calls.append(("set_center", kind, data))
+        self.center_kind = kind
+        self.center_data = data
 
     def set_headline(self, text: str) -> None:
         self.calls.append(("set_headline", text))
+        self.headline = text
 
     def set_name_bar(self, host: str, name: str, handle: str) -> None:
         self.calls.append(("set_name_bar", host, name, handle))

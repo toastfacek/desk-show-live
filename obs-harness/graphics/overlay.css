@@ -1,0 +1,515 @@
+@font-face {
+  font-family: "Plex Cond";
+  src: url("fonts/IBMPlexSansCondensed-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Plex Cond";
+  src: url("fonts/IBMPlexSansCondensed-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Plex";
+  src: url("fonts/IBMPlexSans-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Plex";
+  src: url("fonts/IBMPlexSans-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Plex Mono";
+  src: url("fonts/IBMPlexMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --ink: #e8edf2;
+  --mute: #9aa6b2;
+  --plate: #0c1016;
+  --plate-2: #151b24;
+  --line: #2a3340;
+  --amber: #f0a33c;
+  --cyan: #3ee0e8;
+  --live: #ff5a4d;
+  --pad: 40px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: transparent;
+  color: var(--ink);
+  font-family: Plex, "Arial Narrow", sans-serif;
+}
+
+#stage {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+}
+
+.top {
+  position: absolute;
+  top: 28px;
+  left: var(--pad);
+  right: var(--pad);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 40;
+}
+
+.live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px 0 12px;
+  background: var(--live);
+  color: #1a0604;
+  font-family: "Plex Cond", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.14em;
+  transform: skewX(-8deg);
+}
+
+.live span,
+.live i {
+  transform: skewX(8deg);
+}
+
+.live i {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1a0604;
+  animation: pulse 1.2s steps(2, end) infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.15;
+  }
+}
+
+.wordmark {
+  font-family: "Plex Cond", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: 0.22em;
+}
+
+.presented {
+  margin-left: auto;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: var(--mute);
+  text-transform: uppercase;
+}
+
+.presented b {
+  color: var(--ink);
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+#clock {
+  font-family: "Plex Mono", ui-monospace, monospace;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  min-width: 118px;
+  text-align: right;
+}
+
+.box {
+  position: absolute;
+  border: 3px solid var(--line);
+  background: transparent;
+  z-index: 10;
+}
+
+.box-wide {
+  top: 96px;
+  left: 80px;
+  width: 1760px;
+  height: 760px;
+  display: none;
+}
+
+.box-l {
+  top: 100px;
+  left: 40px;
+  width: 620px;
+  height: 700px;
+}
+
+.box-r {
+  top: 100px;
+  left: 1260px;
+  width: 620px;
+  height: 700px;
+}
+
+#stage[data-speaking="host_a"] .box-l,
+#stage[data-speaking="host_a"] .box-wide {
+  border-color: var(--amber);
+  box-shadow: inset 0 0 0 2px rgba(240, 163, 60, 0.25);
+}
+
+#stage[data-speaking="host_b"] .box-r,
+#stage[data-speaking="host_b"] .box-wide {
+  border-color: var(--cyan);
+  box-shadow: inset 0 0 0 2px rgba(62, 224, 232, 0.25);
+}
+
+.namebar {
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  height: 56px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0 16px;
+  background: var(--plate);
+  border-top: 3px solid var(--line);
+}
+
+.box-l .namebar {
+  border-top-color: var(--amber);
+}
+
+.box-r .namebar {
+  border-top-color: var(--cyan);
+}
+
+.box-wide .namebar-a {
+  left: -3px;
+  right: auto;
+  width: 420px;
+  border-top-color: var(--amber);
+}
+
+.box-wide .namebar-b {
+  right: -3px;
+  left: auto;
+  width: 280px;
+  border-top-color: var(--cyan);
+}
+
+.namebar .name {
+  font-family: "Plex Cond", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.namebar .handle {
+  font-family: "Plex Mono", ui-monospace, monospace;
+  font-size: 14px;
+  color: var(--mute);
+}
+
+.namebar .handle::before {
+  content: "@";
+  color: var(--line);
+}
+
+.card {
+  position: absolute;
+  top: 168px;
+  left: 640px;
+  width: 640px;
+  height: 540px;
+  background: var(--plate);
+  border: 3px solid var(--line);
+  padding: 28px 32px;
+  z-index: 20;
+  display: none;
+}
+
+.card-kicker {
+  display: inline-block;
+  background: var(--amber);
+  color: #1a1206;
+  font-family: "Plex Cond", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.16em;
+  padding: 4px 10px;
+  transform: skewX(-8deg);
+}
+
+.card-kicker span {
+  display: inline-block;
+  transform: skewX(8deg);
+}
+
+.card-author {
+  margin-top: 22px;
+  font-family: "Plex Mono", ui-monospace, monospace;
+  font-size: 16px;
+  color: var(--cyan);
+}
+
+.card p {
+  margin-top: 16px;
+  font-size: 34px;
+  line-height: 1.28;
+  font-weight: 500;
+}
+
+.hold-plate {
+  display: none;
+  position: absolute;
+  inset: 160px 280px 220px;
+  background: var(--plate);
+  border: 3px solid var(--line);
+  z-index: 15;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  font-family: "Plex Cond", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  font-size: 72px;
+  letter-spacing: 0.28em;
+  color: var(--mute);
+}
+
+.hold-plate small {
+  font-family: Plex, sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.2em;
+  font-weight: 400;
+}
+
+.bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 180px;
+  z-index: 40;
+}
+
+.chyron {
+  height: 84px;
+  display: flex;
+  align-items: stretch;
+  background: var(--plate);
+  border-top: 3px solid var(--line);
+}
+
+.chyron-kicker {
+  display: flex;
+  align-items: center;
+  padding: 0 22px;
+  background: var(--amber);
+  color: #1a1206;
+  font-family: "Plex Cond", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.16em;
+  transform: skewX(-8deg);
+  padding-left: 28px;
+}
+
+.chyron-kicker span {
+  transform: skewX(8deg);
+}
+
+.chyron-text {
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  font-family: "Plex Cond", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  font-size: 40px;
+  letter-spacing: 0.04em;
+}
+
+.tickers {
+  height: 96px;
+}
+
+.ticker {
+  height: 48px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.ticker-s {
+  background: var(--plate-2);
+  color: var(--ink);
+}
+
+.ticker-m {
+  background: #080b10;
+  color: var(--cyan);
+  border-top: 2px solid var(--line);
+}
+
+.ticker .label {
+  flex: 0 0 110px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Plex Cond", "Arial Narrow", sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.14em;
+  background: #1c2430;
+  color: var(--ink);
+}
+
+.ticker-m .label {
+  color: var(--cyan);
+}
+
+.track-wrap {
+  overflow: hidden;
+  flex: 1;
+}
+
+.track {
+  display: inline-block;
+  font-family: "Plex Mono", ui-monospace, monospace;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  padding-left: 24px;
+  animation: scroll 28s linear infinite;
+}
+
+.ticker-m .track {
+  animation-duration: 36s;
+}
+
+.track b {
+  color: var(--amber);
+  font-weight: 400;
+  padding: 0 18px;
+}
+
+@keyframes scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* layouts — boxes and card only; furniture always on */
+#stage[data-layout="wide"] .box-wide {
+  display: block;
+}
+#stage[data-layout="wide"] .box-l,
+#stage[data-layout="wide"] .box-r,
+#stage[data-layout="wide"] .card,
+#stage[data-layout="wide"] .hold-plate {
+  display: none;
+}
+
+#stage[data-layout="split"] .box-l,
+#stage[data-layout="split"] .box-r {
+  display: block;
+}
+#stage[data-layout="split"] .card {
+  display: block;
+}
+#stage[data-layout="split"] .box-wide,
+#stage[data-layout="split"] .hold-plate {
+  display: none;
+}
+
+#stage[data-layout="solo_l"] .box-l {
+  display: block;
+  top: 96px;
+  left: 160px;
+  width: 860px;
+  height: 760px;
+}
+#stage[data-layout="solo_l"] .box-r,
+#stage[data-layout="solo_l"] .box-wide,
+#stage[data-layout="solo_l"] .card,
+#stage[data-layout="solo_l"] .hold-plate {
+  display: none;
+}
+
+#stage[data-layout="solo_r"] .box-r {
+  display: block;
+  top: 96px;
+  left: 900px;
+  width: 860px;
+  height: 760px;
+}
+#stage[data-layout="solo_r"] .box-l,
+#stage[data-layout="solo_r"] .box-wide,
+#stage[data-layout="solo_r"] .card,
+#stage[data-layout="solo_r"] .hold-plate {
+  display: none;
+}
+
+#stage[data-layout="card_full"] .card {
+  display: block;
+  top: 120px;
+  left: 280px;
+  width: 1360px;
+  height: 720px;
+}
+#stage[data-layout="card_full"] .card p {
+  font-size: 52px;
+}
+#stage[data-layout="card_full"] .box,
+#stage[data-layout="card_full"] .hold-plate {
+  display: none;
+}
+
+#stage[data-layout="hold"] .hold-plate {
+  display: flex;
+}
+#stage[data-layout="hold"] .box,
+#stage[data-layout="hold"] .card {
+  display: none;
+}
+
+#stage[data-layout="hold"][data-center="card"] .hold-plate {
+  display: none;
+}
+#stage[data-layout="hold"][data-center="card"] .card {
+  display: block;
+  top: 140px;
+  left: 420px;
+  width: 1080px;
+  height: 640px;
+}

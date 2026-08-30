@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Runtime — graphics preview</title>
+    <style>
+      @font-face {
+        font-family: "Plex Cond";
+        src: url("fonts/IBMPlexSansCondensed-Bold.woff2") format("woff2");
+        font-weight: 700;
+      }
+      html,
+      body {
+        margin: 0;
+        background: #05070a;
+        color: #c5ced6;
+        font-family: "Plex Cond", "Arial Narrow", sans-serif;
+      }
+      .dock {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 12px 16px;
+        background: #0c1016;
+        border-bottom: 2px solid #2a3340;
+      }
+      .dock button {
+        appearance: none;
+        border: 2px solid #2a3340;
+        background: #151b24;
+        color: #e8edf2;
+        font: 700 14px/1 "Plex Cond", sans-serif;
+        letter-spacing: 0.08em;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      .dock button[aria-pressed="true"] {
+        border-color: #f0a33c;
+        color: #f0a33c;
+      }
+      .dock a {
+        margin-left: auto;
+        color: #3ee0e8;
+        font-size: 13px;
+      }
+      .frame {
+        width: 1920px;
+        height: 1080px;
+        margin: 16px auto 40px;
+        position: relative;
+        background: #10141a;
+        box-shadow: 0 0 0 2px #2a3340;
+      }
+      .set {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 40% 60% at 18% 40%, rgba(240, 163, 60, 0.22), transparent 70%),
+          radial-gradient(ellipse 40% 60% at 82% 40%, rgba(62, 224, 232, 0.2), transparent 70%),
+          linear-gradient(#1a222c, #0a0d12);
+      }
+      .well {
+        position: absolute;
+        background: #1c2430;
+        border: 2px dashed #2a3340;
+      }
+      .well-wide {
+        top: 96px;
+        left: 80px;
+        width: 1760px;
+        height: 760px;
+      }
+      .well-l {
+        top: 100px;
+        left: 40px;
+        width: 620px;
+        height: 700px;
+      }
+      .well-r {
+        top: 100px;
+        left: 1260px;
+        width: 620px;
+        height: 700px;
+      }
+      .well span {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 0.16em;
+        color: #5c6a78;
+        font-size: 22px;
+      }
+      .set[data-layout="wide"] .well-l,
+      .set[data-layout="wide"] .well-r {
+        display: none;
+      }
+      .set[data-layout="split"] .well-wide,
+      .set[data-layout="solo_l"] .well-wide,
+      .set[data-layout="solo_r"] .well-wide,
+      .set[data-layout="card_full"] .well,
+      .set[data-layout="hold"] .well {
+        display: none;
+      }
+      .set[data-layout="split"] .well-l,
+      .set[data-layout="split"] .well-r {
+        display: block;
+      }
+      .set[data-layout="solo_l"] .well-l {
+        display: block;
+        top: 96px;
+        left: 160px;
+        width: 860px;
+        height: 760px;
+      }
+      .set[data-layout="solo_l"] .well-r {
+        display: none;
+      }
+      .set[data-layout="solo_r"] .well-r {
+        display: block;
+        top: 96px;
+        left: 900px;
+        width: 860px;
+        height: 760px;
+      }
+      .set[data-layout="solo_r"] .well-l {
+        display: none;
+      }
+      iframe {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        border: 0;
+        background: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dock">
+      <button type="button" data-layout="wide">wide</button>
+      <button type="button" data-layout="split" aria-pressed="true">split</button>
+      <button type="button" data-layout="solo_l">solo_l</button>
+      <button type="button" data-layout="solo_r">solo_r</button>
+      <button type="button" data-layout="card_full">card_full</button>
+      <button type="button" data-layout="hold">hold</button>
+      <a href="overlay.html">transparent overlay only</a>
+    </div>
+    <div class="frame">
+      <div class="set" data-layout="split" id="set">
+        <div class="well well-wide"><span>HOST_WIDE · full frame</span></div>
+        <div class="well well-l"><span>HOST_WIDE · left crop</span></div>
+        <div class="well well-r"><span>HOST_WIDE · right crop</span></div>
+      </div>
+      <iframe id="ov" src="overlay.html" title="Runtime overlay"></iframe>
+    </div>
+    <script>
+      const set = document.getElementById("set");
+      const ov = document.getElementById("ov");
+      const buttons = [...document.querySelectorAll("[data-layout]")];
+
+      function show(layout) {
+        set.dataset.layout = layout;
+        buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.layout === layout)));
+        const apply = () => {
+          if (ov.contentWindow && ov.contentWindow.applyState) {
+            ov.contentWindow.applyState({ layout });
+          }
+        };
+        if (ov.contentWindow && ov.contentWindow.applyState) apply();
+        else ov.addEventListener("load", apply, { once: true });
+      }
+
+      buttons.forEach((b) => b.addEventListener("click", () => show(b.dataset.layout)));
+    </script>
+  </body>
+</html>

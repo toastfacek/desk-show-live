@@ -12,7 +12,17 @@ python3 -m pytest -q
 python3 run.py --player fake
 ```
 
-Writes `out/takes.jsonl`.
+Writes `out/takes.jsonl` and `out/overlay_state.json`.
+
+## Preview the frame (no OBS)
+
+```bash
+cd obs-harness
+python3 -m http.server 8765
+```
+
+Open http://127.0.0.1:8765/graphics/preview.html  
+That is the chyron, tickers, name bars, and host frames. Click the six layouts. The video wells are placeholders — real `HOST_WIDE` lives in OBS.
 
 ## Talk to OBS
 

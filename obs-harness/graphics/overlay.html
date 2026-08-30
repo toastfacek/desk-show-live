@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Runtime overlay</title>
+    <link rel="stylesheet" href="overlay.css" />
+  </head>
+  <body>
+    <div id="stage" data-layout="split" data-speaking="host_a" data-center="card">
+      <header class="top">
+        <div class="live"><i></i><span>LIVE</span></div>
+        <div class="wordmark">RUNTIME</div>
+        <div class="presented">Presented by <b>REHEARSE</b></div>
+        <time id="clock">00:00:00</time>
+      </header>
+
+      <div class="box box-wide" id="box-wide">
+        <div class="namebar namebar-a">
+          <span class="name" id="name-wide-a">PHASEONE[lol]</span>
+        </div>
+        <div class="namebar namebar-b">
+          <span class="name" id="name-wide-b">deb</span>
+        </div>
+      </div>
+
+      <div class="box box-l" id="box-l">
+        <div class="namebar">
+          <span class="name" id="name-a">PHASEONE[lol]</span>
+          <span class="handle" id="handle-a">phaseone</span>
+        </div>
+      </div>
+      <div class="box box-r" id="box-r">
+        <div class="namebar">
+          <span class="name" id="name-b">deb</span>
+          <span class="handle" id="handle-b">deb</span>
+        </div>
+      </div>
+
+      <article class="card" id="card">
+        <div class="card-kicker"><span>POST</span></div>
+        <div class="card-author" id="card-author">example</div>
+        <p id="card-text">the vix just did a thing and nobody knows why</p>
+      </article>
+
+      <div class="hold-plate" id="hold-plate">
+        HOLD
+        <small>TICKERS UP · BED UP · NO HOST FACE</small>
+      </div>
+
+      <footer class="bottom">
+        <div class="chyron">
+          <div class="chyron-kicker"><span>NOW</span></div>
+          <div class="chyron-text" id="headline">A MOVE WITHOUT A THESIS</div>
+        </div>
+        <div class="tickers">
+          <div class="ticker ticker-s">
+            <div class="label">SHOW</div>
+            <div class="track-wrap"><div class="track" id="sponsors"></div></div>
+          </div>
+          <div class="ticker ticker-m">
+            <div class="label">TAPE</div>
+            <div class="track-wrap"><div class="track" id="markets"></div></div>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="overlay.js"></script>
+  </body>
+</html>
