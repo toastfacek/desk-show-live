@@ -11,3 +11,5 @@ stub:
   forced_late_takes: [3]
   forced_late_delay_s: 8.0
 clip_duration_s: 5
+graphics:
+  port: 8765

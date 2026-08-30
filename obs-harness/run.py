@@ -11,6 +11,7 @@ import yaml
 
 from loop import Harness
 from player_fake import FakePlayer
+from serve_overlay import start_overlay_server
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -38,6 +39,12 @@ def main(argv: list[str] | None = None) -> int:
         rundown = root / rundown
 
     stub = config.get("stub") or {}
+    graphics = config.get("graphics") or {}
+    port = int(graphics.get("port") or 8765)
+    start_overlay_server(root, port)
+    print(f"overlay http://127.0.0.1:{port}/graphics/overlay.html")
+
+    player = FakePlayer()
     if player_name == "obs":
         from player_obs import ObsPlayer
 
@@ -51,18 +58,26 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             print(f"OBS not connected: {exc}", file=sys.stderr)
             return 2
-        print("OBS connected. Simulated clock still drives this first cut; use fake for tests.")
-        # Realtime OBS drive is H3/H4 on a desk. Keep the same loop with FakePlayer
-        # timebase and fan calls out — not wired yet beyond connect check.
-        _ = player
+        missing = player.missing_layouts()
+        if missing:
+            print(
+                f"OBS is missing scenes {missing}. Run: python3 scenes/install.py",
+                file=sys.stderr,
+            )
+            return 4
 
     harness = Harness.from_rundown(
         rundown,
         stub=stub,
         clip_duration_s=float(config.get("clip_duration_s") or 5),
-        player=FakePlayer(),
+        player=player,
     )
-    harness.run_simulated(max_t=float((yaml.safe_load(rundown.read_text()) or {}).get("show", {}).get("target_len_s") or 90))
+    target = float((yaml.safe_load(rundown.read_text()) or {}).get("show", {}).get("target_len_s") or 90)
+    if player_name == "obs":
+        print("Program is live. Clock is wall time.")
+        harness.run_realtime(max_t=target)
+    else:
+        harness.run_simulated(max_t=target)
     log_path = harness.write_log()
     print(f"wrote {log_path} ({len(harness.log)} rows, {len(harness.beats)} beats)")
     return 0

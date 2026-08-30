@@ -92,6 +92,16 @@ def test_t9_script_slot_stays_at_two(tmp_path):
     assert 2 in depths
 
 
+def test_realtime_clock_advances(tmp_path):
+    h = Harness.from_rundown(
+        _pack(tmp_path),
+        stub={"delay_s": 0.0, "delay_jitter_s": 0.0, "forced_late_takes": []},
+        clip_duration_s=5.0,
+    )
+    h.run_realtime(max_t=0.35)
+    assert h.t >= 0.3
+
+
 def test_t10_director_does_not_import_player_obs():
     text = Path(__file__).resolve().parents[1].joinpath("director.py").read_text()
     assert "player_obs" not in text

@@ -1,36 +1,49 @@
 # OBS Harness
 
-A clock that sits next to [OBS Studio](https://obsproject.com/) and runs a show from files.
+A clock that sits next to stock [OBS Studio](https://obsproject.com/) and runs a show from files. It does not fork OBS. It does not call a language model. It does not buy video.
 
-This package does **not** call a language model and does **not** buy video. Clips come from `assets/clips/`. A later package can plug in your text API and fal.
+## Make it real
 
-## Run the demo (no OBS)
+On the machine that has OBS:
+
+1. OBS 28+. **Tools → WebSocket Server Settings** — enable, note the port (4455).
+2. `export OBS_WEBSOCKET_PASSWORD=...` if you set one.
+3. `pip install 'obsws-python>=1.7' pyyaml`
+4. Build the six scenes once:
 
 ```bash
 cd obs-harness
+python3 scenes/install.py
+```
+
+5. Run the show. This starts the overlay server, talks to Program, and uses **wall time**:
+
+```bash
+python3 run.py --player obs
+```
+
+Watch OBS Program. `FRAME` is `graphics/overlay.html`. `HOST_WIDE` is the clip. The harness switches `wide` / `split` / `solo_l` / `solo_r` / `card_full` / `hold` and writes `out/overlay_state.json` so the chrome follows the cut.
+
+If a named scene is missing, the process exits 4. It does not invent a scene.
+
+## Tests (no OBS)
+
+```bash
 python3 -m pytest -q
 python3 run.py --player fake
 ```
 
-Writes `out/takes.jsonl` and `out/overlay_state.json`.
+`--mode live` exits 2. Text + fal are a different package.
 
-## Preview the frame (no OBS)
+## What is on Program
 
-```bash
-cd obs-harness
-python3 -m http.server 8765
-```
+| Layer | Source |
+| :---- | :---- |
+| Hosts | OBS input `HOST_WIDE` — files from `assets/clips/` |
+| Chrome | Browser source `FRAME` — `graphics/overlay.html` |
+| Copy | `rundown.yaml`, `posts.json`, `script.jsonl` |
 
-Open http://127.0.0.1:8765/graphics/preview.html  
-The dashed wells and the background wash are a mock. What actually streams is `graphics/overlay.html` over the OBS source `HOST_WIDE`. See `graphics/README.md` for what to edit.
-
-## Talk to OBS
-
-1. Install OBS 28+. Enable **Tools → WebSocket Server Settings**.
-2. Build the scenes and inputs listed in `scenes/README.md`.
-3. Prove crop-sync (same README). If the split drifts, stop.
-4. `export OBS_WEBSOCKET_PASSWORD=...`
-5. `python3 run.py --player obs` checks the connection. The 90s desk run is the H4 gate in `OBS Harness — TDD.md`.
+`preview.html` is only a monitor. It is not the stream.
 
 ## License
 

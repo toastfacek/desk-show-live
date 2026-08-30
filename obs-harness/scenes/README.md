@@ -1,6 +1,15 @@
-# OBS scene contract (build by hand)
+# OBS scene contract
 
-Code may switch these scenes and fill these inputs. Code may not create, delete, or rename them.
+The show loop may switch these scenes and fill these inputs. It may not create, delete, or rename them.
+
+Build them once on the desk:
+
+```bash
+cd obs-harness
+python3 scenes/install.py
+```
+
+That talks to the current OBS collection over WebSocket and adds the six scenes plus `HOST_WIDE` / `FRAME`. After that, `python3 run.py --player obs` only switches.
 
 Furniture (chyron, tickers, LIVE, clock, card, host frames) is HTML in `../graphics/`. Add one Browser source named `FRAME`, 1920×1080, transparent, on every scene, above `HOST_WIDE`. See `../graphics/README.md`.
 

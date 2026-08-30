@@ -9,6 +9,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+obs = ["obsws-python>=1.7"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

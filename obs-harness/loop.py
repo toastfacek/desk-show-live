@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import sys
+import time
 from pathlib import Path
 
 import yaml
@@ -10,6 +12,7 @@ import yaml
 from director import decide
 from overlay import DEFAULT_HOSTS, build_state, load_posts, write_state
 from performer_stub import StubPerformer
+from player import Player
 from player_fake import FakePlayer
 
 
@@ -19,7 +22,7 @@ class Harness:
         rundown: dict,
         script_lines: list[dict],
         stub: StubPerformer,
-        player: FakePlayer,
+        player: Player,
         clip_duration_s: float = 5.0,
         base_dir: Path | None = None,
         posts: dict | None = None,
@@ -59,7 +62,7 @@ class Harness:
         rundown_path: Path,
         stub: dict | None = None,
         clip_duration_s: float = 5.0,
-        player: FakePlayer | None = None,
+        player: Player | None = None,
     ) -> Harness:
         rundown_path = Path(rundown_path)
         data = yaml.safe_load(rundown_path.read_text())
@@ -86,7 +89,8 @@ class Harness:
             clip_duration_s=clip_duration_s,
         )
         fake = player or FakePlayer()
-        fake.set_clip_duration(clip_duration_s)
+        if hasattr(fake, "set_clip_duration"):
+            fake.set_clip_duration(clip_duration_s)
         posts: dict = {}
         posts_file = data.get("posts_file")
         if posts_file:
@@ -203,20 +207,39 @@ class Harness:
             return True
         return False
 
+    def _drive(self, beat: dict) -> None:
+        try:
+            self.player.t = self.t
+            self.player.set_layout(beat["layout"])
+            self.player.set_headline(beat.get("chyron") or "")
+            center = beat.get("center") or {"kind": "none"}
+            self.player.set_center(center.get("kind") or "none", center)
+            self.player.set_speaking(beat.get("speaking"))
+            self.player.duck_music(-6.0 if beat.get("speaking") else 0.0)
+        except Exception as exc:
+            print(f"player failed: {exc}", file=sys.stderr)
+            try:
+                self.player.set_layout("hold")
+            except Exception:
+                self.done = True
+                raise
+
     def _execute(self, beat: dict) -> None:
-        self.player.t = self.t
-        self.player.set_layout(beat["layout"])
-        self.player.set_headline(beat.get("chyron") or "")
-        center = beat.get("center") or {"kind": "none"}
-        self.player.set_center(center.get("kind") or "none", center)
-        self.player.set_speaking(beat.get("speaking"))
-        self.player.duck_music(-6.0 if beat.get("speaking") else 0.0)
+        self._drive(beat)
 
         if beat.get("host_source"):
             take = int(str(beat["host_source"]).split(":")[1])
             clip = next(c for c in self.ready if c["take"] == take)
             self.ready = [c for c in self.ready if c["take"] != take]
-            self.player.play_clip(clip["path"])
+            try:
+                self.player.play_clip(clip["path"])
+            except Exception as exc:
+                print(f"play_clip failed: {exc}", file=sys.stderr)
+                try:
+                    self.player.set_layout("hold")
+                except Exception:
+                    self.done = True
+                    raise
             self.on_air = {
                 "kind": "host",
                 "take": take,
@@ -313,6 +336,25 @@ class Harness:
             aired = sum(1 for row in self.log if row.get("t_on_air") is not None)
             if until_takes_on_air is not None and aired >= until_takes_on_air:
                 return
+        self._finalize_unfinished()
+
+    def run_realtime(self, max_t: float = 90.0) -> None:
+        origin = time.monotonic()
+        self.t = 0.0
+        self.step()
+        while self.t < max_t and not self.done:
+            next_t = self.t + 0.2
+            if self.cooking:
+                next_t = min(next_t, self.cooking["ready_at"])
+            if self.on_air and self.on_air.get("ends_at") is not None:
+                next_t = min(next_t, self.on_air["ends_at"])
+            if next_t <= self.t:
+                next_t = self.t + 0.2
+            delay = next_t - (time.monotonic() - origin)
+            if delay > 0:
+                time.sleep(delay)
+            self.t = time.monotonic() - origin
+            self.step()
         self._finalize_unfinished()
 
     def _finalize_unfinished(self) -> None:
