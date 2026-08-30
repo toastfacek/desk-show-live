@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Character Pack Manager</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <header>
+      <p class="eyebrow">Local baseline workspace</p>
+      <h1>Character Pack Manager</h1>
+      <p>Create immutable source packs, review baseline candidates, and lock a verified run.</p>
+    </header>
+
+    <main>
+      <section>
+        <h2>1. Packs and versions</h2>
+        <div class="columns">
+          <form id="pack-form">
+            <h3>Create pack</h3>
+            <label>Kind
+              <select name="kind">
+                <option value="character">Character</option>
+                <option value="scene">Scene</option>
+              </select>
+            </label>
+            <label>Name <input name="name" required></label>
+            <button>Create pack</button>
+          </form>
+
+          <form id="asset-form">
+            <h3>Upload image asset</h3>
+            <label>PNG, JPEG, or WebP
+              <input name="file" type="file" accept="image/png,image/jpeg,image/webp" required>
+            </label>
+            <button>Upload asset</button>
+          </form>
+        </div>
+
+        <form id="version-form" class="wide-form">
+          <h3>Create immutable version</h3>
+          <label>Pack <select name="pack_id" class="pack-options" required></select></label>
+          <label>Manifest JSON
+            <textarea name="manifest" rows="10" required>{
+  "visual_invariants": {"locked_traits": ["silhouette", "eye_design", "proportions"]},
+  "persona": "Calm and curious.",
+  "writer_rules": ["Prefer evidence."],
+  "voice_direction": "Measured and warm.",
+  "asset_ids": []
+}</textarea>
+          </label>
+          <button>Create next version</button>
+        </form>
+        <div id="packs" class="cards" aria-live="polite"></div>
+      </section>
+
+      <section>
+        <h2>2. Candidate image</h2>
+        <p>Upload a finished hero above, or copy an existing reference through the local zero-cost generator.</p>
+        <form id="candidate-form" class="wide-form">
+          <label>Character versions JSON
+            <textarea name="character_versions" rows="4" required>{"BOT1": ["character_pack_id", 1]}</textarea>
+          </label>
+          <label>Scene pack ID <input name="scene_pack_id" required></label>
+          <label>Scene version <input name="scene_version" type="number" min="1" value="1" required></label>
+          <label>Hero asset <select name="hero_asset_id" class="asset-options" required></select></label>
+          <button>Create uploaded candidate</button>
+        </form>
+
+        <form id="generate-form" class="wide-form">
+          <h3>Generate candidate from reference</h3>
+          <label>Character versions JSON
+            <textarea name="character_versions" rows="4" required>{"BOT1": ["character_pack_id", 1]}</textarea>
+          </label>
+          <label>Scene pack ID <input name="scene_pack_id" required></label>
+          <label>Scene version <input name="scene_version" type="number" min="1" value="1" required></label>
+          <label>Reference asset <select name="reference_asset_id" class="asset-options" required></select></label>
+          <label>Prompt <input name="prompt" placeholder="Clean wide studio shot"></label>
+          <label>Seed <input name="seed" type="number"></label>
+          <button>Generate and create draft</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>3. Review candidates</h2>
+        <p>Draft cards expose approval, canonical approval, and rejection controls.</p>
+        <div id="candidates" class="cards" aria-live="polite"></div>
+        <form id="variant-form" class="wide-form">
+          <h3>Create themed variant</h3>
+          <label>Canonical candidate <select name="canonical_candidate_id" class="canonical-options" required></select></label>
+          <label>Hero asset <select name="hero_asset_id" class="asset-options" required></select></label>
+          <label>Theme <input name="theme" required></label>
+          <label>Allowed changes JSON
+            <textarea name="changes" rows="5" required>{"palette": ["red", "green"], "accessories": ["hat"]}</textarea>
+          </label>
+          <button>Create draft variant</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>4. Lock and inspect run</h2>
+        <form id="baseline-form" class="wide-form">
+          <label>Cast key <input name="cast_key" required></label>
+          <label>Requested candidate (optional)
+            <select name="requested_candidate_id" class="candidate-options">
+              <option value="">Canonical</option>
+            </select>
+          </label>
+          <button>Lock immutable run</button>
+        </form>
+        <div id="baselines" class="cards" aria-live="polite"></div>
+        <h3>Verified manifest</h3>
+        <pre id="manifest">Select “Inspect manifest” on a locked run.</pre>
+      </section>
+    </main>
+
+    <div id="notice" role="status" aria-live="polite"></div>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
