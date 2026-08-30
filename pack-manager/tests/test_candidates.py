@@ -240,3 +240,166 @@ def test_canonical_replacement_is_explicit(candidate_setup, approved_canonical):
 
     assert service.resolve(replacement.cast_key).candidate == approved_replacement
     assert approved_canonical.status == "approved"
+
+
+def test_variant_rejects_approved_root_that_was_never_canonical(
+    candidate_setup, approved_canonical
+):
+    service = candidate_setup["candidate_service"]
+    never_canonical = service.create(
+        character_versions={
+            "BOT1": (candidate_setup["bot1"].pack_id, 1),
+            "BOT2": (candidate_setup["bot2"].pack_id, 1),
+        },
+        scene_pack_id=candidate_setup["scene"].pack_id,
+        scene_version=1,
+        hero_asset_id=candidate_setup["hero"].id,
+    )
+    approved = service.approve(
+        never_canonical.id, canonical=False, review_note="Approved alternative"
+    )
+
+    with pytest.raises(ValidationError, match="current canonical"):
+        service.create_variant(
+            canonical_candidate_id=approved.id,
+            hero_asset_id=approved.hero_asset_id,
+            theme="Christmas",
+            changes={"palette": ["red", "green"]},
+        )
+
+    assert service.resolve(approved_canonical.cast_key).candidate == approved_canonical
+
+
+def test_variant_rejects_superseded_canonical_root(
+    candidate_setup, approved_canonical
+):
+    service = candidate_setup["candidate_service"]
+    replacement = service.create(
+        character_versions={
+            "BOT1": (candidate_setup["bot1"].pack_id, 1),
+            "BOT2": (candidate_setup["bot2"].pack_id, 1),
+        },
+        scene_pack_id=candidate_setup["scene"].pack_id,
+        scene_version=1,
+        hero_asset_id=candidate_setup["hero"].id,
+    )
+    service.approve(
+        replacement.id, canonical=True, review_note="Replacement passed"
+    )
+
+    with pytest.raises(ValidationError, match="current canonical"):
+        service.create_variant(
+            canonical_candidate_id=approved_canonical.id,
+            hero_asset_id=approved_canonical.hero_asset_id,
+            theme="Christmas",
+            changes={"palette": ["red", "green"]},
+        )
+
+
+def test_missing_requested_candidate_falls_back(
+    candidate_service, approved_canonical
+):
+    resolution = candidate_service.resolve(
+        approved_canonical.cast_key,
+        requested_candidate_id="candidate_missing",
+    )
+
+    assert resolution.candidate == approved_canonical
+    assert resolution.fallback_reason == "requested candidate does not exist"
+
+
+def test_wrong_cast_requested_candidate_falls_back(
+    candidate_setup, approved_canonical
+):
+    service = candidate_setup["candidate_service"]
+    other_root = service.create(
+        character_versions={
+            "BOT2": (candidate_setup["bot2"].pack_id, 1),
+            "BOT1": (candidate_setup["bot1"].pack_id, 1),
+        },
+        scene_pack_id=candidate_setup["scene"].pack_id,
+        scene_version=1,
+        hero_asset_id=candidate_setup["hero"].id,
+    )
+    other_canonical = service.approve(
+        other_root.id, canonical=True, review_note="Other cast passed"
+    )
+    other_variant = service.create_variant(
+        canonical_candidate_id=other_canonical.id,
+        hero_asset_id=other_canonical.hero_asset_id,
+        theme="Christmas",
+        changes={"palette": ["red", "green"]},
+    )
+    approved_other_variant = service.approve(
+        other_variant.id, canonical=False, review_note="Other theme passed"
+    )
+
+    resolution = service.resolve(
+        approved_canonical.cast_key,
+        requested_candidate_id=approved_other_variant.id,
+    )
+
+    assert resolution.candidate == approved_canonical
+    assert resolution.fallback_reason == "requested candidate has different cast key"
+
+
+def test_invalid_requested_selection_falls_back(
+    candidate_setup, approved_canonical
+):
+    service = candidate_setup["candidate_service"]
+    unrelated_root = service.create(
+        character_versions={
+            "BOT1": (candidate_setup["bot1"].pack_id, 1),
+            "BOT2": (candidate_setup["bot2"].pack_id, 1),
+        },
+        scene_pack_id=candidate_setup["scene"].pack_id,
+        scene_version=1,
+        hero_asset_id=candidate_setup["hero"].id,
+    )
+    approved_unrelated = service.approve(
+        unrelated_root.id,
+        canonical=False,
+        review_note="Approved but not canonical",
+    )
+
+    resolution = service.resolve(
+        approved_canonical.cast_key,
+        requested_candidate_id=approved_unrelated.id,
+    )
+
+    assert resolution.candidate == approved_canonical
+    assert (
+        resolution.fallback_reason
+        == "requested candidate is not a variant of canonical"
+    )
+
+
+@pytest.mark.parametrize("initial_status", ["approved", "rejected"])
+@pytest.mark.parametrize("operation", ["approve", "reject"])
+def test_non_draft_candidate_rejects_every_transition(
+    candidate_setup, initial_status, operation
+):
+    service = candidate_setup["candidate_service"]
+    candidate = service.create(
+        character_versions={
+            "BOT1": (candidate_setup["bot1"].pack_id, 1),
+            "BOT2": (candidate_setup["bot2"].pack_id, 1),
+        },
+        scene_pack_id=candidate_setup["scene"].pack_id,
+        scene_version=1,
+        hero_asset_id=candidate_setup["hero"].id,
+    )
+    if initial_status == "approved":
+        candidate = service.approve(
+            candidate.id, canonical=False, review_note="Approved"
+        )
+    else:
+        candidate = service.reject(candidate.id, review_note="Rejected")
+
+    with pytest.raises(ConflictError, match="draft"):
+        if operation == "approve":
+            service.approve(
+                candidate.id, canonical=False, review_note="Try again"
+            )
+        else:
+            service.reject(candidate.id, review_note="Try again")

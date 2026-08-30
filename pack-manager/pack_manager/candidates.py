@@ -149,30 +149,49 @@ class CandidateService:
         theme: str,
         changes: dict,
     ) -> Candidate:
-        canonical = self._get(canonical_candidate_id)
-        if canonical.status != "approved" or canonical.canonical_candidate_id is not None:
-            raise ValidationError(
-                "variant requires an approved canonical candidate"
-            )
         self._validate_hero(hero_asset_id)
         self._validate_theme(theme)
         stored_changes = self._validate_variant_changes(changes)
-        candidate = Candidate(
-            id=f"candidate_{uuid.uuid4().hex}",
-            cast_key=canonical.cast_key,
-            character_versions=canonical.character_versions,
-            scene_pack_id=canonical.scene_pack_id,
-            scene_version=canonical.scene_version,
-            hero_asset_id=hero_asset_id,
-            canonical_candidate_id=canonical.id,
-            theme=theme,
-            changes=stored_changes,
-            status="draft",
-            review_note=None,
-            created_at=self._now(),
-            reviewed_at=None,
-        )
-        self._insert(candidate)
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            canonical = self._from_row(
+                self._require_row(connection, canonical_candidate_id)
+            )
+            if (
+                canonical.status != "approved"
+                or canonical.canonical_candidate_id is not None
+            ):
+                raise ValidationError(
+                    "variant requires an approved canonical candidate"
+                )
+            current = connection.execute(
+                """
+                SELECT candidate_id
+                FROM canonical_candidates
+                WHERE cast_key = ?
+                """,
+                (canonical.cast_key,),
+            ).fetchone()
+            if current is None or current["candidate_id"] != canonical.id:
+                raise ValidationError(
+                    "variant requires the current canonical candidate"
+                )
+            candidate = Candidate(
+                id=f"candidate_{uuid.uuid4().hex}",
+                cast_key=canonical.cast_key,
+                character_versions=canonical.character_versions,
+                scene_pack_id=canonical.scene_pack_id,
+                scene_version=canonical.scene_version,
+                hero_asset_id=hero_asset_id,
+                canonical_candidate_id=canonical.id,
+                theme=theme,
+                changes=stored_changes,
+                status="draft",
+                review_note=None,
+                created_at=self._now(),
+                reviewed_at=None,
+            )
+            self._insert_with_connection(connection, candidate)
         return candidate
 
     def approve(
@@ -268,10 +287,11 @@ class CandidateService:
             return CandidateResolution(
                 canonical, "requested candidate is not approved"
             )
-        if (
-            requested.cast_key != cast_key
-            or requested.canonical_candidate_id != canonical.id
-        ):
+        if requested.cast_key != cast_key:
+            return CandidateResolution(
+                canonical, "requested candidate has different cast key"
+            )
+        if requested.canonical_candidate_id != canonical.id:
             return CandidateResolution(
                 canonical, "requested candidate is not a variant of canonical"
             )
@@ -383,30 +403,36 @@ class CandidateService:
 
     def _insert(self, candidate: Candidate) -> None:
         with self.database.connect() as connection:
-            connection.execute(
-                """
-                INSERT INTO candidates (
-                    id, cast_key, character_versions, scene_pack_id,
-                    scene_version, hero_asset_id, canonical_candidate_id,
-                    theme, changes, status, review_note, created_at, reviewed_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    candidate.id,
-                    candidate.cast_key,
-                    candidate._character_versions_json,
-                    candidate.scene_pack_id,
-                    candidate.scene_version,
-                    candidate.hero_asset_id,
-                    candidate.canonical_candidate_id,
-                    candidate.theme,
-                    candidate._changes_json,
-                    candidate.status,
-                    candidate.review_note,
-                    candidate.created_at,
-                    candidate.reviewed_at,
-                ),
-            )
+            self._insert_with_connection(connection, candidate)
+
+    @staticmethod
+    def _insert_with_connection(
+        connection: sqlite3.Connection, candidate: Candidate
+    ) -> None:
+        connection.execute(
+            """
+            INSERT INTO candidates (
+                id, cast_key, character_versions, scene_pack_id,
+                scene_version, hero_asset_id, canonical_candidate_id,
+                theme, changes, status, review_note, created_at, reviewed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                candidate.id,
+                candidate.cast_key,
+                candidate._character_versions_json,
+                candidate.scene_pack_id,
+                candidate.scene_version,
+                candidate.hero_asset_id,
+                candidate.canonical_candidate_id,
+                candidate.theme,
+                candidate._changes_json,
+                candidate.status,
+                candidate.review_note,
+                candidate.created_at,
+                candidate.reviewed_at,
+            ),
+        )
 
     def _get(self, candidate_id: str) -> Candidate:
         with self.database.connect() as connection:
