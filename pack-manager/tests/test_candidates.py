@@ -328,10 +328,19 @@ def test_approved_root_can_be_made_canonical_later(
 
 
 def test_set_canonical_rejects_variant_and_nonapproved_root(
-    candidate_service, canonical_candidate, approved_canonical, draft_variant
+    candidate_setup, candidate_service, approved_canonical, draft_variant
 ):
+    draft_root = candidate_service.create(
+        character_versions={
+            "BOT1": (candidate_setup["bot1"].pack_id, 1),
+            "BOT2": (candidate_setup["bot2"].pack_id, 1),
+        },
+        scene_pack_id=candidate_setup["scene"].pack_id,
+        scene_version=1,
+        hero_asset_id=candidate_setup["hero"].id,
+    )
     with pytest.raises(ConflictError, match="approved root"):
-        candidate_service.set_canonical(canonical_candidate.id)
+        candidate_service.set_canonical(draft_root.id)
     approved_variant = candidate_service.approve(
         draft_variant.id,
         canonical=False,

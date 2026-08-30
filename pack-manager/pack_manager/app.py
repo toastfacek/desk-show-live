@@ -36,10 +36,6 @@ class UploadTooLargeError(ValidationError):
     pass
 
 
-class _RequestBodyTooLarge(Exception):
-    pass
-
-
 class RequestBodyLimitMiddleware:
     def __init__(self, app, max_bytes: int):
         self.app = app
@@ -72,26 +68,32 @@ class RequestBodyLimitMiddleware:
                 return
 
         received = 0
-
-        async def limited_receive():
-            nonlocal received
+        messages = []
+        while True:
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
                 if received > self.max_bytes:
-                    raise _RequestBodyTooLarge
-            return message
+                    await _send_asgi_error(
+                        send,
+                        413,
+                        "request_too_large",
+                        f"request size exceeds limit {self.max_bytes}",
+                    )
+                    return
+                messages.append(message)
+                if not message.get("more_body", False):
+                    break
+            else:
+                messages.append(message)
+                break
 
-        try:
-            await self.app(scope, limited_receive, send)
-        except _RequestBodyTooLarge:
-            await _send_asgi_error(
-                send,
-                413,
-                "request_too_large",
-                f"request size exceeds limit {self.max_bytes}",
-            )
+        async def replay_receive():
+            if messages:
+                return messages.pop(0)
+            return {"type": "http.request", "body": b"", "more_body": False}
 
+        await self.app(scope, replay_receive, send)
 
 class LocalRequestMiddleware:
     _trusted_hosts = {"localhost", "127.0.0.1", "::1", "testserver"}
