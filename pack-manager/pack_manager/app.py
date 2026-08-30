@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 import uvicorn
 import yaml
-from fastapi import FastAPI, File, Query, Request, UploadFile
+from fastapi import FastAPI, File, Header, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -30,6 +30,13 @@ from .providers import ReferenceCopyProvider
 DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 DEFAULT_MULTIPART_OVERHEAD_BYTES = 1024 * 1024
 WEB_ROOT = Path(__file__).with_name("web")
+RuntimeManagerHeader = Annotated[
+    Literal["1"],
+    Header(
+        alias="X-Runtime-Manager",
+        description="Required marker for local mutating API requests.",
+    ),
+]
 
 
 class UploadTooLargeError(ValidationError):
@@ -347,7 +354,7 @@ def create_app(
         return [_pack_json(pack) for pack in services.packs.list_packs(kind)]
 
     @app.post("/api/packs", status_code=201)
-    def create_pack(body: PackCreate):
+    def create_pack(body: PackCreate, _runtime_manager: RuntimeManagerHeader):
         return _pack_json(services.packs.create_pack(body.kind, body.name))
 
     @app.get("/api/packs/{pack_id}/versions")
@@ -362,7 +369,11 @@ def create_app(
         return _version_json(services.packs.get_version(pack_id, version))
 
     @app.post("/api/packs/{pack_id}/versions", status_code=201)
-    def create_version(pack_id: str, body: VersionCreate):
+    def create_version(
+        pack_id: str,
+        body: VersionCreate,
+        _runtime_manager: RuntimeManagerHeader,
+    ):
         return _version_json(
             services.packs.create_version(pack_id, body.manifest)
         )
@@ -390,6 +401,7 @@ def create_app(
     @app.post("/api/assets", status_code=201)
     async def upload_asset(
         file: Annotated[UploadFile, File(description="PNG, JPEG, or WebP image")],
+        _runtime_manager: RuntimeManagerHeader,
     ):
         mime_type = file.content_type or "application/octet-stream"
         if mime_type not in {"image/png", "image/jpeg", "image/webp"}:
@@ -420,7 +432,10 @@ def create_app(
         ]
 
     @app.post("/api/candidates/generate", status_code=201)
-    def generate_candidate(body: GeneratedCandidateCreate):
+    def generate_candidate(
+        body: GeneratedCandidateCreate,
+        _runtime_manager: RuntimeManagerHeader,
+    ):
         references = tuple(
             services.assets.get(asset_id) for asset_id in body.reference_asset_ids
         )
@@ -458,7 +473,9 @@ def create_app(
         )
 
     @app.post("/api/candidates/variants", status_code=201)
-    def create_variant(body: VariantCreate):
+    def create_variant(
+        body: VariantCreate, _runtime_manager: RuntimeManagerHeader
+    ):
         candidate = services.candidates.create_variant(
             canonical_candidate_id=body.canonical_candidate_id,
             hero_asset_id=body.hero_asset_id,
@@ -475,7 +492,9 @@ def create_app(
         )
 
     @app.post("/api/candidates", status_code=201)
-    def create_candidate(body: CandidateCreate):
+    def create_candidate(
+        body: CandidateCreate, _runtime_manager: RuntimeManagerHeader
+    ):
         candidate = services.candidates.create(
             character_versions=body.character_versions,
             scene_pack_id=body.scene_pack_id,
@@ -499,7 +518,11 @@ def create_app(
         )
 
     @app.post("/api/candidates/{candidate_id}/approve")
-    def approve_candidate(candidate_id: str, body: CandidateApprove):
+    def approve_candidate(
+        candidate_id: str,
+        body: CandidateApprove,
+        _runtime_manager: RuntimeManagerHeader,
+    ):
         candidate = services.candidates.approve(
             candidate_id,
             canonical=body.canonical,
@@ -514,12 +537,18 @@ def create_app(
         )
 
     @app.post("/api/candidates/{candidate_id}/canonical")
-    def set_canonical_candidate(candidate_id: str):
+    def set_canonical_candidate(
+        candidate_id: str, _runtime_manager: RuntimeManagerHeader
+    ):
         candidate = services.candidates.set_canonical(candidate_id)
         return _candidate_json(candidate, is_current_canonical=True)
 
     @app.post("/api/candidates/{candidate_id}/reject")
-    def reject_candidate(candidate_id: str, body: CandidateReject):
+    def reject_candidate(
+        candidate_id: str,
+        body: CandidateReject,
+        _runtime_manager: RuntimeManagerHeader,
+    ):
         candidate = services.candidates.reject(
             candidate_id, review_note=body.review_note
         )
@@ -531,7 +560,9 @@ def create_app(
         )
 
     @app.post("/api/baselines", status_code=201)
-    def lock_baseline(body: BaselineCreate):
+    def lock_baseline(
+        body: BaselineCreate, _runtime_manager: RuntimeManagerHeader
+    ):
         return _baseline_json(
             services.baselines.lock_run(
                 body.cast_key,
@@ -577,7 +608,9 @@ def create_app(
         )
 
     @app.delete("/api/baselines/{baseline_id}")
-    def reject_baseline_delete(baseline_id: str):
+    def reject_baseline_delete(
+        baseline_id: str, _runtime_manager: RuntimeManagerHeader
+    ):
         services.baselines.load(baseline_id)
         raise ConflictError("locked baselines are immutable")
 

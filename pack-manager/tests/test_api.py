@@ -110,7 +110,7 @@ def test_complete_fallback_workflow(tmp_path):
                 "theme": "Christmas",
                 "changes": {
                     "palette": ["red", "green"],
-                    "accessories": ["Santa hat"],
+                    "accessories": {"BOT1": ["Santa hat"]},
                 },
             },
         )
@@ -303,11 +303,18 @@ def test_conflicts_and_locked_mutation(tmp_path):
         character = client.post(
             "/api/packs", json={"kind": "character", "name": "BOT1"}
         ).json()
+        character2 = client.post(
+            "/api/packs", json={"kind": "character", "name": "BOT2"}
+        ).json()
         scene = client.post(
             "/api/packs", json={"kind": "scene", "name": "Studio"}
         ).json()
         client.post(
             f"/api/packs/{character['id']}/versions",
+            json={"manifest": character_manifest(character_asset["id"])},
+        )
+        client.post(
+            f"/api/packs/{character2['id']}/versions",
             json={"manifest": character_manifest(character_asset["id"])},
         )
         client.post(
@@ -317,7 +324,10 @@ def test_conflicts_and_locked_mutation(tmp_path):
         candidate = client.post(
             "/api/candidates",
             json={
-                "character_versions": {"BOT1": [character["id"], 1]},
+                "character_versions": {
+                    "BOT1": [character["id"], 1],
+                    "BOT2": [character2["id"], 1],
+                },
                 "scene_pack_id": scene["id"],
                 "scene_version": 1,
                 "hero_asset_id": hero["id"],
@@ -352,11 +362,18 @@ def test_verified_manifest_download_rechecks_in_memory_bytes(tmp_path):
         character = client.post(
             "/api/packs", json={"kind": "character", "name": "BOT1"}
         ).json()
+        character2 = client.post(
+            "/api/packs", json={"kind": "character", "name": "BOT2"}
+        ).json()
         scene = client.post(
             "/api/packs", json={"kind": "scene", "name": "Studio"}
         ).json()
         client.post(
             f"/api/packs/{character['id']}/versions",
+            json={"manifest": character_manifest(hero["id"])},
+        )
+        client.post(
+            f"/api/packs/{character2['id']}/versions",
             json={"manifest": character_manifest(hero["id"])},
         )
         client.post(
@@ -366,7 +383,10 @@ def test_verified_manifest_download_rechecks_in_memory_bytes(tmp_path):
         candidate = client.post(
             "/api/candidates",
             json={
-                "character_versions": {"BOT1": [character["id"], 1]},
+                "character_versions": {
+                    "BOT1": [character["id"], 1],
+                    "BOT2": [character2["id"], 1],
+                },
                 "scene_pack_id": scene["id"],
                 "scene_version": 1,
                 "hero_asset_id": hero["id"],
@@ -416,6 +436,9 @@ def test_only_current_root_is_serialized_and_selectable_as_canonical(tmp_path):
         character = client.post(
             "/api/packs", json={"kind": "character", "name": "BOT1"}
         ).json()
+        character2 = client.post(
+            "/api/packs", json={"kind": "character", "name": "BOT2"}
+        ).json()
         scene = client.post(
             "/api/packs", json={"kind": "scene", "name": "Studio"}
         ).json()
@@ -424,11 +447,18 @@ def test_only_current_root_is_serialized_and_selectable_as_canonical(tmp_path):
             json={"manifest": character_manifest(hero["id"])},
         )
         client.post(
+            f"/api/packs/{character2['id']}/versions",
+            json={"manifest": character_manifest(hero["id"])},
+        )
+        client.post(
             f"/api/packs/{scene['id']}/versions",
             json={"manifest": scene_manifest(hero["id"])},
         )
         candidate_body = {
-            "character_versions": {"BOT1": [character["id"], 1]},
+            "character_versions": {
+                "BOT1": [character["id"], 1],
+                "BOT2": [character2["id"], 1],
+            },
             "scene_pack_id": scene["id"],
             "scene_version": 1,
             "hero_asset_id": hero["id"],
@@ -497,3 +527,36 @@ def test_web_assets_are_declared_as_wheel_package_data():
     assert '"web/*.html"' in pyproject
     assert '"web/*.js"' in pyproject
     assert '"web/*.css"' in pyproject
+
+
+def test_every_mutating_openapi_operation_requires_manager_header(tmp_path):
+    schema = create_app(tmp_path / "data").openapi()
+    mutating = {"post", "put", "patch", "delete"}
+    operations = [
+        operation
+        for path in schema["paths"].values()
+        for method, operation in path.items()
+        if method in mutating
+    ]
+
+    assert operations
+    for operation in operations:
+        matching = [
+            parameter
+            for parameter in operation.get("parameters", [])
+            if parameter.get("in") == "header"
+            and parameter.get("name") == "X-Runtime-Manager"
+        ]
+        assert len(matching) == 1
+        assert matching[0]["required"] is True
+
+
+def test_readme_documents_current_api_security_and_errors():
+    readme = (
+        __import__("pathlib").Path(__file__).parents[1] / "README.md"
+    ).read_text()
+
+    assert "X-Runtime-Manager: 1" in readme
+    assert "POST /api/candidates/{id}/canonical" in readme
+    assert "DELETE /api/baselines/{id}" in readme
+    assert "request_too_large" in readme

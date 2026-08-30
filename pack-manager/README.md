@@ -41,18 +41,31 @@ returning or downloading a manifest.
 
 ## HTTP API
 
-The interactive OpenAPI reference is available at `/docs`.
+The interactive OpenAPI reference is available at `/docs`. Every `POST`, `PUT`,
+`PATCH`, or `DELETE` request under `/api/` must include
+`X-Runtime-Manager: 1`. Read-only requests do not require it.
 
-- `GET|POST /api/packs`
-- `GET|POST /api/packs/{pack_id}/versions`
-- `GET|POST /api/assets`
+- `GET /api/packs`
+- `POST /api/packs`
+- `GET /api/packs/{pack_id}/versions`
+- `POST /api/packs/{pack_id}/versions`
+- `GET /api/packs/{pack_id}/versions/{version}`
+- `GET /api/assets`
+- `POST /api/assets`
+- `GET /api/assets/{id}`
 - `GET /api/assets/{id}/content` (hash-verified image bytes for previews)
-- `GET|POST /api/candidates`
+- `GET /api/candidates`
+- `POST /api/candidates`
+- `GET /api/candidates/{id}`
 - `POST /api/candidates/generate`
 - `POST /api/candidates/variants`
 - `POST /api/candidates/{id}/approve`
 - `POST /api/candidates/{id}/reject`
-- `GET|POST /api/baselines`
+- `POST /api/candidates/{id}/canonical`
+- `GET /api/baselines`
+- `POST /api/baselines`
+- `GET /api/baselines/{id}`
+- `DELETE /api/baselines/{id}` (always reports immutable conflict)
 - `GET /api/baselines/{id}/manifest`
 - `GET /api/baselines/{id}/download/manifest`
 
@@ -63,10 +76,10 @@ Domain failures have a stable envelope:
 ```
 
 The codes include `request_validation`, `malformed_request`,
-`validation_error`, `upload_too_large`, `not_found`, `method_not_allowed`,
-`conflict`, `integrity_error`, and `internal_error`. Framework routing, parsing,
-and request-model failures use the same envelope. API responses never expose
-local absolute paths.
+`validation_error`, `upload_too_large`, `request_too_large`, `unsafe_request`,
+`not_found`, `method_not_allowed`, `conflict`, `integrity_error`, and
+`internal_error`. Framework routing, parsing, and request-model failures use
+the same envelope. API responses never expose local absolute paths.
 
 ## Test
 

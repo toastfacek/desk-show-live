@@ -1,5 +1,9 @@
 const state = { packs: [], versions: [], assets: [], candidates: [], baselines: [] };
 const notice = document.querySelector("#notice");
+const {
+  requestedCandidateLabel,
+  requestedCandidatesForCanonical,
+} = PackManagerSelection;
 
 async function api(path, options = {}) {
   const method = (options.method || "GET").toUpperCase();
@@ -89,7 +93,6 @@ function render() {
     state.candidates.filter((item) => item.is_current_canonical),
     (item) => `${item.id} · ${item.cast_key.slice(0, 10)}`,
   );
-  refill(".candidate-options", state.candidates, (item) => `${item.id} · ${item.status}`, true);
   refill(
     ".cast-options",
     state.candidates
@@ -97,6 +100,7 @@ function render() {
       .map((item) => ({ ...item, id: item.cast_key })),
     (item) => `${candidateLabel(item)} · ${item.cast_key.slice(0, 10)}`,
   );
+  refreshRequestedCandidateOptions();
 
   const assets = document.querySelector("#assets");
   assets.replaceChildren(...state.assets.map(assetCard));
@@ -142,6 +146,15 @@ function render() {
     card.append(inspect, download);
     return card;
   }));
+}
+
+function refreshRequestedCandidateOptions() {
+  const castKey = document.querySelector(".cast-options").value;
+  refill(
+    ".candidate-options",
+    requestedCandidatesForCanonical(state.candidates, castKey),
+    requestedCandidateLabel,
+  );
 }
 
 function assetCard(asset) {
@@ -379,4 +392,8 @@ handle("#baseline-form", async (form) => {
   await inspectManifest(baseline.id);
 });
 
+document.querySelector(".cast-options").addEventListener(
+  "change",
+  refreshRequestedCandidateOptions,
+);
 refresh().catch((error) => show(error.message, true));
