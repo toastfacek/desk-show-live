@@ -449,9 +449,16 @@ body {
 #stage[data-layout="split"] .box-l,
 #stage[data-layout="split"] .box-r {
   display: block;
+  top: var(--stage-top);
+  height: var(--stage-h);
 }
 #stage[data-layout="split"] .card {
   display: block;
+  top: var(--stage-top);
+  left: calc(var(--pad) + var(--col) + var(--gap));
+  width: var(--col);
+  height: var(--stage-h);
+  bottom: auto;
 }
 #stage[data-layout="split"] .box-wide,
 #stage[data-layout="split"] .hold-plate {
@@ -525,8 +532,8 @@ body {
 }
 #stage[data-layout="hold"][data-center="card"] .card {
   display: block;
-  top: 140px;
-  left: 420px;
-  width: 1080px;
-  height: 640px;
+  top: var(--stage-top);
+  left: var(--pad);
+  width: calc(1920px - (var(--pad) * 2));
+  height: var(--stage-h);
 }
