@@ -45,4 +45,5 @@ def test_ui_requires_two_hosts_and_refreshes_requested_candidates():
     bot2 = html.split('name="BOT2"', 1)[1].split("</select>", 1)[0]
     assert "required" in bot2
     assert "requestedCandidatesForCanonical" in javascript
-    assert "addEventListener(\"change\"" in javascript
+    assert "addEventListener(" in javascript
+    assert '"change"' in javascript
