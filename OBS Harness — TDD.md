@@ -1,6 +1,6 @@
 # TDD — OBS Harness
 
-**Status:** Draft for build · **Date:** 30 Aug 2026 · **Owner:** Jesse  
+**Status:** H1–H2 implemented in `obs-harness/` (fake player + tests). H0/H3/H4 still need a desk with OBS. · **Date:** 30 Aug 2026 · **Owner:** Jesse  
 **Release:** This file is the whole public v1. It can ship without the desk show, without a text vendor, and without fal.
 
 **Parent:** `Agentic Live Streaming Harness — Plan.md` (why a clock sits beside OBS).  
