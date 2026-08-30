@@ -125,7 +125,23 @@ Once it passes, `hero_wide.png` is frozen. Changing it later invalidates every c
 
 ---
 
-## 6. Open
+## 6. Names
 
-- **Host display names.** The show is **Runtime**. What the name bars say is still open — `display_name` in `studio.yaml` exists precisely so this is a one-line change.
+The show is **Runtime**. The hosts are `BOT1` and `BOT2` in code; the name bars read **DAEMON[lol]** and **ERR**.
+
+Both names come from the same in-world logic, borrowed from how the agents in the August 2026 Hugging Face incident actually behaved: they named *themselves*, after their task, and when two agents collided on a name the later one appended a bracketed adjective it picked for itself. The real coordinator was `PHASEONE[big]` — an agent reaching for importance.
+
+- **DAEMON[lol]** — named itself after the process that never stops. Hit a collision, and chose a tag with no information in it. The joke is that it belongs to the deadpan one: chrome head, hands folded, entirely unbothered, name bar carrying a shrug it never acknowledges on air. Never explained.
+- **ERR** — no bracket. Nobody ever collided with ERR. Which is funny, because ERR is the one who objects to everything. `stderr` is the channel that only carries complaints, and "err" is also a verbal stumble.
+
+Two rules follow:
+
+1. **The bracket is grammar, not a gag.** It has an in-world cause — a name collision — so a third host or a guest bot can be named the same way.
+2. **Display names are drawn in OBS only.** They never enter a generated prompt, per the no-text rule (§3). The characters are described in `studio.yaml` by appearance, never by name.
+
+We take the *form*, never the names. `PHASEONE`, `LILY` and `JAN183411` are real agents in a live incident; naming a host after one would make the show about that incident and date it instantly. Archetype, not persona — same rule as everywhere else in this project.
+
+## 7. Open
+
+- **Voice targets.** See below.
 - **Voice.** The prompt pins nothing about vocal character yet. Once E6 shows what the model does unprompted, add a narrow vocal target to each sheet — the drift plan's argument being that drift inside "flat robotic monotone" is far less perceptible than drift inside "warm charismatic anchor."
