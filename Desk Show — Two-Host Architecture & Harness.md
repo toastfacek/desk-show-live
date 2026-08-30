@@ -50,7 +50,7 @@ This is an engineering decision as much as an art one:
 
 **Prompt rule, non-negotiable:** never name a show, studio, artist, or character in a prompt. Describe the style in our own words. Naming IP invites both a safety-checker 422 and the exact Twitch DMCA outcome that got the original inspiration for this project banned.
 
-Host names, show name, and the feed source are **still placeholders**. Hosts are `HOST_L` and `HOST_R` throughout this doc.
+Hosts are `BOT1` (camera-left) and `BOT2` (camera-right). Working names, deliberately plain — the characters carry the show, not the names. Show name is still open.
 
 ---
 
@@ -58,7 +58,7 @@ Host names, show name, and the feed source are **still placeholders**. Hosts are
 
 ### 4.1 One generated asset
 
-Every take is the same shot: **a wide two-shot of both hosts at the desk.** `HOST_L` sits camera-left and faces slightly right. `HOST_R` sits camera-right and faces slightly left. That never changes.
+Every take is the same shot: **a wide two-shot of both hosts at the desk.** `BOT1` sits camera-left and faces slightly right. `BOT2` sits camera-right and faces slightly left. That never changes.
 
 The wide is composed so it can be cut apart:
 
@@ -66,7 +66,7 @@ The wide is composed so it can be cut apart:
   0%            34%            66%           100%
   |--------------|--------------|--------------|
   |   LEFT ZONE  | CENTER ZONE  |  RIGHT ZONE  |
-  |    HOST_L    | desk / wall  |    HOST_R    |
+  |     BOT1     | desk / wall  |     BOT2     |
   |--------------|--------------|--------------|
 ```
 
@@ -104,6 +104,27 @@ The **on-air highlight** is cheap insurance. We always know who is speaking, so 
 
 ---
 
+### 4.4 Resolution
+
+Canvas and generation are separate decisions, and the crop matters more than either.
+
+**H3 Max outputs 480p or 768p only.** There is no 1080 or 2K on this endpoint. 768p 16:9 is 1344×768 at 24 fps.
+
+**Stream the canvas at 1920×1080 regardless.** The chyron, tickers, name bars, sponsor bar and centre card all render at true 1080 and stay razor sharp. That is most of the pixels on screen and most of what makes the frame read as a real broadcast. Only the host boxes are upscaled.
+
+The split crop is the real quality constraint, because it throws away two thirds of the frame before scaling:
+
+| Generated at | Left-zone crop | Into a ~550×920 box | Cost/min (promo / list) |
+| :---- | :---- | :---- | :---- |
+| 768p (1344×768) | ~457×768 | **1.2×** | $2.40 / $4.80 |
+| 480p (854×480) | ~290×480 | **1.9×** | $1.50 / $3.00 |
+
+768p into a TBPN-sized box is barely an upscale — the aspect happens to match well. 480p is nearly double and will be visibly soft, but flat 2D art hides softness better than any other style would. 480p is a 38% discount, so it is worth the $3 to find out (E7).
+
+The `wide` layout is gentler on both: the full frame scaled into a 1080 canvas is 1.43× from 768p.
+
+**Baked assets are not capped.** The hero still, bumpers, ad reads and stings are made off-air, where slow is fine. Generate them large and downscale. The anchor PNG must match the live frame size, but the art it is derived from does not have to.
+
 ## 5. The studio bible
 
 A data file plus baked assets. Built once, offline. This is what gives the system spatial knowledge — the model does not need to "know" the room, the bible tells it, identically, every take.
@@ -118,12 +139,12 @@ studio:
     center: [0.34, 0.66]
     right:  [0.66, 1.00]
   hosts:
-    HOST_L:
+    BOT1:
       seat: left
       faces: right
       sheet: |
         <character description: silhouette, hair, wardrobe, props>
-    HOST_R:
+    BOT2:
       seat: right
       faces: left
       sheet: |
@@ -151,8 +172,8 @@ Note we are **not** baking idle loops. The listener is animated inside the wide,
 Every take's prompt is assembled the same way, mechanically:
 
 ```
-style block + set block + HOST_L sheet + HOST_R sheet
-+ "HOST_L is speaking" (or HOST_R)
+style block + set block + BOT1 sheet + BOT2 sheet
++ "BOT1 is speaking" (or BOT2)
 + the line, verbatim, in quotes
 ```
 
@@ -185,6 +206,8 @@ At 5s per take, one metered window:
 
 The rate did not change from the earlier docs. **The value did** — that same window now carries two hosts instead of one.
 
+At 480p it is $1.50/min promo, $3.00/min list — a 38% discount, pending E7. See §4.4.
+
 **Wall-to-wall talking is the ceiling, not the plan.** The lever for a Twitch-length block is how much of it is free:
 
 - baked bumpers, stings, ad reads — free, and TBPN runs them constantly
@@ -194,7 +217,7 @@ The rate did not change from the earlier docs. **The value did** — that same w
 
 A block that is half free runs ~$72/hr promo, ~$144/hr list. That is the difference between a demo and something you can leave running. Waste — takes generated and never aired — is the only way past the ceiling, so the director must not generate speculatively.
 
-**Build budget:** baking ≈ $4–6, experiments ≈ $10–14, shakeout ≈ $6, a handful of 90s segments ≈ $6. Base ≈ $30, with a 1.8× mess multiplier ≈ **$54**. Set the spend meter's hard cap at $50 and raise deliberately.
+**Build budget:** baking ≈ $4–6, experiments ≈ $10–14, shakeout ≈ $6, a handful of 90s segments ≈ $6. Base ≈ $30, with a 1.8× mess multiplier ≈ **$54**. **Spend meter hard cap: $50**, raised only deliberately.
 
 ---
 
@@ -204,7 +227,7 @@ Collapsed hard, on purpose. Latency and coordination complexity were the stated 
 
 | Role | What it is | Where it runs |
 | :---- | :---- | :---- |
-| **Ingest** | Pulls posts. Plain API call. | Function. No model. |
+| **Ingest** | Supplies posts. **A fixed JSON file in the MVP** (§15). Live API later. | Function. No model. |
 | **Segmenter** | Opens one topic: question, framing, angles. | Model, **once per segment**. Off the critical path. |
 | **Writer** | Writes the next complete thought for whoever is speaking. Runs 2 thoughts ahead. | Model. Never blocks the loop. |
 | **Director** | Picks the layout, the center content, the chyron, and whether to spend a take. | **Plain function. Rules, no model.** |
@@ -260,7 +283,7 @@ Nothing in the beat loop waits on a model. All of its latency is fal's.
 ```mermaid
 flowchart TB
   subgraph OFF["Segment loop — off the critical path"]
-    Feed["Twitter/X feed"] --> Ingest
+    Feed["posts.json — hand-pasted in MVP"] --> Ingest
     Ingest -->|posts| Seg["Segmenter (model, 1x per segment)"]
     Seg -->|topic package| Writer["Writer (model, runs 2 ahead)"]
     Rundown["Rundown (data)"] --> Director
@@ -302,13 +325,13 @@ flowchart TB
   "at": 15.4,
   "layout": "split",
   "host_source": "ready:7",
-  "speaking": "HOST_L",
+  "speaking": "BOT1",
   "center": {"kind": "tweet_card", "post_id": "1950123999999999999"},
   "chyron": "A MOVE WITHOUT A THESIS",
   "submit": {
     "take": 8,
     "line": "Fear has a ticker now, and it shrugs.",
-    "speaker": "HOST_L",
+    "speaker": "BOT1",
     "image_url": "https://fal.media/files/008.png",
     "anchor": "chain",
     "duration": 5,
@@ -407,7 +430,7 @@ Ordered by what kills the design. Each is a script in `experiments/`. E1–E6 ca
 | **E4** | **Listener behavior.** Does the non-speaking host sit plausibly — not frozen, not lip-syncing, not leaving frame? | Subjective 1–5, ≥ 3 on all 8. |
 | **E5** | **End-frame pinning.** Same 8 takes with `end_image_url` = hero. Compare drift and motion quality against E1. | Drift lower, motion not visibly snapped-back. Pass → drift is solved. |
 | **E6** | **Voice consistency, two hosts.** Blind listen. | Two distinguishable voices, each recognizable across 8 takes. |
-| **E7** | **Crop quality.** Left-third crop upscaled into a box, at 768p and 480p. | Acceptable at 768p by eye. Tells us whether 480p is viable, which halves the bill. |
+| **E7** | **Crop quality.** Same take at 480p and 768p, each cropped and composited into the real 1080 canvas at real box size. Compare side by side. | 768p acceptable by eye in `split`. Tells us whether 480p is viable, which is a 38% discount (§4.4). |
 | **E8** | **90s segment.** Full harness, live. | No dead air; hold fires on purpose at least once; manifest complete. |
 | **E9** | **$/segment.** From the manifest, including drops and retries. | A real number with retry overhead as a percentage. |
 
@@ -444,10 +467,10 @@ One tweet in the center slot, both hosts in their boxes, roughly 10 beats of bac
 
 ## 15. Open items
 
-1. **Host names, show name, visual design.** Placeholders throughout.
-2. **Feed source.** Whose timeline, or which list. Needed before M5.
+1. **Show name and visual design.** Host working names are settled (`BOT1`, `BOT2`); the character sheets, set art and show name are not.
+2. **Live feed source.** Resolved for the MVP: **no X API at all.** Ingest reads a hand-pasted JSON file of ~20 posts. It exercises every downstream stage, costs nothing, and is byte-identical across runs — which `rehearse` and `replay` both need. Whose timeline (or list, or search) it eventually pulls from is deferred until the show works; live ingest is then a swap of one function.
 3. **Second generated framing.** v1 generates exactly one composition. A tighter two-shot as a "push in" for heated moments would need its own hero still and its own chain. Deferred until E1 says the first chain holds.
 4. **Twitch chat.** Displaying it is nearly free and can land any time. Letting it *influence* the show is v2 and comes with the full adversarial-input problem.
-5. **480p.** Halves the bill. E7 tells us whether the crop survives it.
+5. **480p.** A 38% discount. E7 tells us whether the crop survives it. 1080 generation is not available at all — see §4.4.
 6. **Producer model.** Noted in §8. Not built.
 7. **Reference-to-video.** `minimax/h3-max/reference-to-video` shipped 29 Aug. If a pinned character reference holds identity without the previous last frame, the chain — and most of §6 — goes away, and takes can cook in parallel. Ten takes, ~$2 to find out. Worth measuring, but not before E1.
