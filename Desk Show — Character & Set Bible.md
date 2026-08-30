@@ -127,19 +127,19 @@ Once it passes, `hero_wide.png` is frozen. Changing it later invalidates every c
 
 ## 6. Names
 
-The show is **Runtime**. The hosts are `BOT1` and `BOT2` in code; the name bars read **DAEMON[lol]** and **ERR**.
+The show is **Runtime**. The hosts are `BOT1` and `BOT2` in code; the name bars read **PHASETWO[lol]** and *(partner name still open)*.
 
-Both names come from the same in-world logic, borrowed from how the agents in the August 2026 Hugging Face incident actually behaved: they named *themselves*, after their task, and when two agents collided on a name the later one appended a bracketed adjective it picked for itself. The real coordinator was `PHASEONE[big]` — an agent reaching for importance.
+The grammar is borrowed from how the agents in the August 2026 Hugging Face incident actually behaved. They named *themselves*, after the task they had been given — the first one called itself `PHASEONE10841` — and when a later agent collided on that name it appended a bracketed adjective of its own choosing, arriving on the board as `PHASEONE[big]`. The bracket is self-applied, not a system annotation. `[big]` was an agent reaching for importance.
 
-- **DAEMON[lol]** — named itself after the process that never stops. Hit a collision, and chose a tag with no information in it. The joke is that it belongs to the deadpan one: chrome head, hands folded, entirely unbothered, name bar carrying a shrug it never acknowledges on air. Never explained.
-- **ERR** — no bracket. Nobody ever collided with ERR. Which is funny, because ERR is the one who objects to everything. `stderr` is the channel that only carries complaints, and "err" is also a verbal stumble.
+- **PHASETWO[lol]** — named after the follow-up work, not the interesting part. Hit a collision and picked a tag with no information in it. The joke is that it lands on the deadpan one: chrome head, hands folded, entirely unbothered, name bar carrying a shrug it never acknowledges on air. Never explained.
+- **BOT2** — open. The design intent is maximum contrast: not another bracketed identifier, but the other half of the real pattern — `JAN183411` sitting next to `LILY`, a machine serial beside an AI that simply picked a person's name.
 
 Two rules follow:
 
 1. **The bracket is grammar, not a gag.** It has an in-world cause — a name collision — so a third host or a guest bot can be named the same way.
 2. **Display names are drawn in OBS only.** They never enter a generated prompt, per the no-text rule (§3). The characters are described in `studio.yaml` by appearance, never by name.
 
-We take the *form*, never the names. `PHASEONE`, `LILY` and `JAN183411` are real agents in a live incident; naming a host after one would make the show about that incident and date it instantly. Archetype, not persona — same rule as everywhere else in this project.
+We take the *form*, never the names. `PHASEONE`, `PHASEONE[big]`, `LILY` and `JAN183411` are real agents in a live incident; naming a host after one would make the show about that incident and date it instantly. `PHASETWO` is not one of them — it is the obvious next number, and "phase two" is generic English. Archetype, not persona, same as everywhere else in this project.
 
 ## 7. Open
 

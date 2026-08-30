@@ -471,7 +471,7 @@ One tweet in the center slot, both hosts in their boxes, roughly 10 beats of bac
 
 ## 15. Open items
 
-1. **Art.** The show is **Runtime**; the hosts are **DAEMON[lol]** and **ERR**. Character sheets and set are drafted in `studio.yaml`, but the hero still has not been baked or approved — that is the M0 gate.
+1. **Art.** The show is **Runtime**; BOT1 is **PHASETWO[lol]** and BOT2's name is still open. Character sheets and set are drafted in `studio.yaml`, but the hero still has not been baked or approved — that is the M0 gate.
 2. **Live feed source.** Resolved for the MVP: **no X API at all.** Ingest reads a hand-pasted JSON file of ~20 posts. It exercises every downstream stage, costs nothing, and is byte-identical across runs — which `rehearse` and `replay` both need. Whose timeline (or list, or search) it eventually pulls from is deferred until the show works; live ingest is then a swap of one function.
 3. **Second generated framing.** v1 generates exactly one composition. A tighter two-shot as a "push in" for heated moments would need its own hero still and its own chain. Deferred until E1 says the first chain holds.
 4. **Twitch chat.** Displaying it is nearly free and can land any time. Letting it *influence* the show is v2 and comes with the full adversarial-input problem.
