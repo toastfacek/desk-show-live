@@ -4,7 +4,7 @@
 
 **Parent docs:** "Desk Show — H3 Max Spec \+ Review \+ Drift Plan" (Drive \+ project). This TDD covers only the confirmed first-build slice (one host, simple player, real fal).
 
-The harness / OBS runner is a different slice: `Harness MVP — TDD (OBS sidecar, rehearse).md`.
+The OBS runner is a different slice and a separate release: `OBS Harness — TDD.md`. Text + fal accounts: `Live Sockets — TDD (text API + fal H3).md`.
 
 ---
 
