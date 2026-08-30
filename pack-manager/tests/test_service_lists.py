@@ -18,6 +18,7 @@ def test_services_expose_public_ordered_list_interfaces(tmp_path):
 
     asset = assets.put_bytes("reference.png", PNG, "image/png")
     character = packs.create_pack("character", "BOT1")
+    character2 = packs.create_pack("character", "BOT2")
     scene = packs.create_pack("scene", "Studio")
     character_version = packs.create_version(
         character.id,
@@ -28,6 +29,18 @@ def test_services_expose_public_ordered_list_interfaces(tmp_path):
             "persona": "Calm.",
             "writer_rules": ["Prefer evidence."],
             "voice_direction": "Measured.",
+            "asset_ids": [asset.id],
+        },
+    )
+    character2_version = packs.create_version(
+        character2.id,
+        {
+            "visual_invariants": {
+                "locked_traits": ["silhouette", "eye_design", "proportions"]
+            },
+            "persona": "Curious.",
+            "writer_rules": ["Prefer evidence."],
+            "voice_direction": "Warm.",
             "asset_ids": [asset.id],
         },
     )
@@ -43,7 +56,10 @@ def test_services_expose_public_ordered_list_interfaces(tmp_path):
         },
     )
     candidate = candidates.create(
-        character_versions={"BOT1": (character.id, character_version.version)},
+        character_versions={
+            "BOT1": (character.id, character_version.version),
+            "BOT2": (character2.id, character2_version.version),
+        },
         scene_pack_id=scene.id,
         scene_version=scene_version.version,
         hero_asset_id=asset.id,

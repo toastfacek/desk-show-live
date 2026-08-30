@@ -1,6 +1,10 @@
 import hashlib
 import json
+import shutil
 import sqlite3
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -84,7 +88,10 @@ def baseline_setup(tmp_path):
         canonical_candidate_id=approved_canonical.id,
         hero_asset_id=variant_hero.id,
         theme="Christmas",
-        changes={"palette": ["red", "green"], "accessories": ["Santa hat"]},
+        changes={
+            "palette": ["red", "green"],
+            "accessories": {"BOT1": ["Santa hat"]},
+        },
     )
 
     return {
@@ -360,3 +367,117 @@ def test_initialization_cleans_crash_orphans_safely(baseline_setup):
     assert not temporary.exists()
     assert not orphan.exists()
     assert (unrelated / "keep.txt").read_text() == "keep"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("host_map", {"BOT1": "host_a"}),
+        (
+            "host_map",
+            {"BOT1": "host_a", "BOT2": "host_b", "BOT3": "host_c"},
+        ),
+        ("display_names", {"BOT1": "BOT1"}),
+        ("display_names", {"BOT1": "BOT1", "BOT2": ""}),
+        (
+            "display_names",
+            {"BOT1": "BOT1", "BOT2": "BOT2", "BOT3": "BOT3"},
+        ),
+    ],
+)
+def test_loader_rejects_corrupt_runtime_slot_metadata(
+    baseline_setup, locked_baseline, field, value
+):
+    service = baseline_setup["baseline_service"]
+    original_dir = locked_baseline.manifest_path.parent
+    malicious_id = f"baseline_corrupt_{field}_{len(value)}"
+    malicious_dir = service.export_root / malicious_id
+    shutil.copytree(original_dir, malicious_dir)
+    manifest_path = malicious_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["baseline_id"] = malicious_id
+    manifest[field] = value
+    manifest_bytes = service._normalized_json(manifest)
+    manifest_path.write_bytes(manifest_bytes)
+    with baseline_setup["database"].connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO baselines (
+                id, cast_key, candidate_id, canonical_candidate_id,
+                fallback_reason, manifest_path, manifest_sha256, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                malicious_id,
+                locked_baseline.cast_key,
+                locked_baseline.candidate_id,
+                locked_baseline.canonical_candidate_id,
+                None,
+                str(manifest_path),
+                hashlib.sha256(manifest_bytes).hexdigest(),
+                locked_baseline.created_at,
+            ),
+        )
+
+    with pytest.raises(IntegrityError, match="host mapping|display names"):
+        service.load(malicious_id)
+
+
+def test_concurrent_same_cast_locks_are_separate_and_valid(
+    baseline_service, approved_canonical
+):
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        baselines = list(
+            executor.map(
+                lambda _: baseline_service.lock_run(
+                    approved_canonical.cast_key
+                ),
+                range(4),
+            )
+        )
+
+    assert len({baseline.id for baseline in baselines}) == 4
+    for baseline in baselines:
+        baseline_service.verify(baseline.id)
+
+
+def test_cleanup_cannot_remove_an_active_export(baseline_setup):
+    service = baseline_setup["baseline_service"]
+    export_started = threading.Event()
+    allow_export = threading.Event()
+    init_started = threading.Event()
+    original_export = service._export
+
+    def paused_export(**kwargs):
+        export_started.set()
+        assert allow_export.wait(timeout=5)
+        return original_export(**kwargs)
+
+    service._export = paused_export
+
+    def initialize_second_service():
+        init_started.set()
+        return BaselineService(
+            baseline_setup["database"],
+            baseline_setup["asset_store"],
+            baseline_setup["pack_service"],
+            baseline_setup["candidate_service"],
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        lock_future = executor.submit(
+            service.lock_run,
+            baseline_setup["approved_canonical"].cast_key,
+        )
+        assert export_started.wait(timeout=5)
+        init_future = executor.submit(initialize_second_service)
+        assert init_started.wait(timeout=5)
+        time.sleep(0.1)
+        try:
+            assert not init_future.done()
+        finally:
+            allow_export.set()
+        baseline = lock_future.result(timeout=5)
+        init_future.result(timeout=5)
+
+    service.verify(baseline.id)

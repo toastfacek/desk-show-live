@@ -13,7 +13,7 @@ from .packs import PackService
 
 
 _ALLOWED_VARIANT_CHANGES = {"scene", "palette", "accessories"}
-_LOCKED_CHARACTER_TRAITS = {"silhouette", "eye_design", "proportions"}
+_REQUIRED_CHARACTER_SLOTS = {"BOT1", "BOT2"}
 
 
 @dataclass(frozen=True)
@@ -395,6 +395,10 @@ class CandidateService:
     ) -> tuple[CharacterVersion, ...]:
         if not isinstance(character_versions, Mapping) or not character_versions:
             raise ValidationError("character_versions must be a non-empty mapping")
+        if set(character_versions) != _REQUIRED_CHARACTER_SLOTS:
+            raise ValidationError(
+                "character_versions must contain exactly BOT1 and BOT2"
+            )
         versions = []
         for slot, reference in character_versions.items():
             if not isinstance(slot, str) or not slot.strip():
@@ -454,34 +458,40 @@ class CandidateService:
     def _validate_variant_changes(changes: dict) -> dict:
         if not isinstance(changes, dict) or not changes:
             raise ValidationError("variant changes must be a non-empty object")
-        locked = CandidateService._find_locked_trait(changes)
-        if locked is not None:
-            raise ValidationError(
-                f"variant cannot override locked trait: {locked}"
-            )
         unsupported = set(changes) - _ALLOWED_VARIANT_CHANGES
         if unsupported:
             raise ValidationError(
                 "variant changes may contain only scene, palette, and accessories"
             )
+        if "scene" in changes and not isinstance(changes["scene"], dict):
+            raise ValidationError("variant scene changes must be an object")
+        if "palette" in changes and not PackService._is_meaningful_descriptor(
+            changes["palette"]
+        ):
+            raise ValidationError(
+                "variant palette must be a meaningful color descriptor"
+            )
+        if "accessories" in changes:
+            accessories = changes["accessories"]
+            if (
+                not isinstance(accessories, dict)
+                or not accessories
+                or not set(accessories).issubset(_REQUIRED_CHARACTER_SLOTS)
+                or any(
+                    not isinstance(items, list)
+                    or any(
+                        not isinstance(item, str) or not item.strip()
+                        for item in items
+                    )
+                    for items in accessories.values()
+                )
+            ):
+                raise ValidationError(
+                    "variant accessories must be an object keyed only by "
+                    "BOT1/BOT2 with lists of non-empty strings"
+                )
         serialized = _serialize_json(changes, "changes")
         return json.loads(serialized)
-
-    @staticmethod
-    def _find_locked_trait(value: object) -> str | None:
-        if isinstance(value, dict):
-            for key, item in value.items():
-                if key in _LOCKED_CHARACTER_TRAITS:
-                    return key
-                nested = CandidateService._find_locked_trait(item)
-                if nested is not None:
-                    return nested
-        elif isinstance(value, list):
-            for item in value:
-                nested = CandidateService._find_locked_trait(item)
-                if nested is not None:
-                    return nested
-        return None
 
     @staticmethod
     def _cast_key(

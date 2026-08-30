@@ -1,4 +1,5 @@
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -48,6 +49,29 @@ def test_versions_are_monotonic_and_immutable(pack_service):
 
     assert (v1.version, v2.version) == (1, 2)
     assert pack_service.get_version(pack.id, 1).manifest["persona"] != "More curious."
+
+
+def test_concurrent_version_allocation_is_unique_and_monotonic(pack_service):
+    pack = pack_service.create_pack("character", "PHASEONE[lol]")
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        versions = list(
+            executor.map(
+                lambda index: pack_service.create_version(
+                    pack.id,
+                    {
+                        **character_manifest(),
+                        "persona": f"Persona {index}",
+                    },
+                ),
+                range(16),
+            )
+        )
+
+    assert sorted(version.version for version in versions) == list(range(1, 17))
+    assert [
+        version.version for version in pack_service.list_versions(pack.id)
+    ] == list(range(1, 17))
 
 
 @pytest.mark.parametrize(

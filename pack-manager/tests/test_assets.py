@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 import pytest
 
 from pack_manager.errors import ValidationError
@@ -12,6 +14,24 @@ def test_same_bytes_are_deduplicated(asset_store):
 
     assert first.id == second.id
     assert first.sha256 == second.sha256
+
+
+def test_concurrent_same_bytes_leave_one_row_and_blob(asset_store):
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        assets = list(
+            executor.map(
+                lambda index: asset_store.put_bytes(
+                    f"{index}.png", PNG, "image/png"
+                ),
+                range(16),
+            )
+        )
+
+    assert len({asset.id for asset in assets}) == 1
+    assert len(asset_store.list_assets()) == 1
+    assert list((asset_store.data_dir / "blobs").iterdir()) == [
+        assets[0].path
+    ]
 
 
 def test_same_bytes_with_different_mime_keep_one_canonical_blob(asset_store):

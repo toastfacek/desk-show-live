@@ -1,9 +1,11 @@
+import fcntl
 import hashlib
 import json
 import os
 import shutil
 import sqlite3
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -54,6 +56,12 @@ class BaselineService:
         self._cleanup_orphan_exports()
 
     def lock_run(
+        self, cast_key: str, requested_candidate_id: str | None = None
+    ) -> Baseline:
+        with self._manager_lock():
+            return self._lock_run_locked(cast_key, requested_candidate_id)
+
+    def _lock_run_locked(
         self, cast_key: str, requested_candidate_id: str | None = None
     ) -> Baseline:
         resolution = self.candidate_service.resolve(
@@ -342,7 +350,7 @@ class BaselineService:
             row = connection.execute(
                 "SELECT name FROM packs WHERE id = ?", (pack_id,)
             ).fetchone()
-        if row is None:
+        if row is None or not row["name"].strip():
             raise IntegrityError(f"missing pack: {pack_id}")
         return row["name"]
 
@@ -357,6 +365,8 @@ class BaselineService:
         characters = manifest.get("packs", {}).get("characters")
         display_names = manifest.get("display_names")
         if not isinstance(characters, list) or not isinstance(display_names, dict):
+            raise IntegrityError("invalid display names")
+        if set(display_names) != {"BOT1", "BOT2"}:
             raise IntegrityError("invalid display names")
         expected = {}
         try:
@@ -382,6 +392,10 @@ class BaselineService:
         if self.export_root.is_symlink():
             return
         self.export_root.mkdir(parents=True, exist_ok=True)
+        with self._manager_lock():
+            self._cleanup_orphan_exports_locked()
+
+    def _cleanup_orphan_exports_locked(self) -> None:
         with self.database.connect() as connection:
             referenced = {
                 row["id"]
@@ -398,6 +412,17 @@ class BaselineService:
                 path.unlink(missing_ok=True)
             elif path.is_dir():
                 shutil.rmtree(path)
+
+    @contextmanager
+    def _manager_lock(self):
+        self.export_root.mkdir(parents=True, exist_ok=True)
+        lock_path = self.export_root / ".manager.lock"
+        with lock_path.open("a+b") as lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
     @staticmethod
     def _normalized_json(value: object) -> bytes:

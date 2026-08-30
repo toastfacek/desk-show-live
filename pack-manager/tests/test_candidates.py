@@ -92,7 +92,10 @@ def draft_variant(candidate_service, approved_canonical):
         canonical_candidate_id=approved_canonical.id,
         hero_asset_id=approved_canonical.hero_asset_id,
         theme="Christmas",
-        changes={"palette": ["red", "green"], "accessories": ["Santa hat"]},
+        changes={
+            "palette": ["red", "green"],
+            "accessories": {"BOT1": ["Santa hat"]},
+        },
     )
 
 
@@ -132,7 +135,7 @@ def test_unapproved_requested_variant_falls_back(
 def test_variant_cannot_override_locked_character_trait(
     candidate_service, approved_canonical, trait
 ):
-    with pytest.raises(ValidationError, match=trait):
+    with pytest.raises(ValidationError, match="changes"):
         candidate_service.create_variant(
             canonical_candidate_id=approved_canonical.id,
             hero_asset_id=approved_canonical.hero_asset_id,
@@ -208,19 +211,6 @@ def test_variant_rejects_changes_outside_allowlist(
         )
 
 
-@pytest.mark.parametrize("trait", ["silhouette", "eye_design", "proportions"])
-def test_variant_recursively_rejects_locked_trait_keys(
-    candidate_service, approved_canonical, trait
-):
-    with pytest.raises(ValidationError, match=trait):
-        candidate_service.create_variant(
-            canonical_candidate_id=approved_canonical.id,
-            hero_asset_id=approved_canonical.hero_asset_id,
-            theme="Nested bypass",
-            changes={"scene": {"nested": [{"metadata": {trait: "different"}}]}},
-        )
-
-
 def test_variant_can_use_alternate_scene_without_changing_cast_lineage(
     candidate_setup, approved_canonical
 ):
@@ -273,10 +263,10 @@ def test_variant_approval_revalidates_stored_changes(
     with candidate_setup["database"].connect() as connection:
         connection.execute(
             "UPDATE candidates SET changes = ? WHERE id = ?",
-            ('{"scene":{"silhouette":"bypass"}}', draft_variant.id),
+            ('{"accessories":{"BOT1":{"silhouette":"bypass"}}}', draft_variant.id),
         )
 
-    with pytest.raises(ValidationError, match="silhouette"):
+    with pytest.raises(ValidationError, match="accessories"):
         candidate_setup["candidate_service"].approve(
             draft_variant.id,
             canonical=False,
@@ -407,22 +397,98 @@ def test_candidate_requires_existing_versions_and_hero(candidate_setup):
     service = candidate_setup["candidate_service"]
     with pytest.raises(ValidationError, match="character version"):
         service.create(
-            character_versions={"BOT1": ("missing", 1)},
+            character_versions={
+                "BOT1": ("missing", 1),
+                "BOT2": (candidate_setup["bot2"].pack_id, 1),
+            },
             scene_pack_id=candidate_setup["scene"].pack_id,
             scene_version=1,
             hero_asset_id=candidate_setup["hero"].id,
         )
-
     with pytest.raises(ValidationError, match="hero"):
         service.create(
             character_versions={
-                "BOT1": (candidate_setup["bot1"].pack_id, 1)
+                "BOT1": (candidate_setup["bot1"].pack_id, 1),
+                "BOT2": (candidate_setup["bot2"].pack_id, 1),
             },
             scene_pack_id=candidate_setup["scene"].pack_id,
             scene_version=1,
             hero_asset_id="asset_missing",
         )
 
+
+@pytest.mark.parametrize(
+    "character_versions",
+    [
+        {"BOT1": ("bot1", 1)},
+        {"BOT2": ("bot2", 1)},
+        {"BOT1": ("bot1", 1), "HOST2": ("bot2", 1)},
+        {
+            "BOT1": ("bot1", 1),
+            "BOT2": ("bot2", 1),
+            "BOT3": ("bot2", 1),
+        },
+    ],
+)
+def test_candidate_requires_exactly_bot1_and_bot2_slots(
+    candidate_setup, character_versions
+):
+    references = {
+        "bot1": candidate_setup["bot1"].pack_id,
+        "bot2": candidate_setup["bot2"].pack_id,
+    }
+    supplied = {
+        slot: (references.get(pack_id, pack_id), version)
+        for slot, (pack_id, version) in character_versions.items()
+    }
+
+    with pytest.raises(ValidationError, match="BOT1 and BOT2"):
+        candidate_setup["candidate_service"].create(
+            character_versions=supplied,
+            scene_pack_id=candidate_setup["scene"].pack_id,
+            scene_version=1,
+            hero_asset_id=candidate_setup["hero"].id,
+        )
+
+
+def test_variant_allows_scene_proportions_descriptor(
+    candidate_service, approved_canonical
+):
+    variant = candidate_service.create_variant(
+        canonical_candidate_id=approved_canonical.id,
+        hero_asset_id=approved_canonical.hero_asset_id,
+        theme="Wide desk",
+        changes={"scene": {"proportions": {"desk": "wide", "screen": 0.4}}},
+    )
+
+    assert variant.changes["scene"]["proportions"]["desk"] == "wide"
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"scene": []},
+        {"palette": []},
+        {"palette": ["blue", "  "]},
+        {"accessories": []},
+        {"accessories": {}},
+        {"accessories": {"BOT3": ["hat"]}},
+        {"accessories": {"BOT1": "hat"}},
+        {"accessories": {"BOT1": [""]}},
+        {"accessories": {"BOT1": [{"name": "hat"}]}},
+        {"accessories": {"BOT1": {"silhouette": "round"}}},
+    ],
+)
+def test_variant_rejects_invalid_change_section_shapes(
+    candidate_service, approved_canonical, changes
+):
+    with pytest.raises(ValidationError, match="scene|palette|accessories"):
+        candidate_service.create_variant(
+            canonical_candidate_id=approved_canonical.id,
+            hero_asset_id=approved_canonical.hero_asset_id,
+            theme="Invalid",
+            changes=changes,
+        )
 
 def test_canonical_replacement_is_explicit(candidate_setup, approved_canonical):
     service = candidate_setup["candidate_service"]
