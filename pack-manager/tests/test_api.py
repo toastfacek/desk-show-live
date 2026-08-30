@@ -344,3 +344,60 @@ def test_browser_ui_exposes_asset_inventory_and_image_previews(tmp_path):
     assert 'document.createElement("img")' in javascript
     assert "Use in version manifest" in javascript
     assert "Copy ID" in javascript
+
+
+def test_only_current_root_is_serialized_and_selectable_as_canonical(tmp_path):
+    with TestClient(create_app(tmp_path / "data")) as client:
+        hero = upload(client, "hero.png")
+        character = client.post(
+            "/api/packs", json={"kind": "character", "name": "BOT1"}
+        ).json()
+        scene = client.post(
+            "/api/packs", json={"kind": "scene", "name": "Studio"}
+        ).json()
+        client.post(
+            f"/api/packs/{character['id']}/versions",
+            json={"manifest": character_manifest(hero["id"])},
+        )
+        client.post(
+            f"/api/packs/{scene['id']}/versions",
+            json={"manifest": scene_manifest(hero["id"])},
+        )
+        candidate_body = {
+            "character_versions": {"BOT1": [character["id"], 1]},
+            "scene_pack_id": scene["id"],
+            "scene_version": 1,
+            "hero_asset_id": hero["id"],
+        }
+        never_canonical = client.post(
+            "/api/candidates", json=candidate_body
+        ).json()
+        client.post(
+            f"/api/candidates/{never_canonical['id']}/approve",
+            json={"canonical": False, "review_note": "approved only"},
+        )
+        superseded = client.post("/api/candidates", json=candidate_body).json()
+        client.post(
+            f"/api/candidates/{superseded['id']}/approve",
+            json={"canonical": True, "review_note": "first canonical"},
+        )
+        current = client.post("/api/candidates", json=candidate_body).json()
+        current_response = client.post(
+            f"/api/candidates/{current['id']}/approve",
+            json={"canonical": True, "review_note": "replacement canonical"},
+        )
+
+        by_id = {
+            candidate["id"]: candidate
+            for candidate in client.get("/api/candidates").json()
+        }
+        javascript = client.get("/static/app.js").text
+
+    assert by_id[never_canonical["id"]]["is_current_canonical"] is False
+    assert by_id[superseded["id"]]["is_current_canonical"] is False
+    assert by_id[current["id"]]["is_current_canonical"] is True
+    assert current_response.json()["is_current_canonical"] is True
+    assert (
+        "state.candidates.filter((item) => item.is_current_canonical)"
+        in javascript
+    )
