@@ -1,0 +1,56 @@
+# Desk Show MVP config — see the TDD for the full design.
+# Secrets (FAL_KEY, WRITER_API_KEY) come from env / .env, never from this file.
+
+writer:
+  base_url: "https://api.example-inference.com/v1"   # any OpenAI-compatible chat endpoint
+  model: "TBD-distilled-model"                        # Jesse speed-tests and swaps this
+  max_words: 12
+  beats_ahead: 2
+  latency_budget_s: 1.5
+  canned_fallback:
+    # Used only if the writer endpoint is down for 3+ consecutive calls.
+    - "The markets are simply numbers that argue."
+    - "Silence is just data with no signal yet."
+    - "I have questions. The questions have no comment."
+    - "Today's forecast: cloudy, with a chance of irony."
+
+video:
+  duration: 5
+  resolution: "768p"
+  expansion: "balanced"       # prompt_expansion_mode; "quality" stalls a live show
+  model: "minimax/h3-max/image-to-video"
+
+identity:
+  anchor_reset_every: 5       # force reset to hero still every N takes
+  voice_effect: true          # apply the fixed robot ffmpeg filtergraph
+  hero_still: "assets/hero.png"
+  hold_clip: "assets/hold.mp4"
+
+spend:
+  rate_768p: 0.04             # $/s of billed output video (promo rate, ends 1 Sep 2026)
+  rate_480p: 0.025
+  cap_usd: 20                 # hard stop; leaves margin under the $25 budget
+
+persona: |
+  You are an original robot talk-show anchor. Chrome/matte head, stylized or
+  occluded mouth (LED-waveform strip). Flat robotic monotone, mid-pitch.
+  Speak exactly one line per turn: plain spoken dialogue only, no stage
+  directions, no action descriptions, no emotes. Keep it under 12 words.
+  End every line on a period.
+
+topics:
+  - "the stock market"
+  - "whether robots dream"
+  - "the weather, but ominous"
+  - "a tweet you just read"
+  - "the concept of Mondays"
+
+paths:
+  out_dir: "out"
+  raw_dir: "out/raw"
+  ready_dir: "out/ready"
+  frames_dir: "out/frames"
+  manifest: "out/takes.jsonl"
+
+playhead:
+  ipc_socket: "/tmp/deskshow.sock"
