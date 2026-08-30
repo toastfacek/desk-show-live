@@ -48,6 +48,19 @@ def test_versions_are_monotonic_and_immutable(pack_service):
     assert pack_service.get_version(pack.id, 1).manifest["persona"] != "More curious."
 
 
+def test_returned_manifest_mutation_cannot_change_version_truth(pack_service):
+    pack = pack_service.create_pack("character", "deb")
+    expected = character_manifest()
+    created = pack_service.create_version(pack.id, expected)
+
+    exposed = created.manifest
+    exposed["persona"] = "Tampered"
+    exposed["visual_invariants"]["locked_traits"].append("color")
+
+    assert created.manifest == expected
+    assert pack_service.get_version(pack.id, 1).manifest == expected
+
+
 def test_character_manifest_requires_locked_traits(pack_service):
     pack = pack_service.create_pack("character", "deb")
 
@@ -71,11 +84,128 @@ def test_character_locked_traits_are_exact(pack_service):
         pack_service.create_version(pack.id, manifest)
 
 
+@pytest.mark.parametrize(
+    ("field", "message"),
+    [
+        ("visual_invariants", "visual_invariants"),
+        ("persona", "persona"),
+        ("writer_rules", "writer_rules"),
+        ("voice_direction", "voice_direction"),
+        ("asset_ids", "asset_ids"),
+    ],
+)
+def test_character_manifest_requires_every_field(pack_service, field, message):
+    pack = pack_service.create_pack("character", "deb")
+    manifest = character_manifest()
+    del manifest[field]
+
+    with pytest.raises(ValidationError, match=message):
+        pack_service.create_version(pack.id, manifest)
+
+
+@pytest.mark.parametrize(
+    ("field", "message"),
+    [
+        ("set", "set"),
+        ("palette", "palette"),
+        ("lighting", "lighting"),
+        ("frame", "frame"),
+        ("reanchor_every", "reanchor_every"),
+        ("asset_ids", "asset_ids"),
+    ],
+)
+def test_scene_manifest_requires_every_field(pack_service, field, message):
+    pack = pack_service.create_pack("scene", "Light studio")
+    manifest = scene_manifest()
+    del manifest[field]
+
+    with pytest.raises(ValidationError, match=message):
+        pack_service.create_version(pack.id, manifest)
+
+
+@pytest.mark.parametrize("field", ["w", "h", "fps"])
+def test_scene_frame_requires_every_field(pack_service, field):
+    pack = pack_service.create_pack("scene", "Light studio")
+    manifest = scene_manifest()
+    del manifest["frame"][field]
+
+    with pytest.raises(ValidationError, match=rf"frame\.{field}"):
+        pack_service.create_version(pack.id, manifest)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("persona", ""),
+        ("persona", "   "),
+        ("persona", 1),
+        ("voice_direction", ""),
+        ("voice_direction", None),
+        ("writer_rules", "Prefer evidence."),
+        ("writer_rules", {}),
+        ("visual_invariants", []),
+        ("asset_ids", ()),
+    ],
+)
+def test_character_manifest_rejects_invalid_structures(
+    pack_service, field, value
+):
+    pack = pack_service.create_pack("character", "deb")
+    manifest = character_manifest()
+    manifest[field] = value
+
+    with pytest.raises(ValidationError, match=field):
+        pack_service.create_version(pack.id, manifest)
+
+
+@pytest.mark.parametrize(
+    ("path", "value", "message"),
+    [
+        (("frame", "w"), 0, r"frame\.w"),
+        (("frame", "h"), -1, r"frame\.h"),
+        (("frame", "fps"), 1.5, r"frame\.fps"),
+        (("frame", "fps"), True, r"frame\.fps"),
+        (("reanchor_every",), 0, "reanchor_every"),
+        (("reanchor_every",), False, "reanchor_every"),
+        (("set",), "  ", "set"),
+        (("palette",), [], "palette"),
+        (("palette",), ["  "], "palette"),
+        (("palette",), {}, "palette"),
+        (("lighting",), None, "lighting"),
+        (("frame",), [], "frame"),
+        (("asset_ids",), (), "asset_ids"),
+    ],
+)
+def test_scene_manifest_rejects_invalid_values(
+    pack_service, path, value, message
+):
+    pack = pack_service.create_pack("scene", "Light studio")
+    manifest = scene_manifest()
+    target = manifest
+    for part in path[:-1]:
+        target = target[part]
+    target[path[-1]] = value
+
+    with pytest.raises(ValidationError, match=message):
+        pack_service.create_version(pack.id, manifest)
+
+
 def test_version_requires_existing_assets(pack_service):
     pack = pack_service.create_pack("scene", "Light studio")
 
     with pytest.raises(ValidationError, match="asset_missing"):
         pack_service.create_version(pack.id, scene_manifest(["asset_missing"]))
+
+
+def test_version_accepts_existing_asset_reference(pack_service):
+    asset = pack_service.asset_store.put_bytes(
+        "reference.png", b"\x89PNG\r\n\x1a\nreference", "image/png"
+    )
+    pack = pack_service.create_pack("character", "deb")
+
+    version = pack_service.create_version(pack.id, character_manifest([asset.id]))
+
+    assert version.manifest["asset_ids"] == [asset.id]
 
 
 def test_list_packs_can_filter_by_kind(pack_service):

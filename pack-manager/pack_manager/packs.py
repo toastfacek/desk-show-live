@@ -1,7 +1,7 @@
 import json
 import sqlite3
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from .assets import AssetStore
@@ -21,12 +21,29 @@ class Pack:
     created_at: str
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class PackVersion:
     pack_id: str
     version: int
-    manifest: dict
     created_at: str
+    _manifest_json: str = field(repr=False)
+
+    def __init__(
+        self, pack_id: str, version: int, manifest: dict, created_at: str
+    ):
+        object.__setattr__(self, "pack_id", pack_id)
+        object.__setattr__(self, "version", version)
+        object.__setattr__(self, "created_at", created_at)
+        object.__setattr__(
+            self,
+            "_manifest_json",
+            json.dumps(manifest, sort_keys=True, separators=(",", ":")),
+        )
+
+    @property
+    def manifest(self) -> dict:
+        """Return an independent copy of this version's manifest."""
+        return json.loads(self._manifest_json)
 
 
 class PackService:
@@ -145,6 +162,12 @@ class PackService:
         PackService._require_fields(
             manifest, ("persona", "writer_rules", "voice_direction", "asset_ids")
         )
+        PackService._require_non_empty_string(manifest["persona"], "persona")
+        if not isinstance(manifest["writer_rules"], list):
+            raise ValidationError("writer_rules must be a list")
+        PackService._require_non_empty_string(
+            manifest["voice_direction"], "voice_direction"
+        )
 
     @staticmethod
     def _validate_scene_manifest(manifest: dict) -> None:
@@ -156,6 +179,14 @@ class PackService:
             manifest,
             ("set", "palette", "lighting", "reanchor_every", "asset_ids"),
         )
+        for field in ("w", "h", "fps"):
+            PackService._require_positive_integer(frame[field], f"frame.{field}")
+        PackService._require_positive_integer(
+            manifest["reanchor_every"], "reanchor_every"
+        )
+        PackService._require_non_empty_string(manifest["set"], "set")
+        PackService._require_meaningful_palette(manifest["palette"])
+        PackService._require_non_empty_string(manifest["lighting"], "lighting")
 
     def _validate_assets(self, asset_ids: object) -> None:
         if not isinstance(asset_ids, list):
@@ -175,6 +206,38 @@ class PackService:
         for field in fields:
             if field not in value:
                 raise ValidationError(f"manifest requires {prefix}{field}")
+
+    @staticmethod
+    def _require_non_empty_string(value: object, field: str) -> None:
+        if not isinstance(value, str) or not value.strip():
+            raise ValidationError(f"{field} must be a non-empty string")
+
+    @staticmethod
+    def _require_positive_integer(value: object, field: str) -> None:
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValidationError(f"{field} must be a positive integer")
+
+    @staticmethod
+    def _require_meaningful_palette(value: object) -> None:
+        if not PackService._is_meaningful_descriptor(value):
+            raise ValidationError("palette must be a meaningful value")
+
+    @staticmethod
+    def _is_meaningful_descriptor(value: object) -> bool:
+        if isinstance(value, str):
+            return bool(value.strip())
+        if isinstance(value, list):
+            return bool(value) and all(
+                PackService._is_meaningful_descriptor(item) for item in value
+            )
+        if isinstance(value, dict):
+            return bool(value) and all(
+                isinstance(key, str)
+                and bool(key.strip())
+                and PackService._is_meaningful_descriptor(item)
+                for key, item in value.items()
+            )
+        return False
 
     @staticmethod
     def _serialize_manifest(manifest: dict) -> str:
