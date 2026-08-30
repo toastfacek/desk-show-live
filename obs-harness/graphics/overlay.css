@@ -45,6 +45,7 @@
   --live: #ff5a4d;
   --pad: 32px;
   --gap: 0px;
+  --weld: 3px;
   --stage-top: 96px;
   --stage-h: 792px;
   --col: calc((1920px - (var(--pad) * 2)) / 3);
@@ -175,7 +176,7 @@ body {
 
 .box-r {
   top: var(--stage-top);
-  left: calc(var(--pad) + var(--col) + var(--gap) + var(--col) + var(--gap));
+  left: calc(var(--pad) + var(--col) + var(--col) - var(--weld));
   width: var(--col);
   height: var(--stage-h);
 }
@@ -250,8 +251,8 @@ body {
 .card {
   position: absolute;
   top: var(--stage-top);
-  left: calc(var(--pad) + var(--col) + var(--gap));
-  width: var(--col);
+  left: calc(var(--pad) + var(--col) - var(--weld));
+  width: calc(var(--col) + (var(--weld) * 2));
   height: var(--stage-h);
   background: var(--plate);
   border: 3px solid var(--line);
@@ -455,8 +456,8 @@ body {
 #stage[data-layout="split"] .card {
   display: block;
   top: var(--stage-top);
-  left: calc(var(--pad) + var(--col) + var(--gap));
-  width: var(--col);
+  left: calc(var(--pad) + var(--col) - var(--weld));
+  width: calc(var(--col) + (var(--weld) * 2));
   height: var(--stage-h);
   bottom: auto;
 }
@@ -474,8 +475,8 @@ body {
   height: var(--stage-h);
 }
 #stage[data-layout="solo_l"] .card {
-  left: calc(var(--pad) + var(--solo-host) + var(--gap));
-  width: var(--solo-info);
+  left: calc(var(--pad) + var(--solo-host) - var(--weld));
+  width: calc(var(--solo-info) + var(--weld));
   height: var(--stage-h);
 }
 #stage[data-layout="solo_l"] .box-r,
@@ -490,11 +491,11 @@ body {
 }
 #stage[data-layout="solo_r"] .card {
   left: var(--pad);
-  width: var(--solo-info);
+  width: calc(var(--solo-info) + var(--weld));
   height: var(--stage-h);
 }
 #stage[data-layout="solo_r"] .box-r {
-  left: calc(var(--pad) + var(--solo-info) + var(--gap));
+  left: calc(var(--pad) + var(--solo-info) - var(--weld));
   width: var(--solo-host);
   height: var(--stage-h);
 }
