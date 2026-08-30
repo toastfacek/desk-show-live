@@ -61,7 +61,7 @@ function render() {
   refill(".asset-options", state.assets, (item) => `${item.id} · ${item.mime_type}`);
   refill(
     ".canonical-options",
-    state.candidates.filter((item) => item.status === "approved" && !item.canonical_candidate_id),
+    state.candidates.filter((item) => item.is_current_canonical),
     (item) => `${item.id} · ${item.cast_key.slice(0, 10)}`,
   );
   refill(".candidate-options", state.candidates, (item) => `${item.id} · ${item.status}`, true);

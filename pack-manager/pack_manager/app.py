@@ -265,8 +265,12 @@ def create_app(
 
     @app.get("/api/candidates")
     def list_candidates():
+        canonical_ids = services.candidates.current_canonical_ids()
         return [
-            _candidate_json(candidate)
+            _candidate_json(
+                candidate,
+                is_current_canonical=candidate.id in canonical_ids,
+            )
             for candidate in services.candidates.list_candidates()
         ]
 
@@ -295,57 +299,82 @@ def create_app(
             )
         finally:
             output_path.unlink(missing_ok=True)
+        candidate = services.candidates.create(
+            character_versions=body.character_versions,
+            scene_pack_id=body.scene_pack_id,
+            scene_version=body.scene_version,
+            hero_asset_id=generated.id,
+        )
         return _candidate_json(
-            services.candidates.create(
-                character_versions=body.character_versions,
-                scene_pack_id=body.scene_pack_id,
-                scene_version=body.scene_version,
-                hero_asset_id=generated.id,
-            )
+            candidate,
+            is_current_canonical=services.candidates.is_current_canonical(
+                candidate.id
+            ),
         )
 
     @app.post("/api/candidates/variants", status_code=201)
     def create_variant(body: VariantCreate):
+        candidate = services.candidates.create_variant(
+            canonical_candidate_id=body.canonical_candidate_id,
+            hero_asset_id=body.hero_asset_id,
+            theme=body.theme,
+            changes=body.changes,
+        )
         return _candidate_json(
-            services.candidates.create_variant(
-                canonical_candidate_id=body.canonical_candidate_id,
-                hero_asset_id=body.hero_asset_id,
-                theme=body.theme,
-                changes=body.changes,
-            )
+            candidate,
+            is_current_canonical=services.candidates.is_current_canonical(
+                candidate.id
+            ),
         )
 
     @app.post("/api/candidates", status_code=201)
     def create_candidate(body: CandidateCreate):
+        candidate = services.candidates.create(
+            character_versions=body.character_versions,
+            scene_pack_id=body.scene_pack_id,
+            scene_version=body.scene_version,
+            hero_asset_id=body.hero_asset_id,
+        )
         return _candidate_json(
-            services.candidates.create(
-                character_versions=body.character_versions,
-                scene_pack_id=body.scene_pack_id,
-                scene_version=body.scene_version,
-                hero_asset_id=body.hero_asset_id,
-            )
+            candidate,
+            is_current_canonical=services.candidates.is_current_canonical(
+                candidate.id
+            ),
         )
 
     @app.get("/api/candidates/{candidate_id}")
     def get_candidate(candidate_id: str):
-        return _candidate_json(services.candidates.get(candidate_id))
+        return _candidate_json(
+            services.candidates.get(candidate_id),
+            is_current_canonical=services.candidates.is_current_canonical(
+                candidate_id
+            ),
+        )
 
     @app.post("/api/candidates/{candidate_id}/approve")
     def approve_candidate(candidate_id: str, body: CandidateApprove):
+        candidate = services.candidates.approve(
+            candidate_id,
+            canonical=body.canonical,
+            review_note=body.review_note,
+        )
         return _candidate_json(
-            services.candidates.approve(
-                candidate_id,
-                canonical=body.canonical,
-                review_note=body.review_note,
-            )
+            candidate,
+            is_current_canonical=services.candidates.is_current_canonical(
+                candidate.id
+            ),
         )
 
     @app.post("/api/candidates/{candidate_id}/reject")
     def reject_candidate(candidate_id: str, body: CandidateReject):
+        candidate = services.candidates.reject(
+            candidate_id, review_note=body.review_note
+        )
         return _candidate_json(
-            services.candidates.reject(
-                candidate_id, review_note=body.review_note
-            )
+            candidate,
+            is_current_canonical=services.candidates.is_current_canonical(
+                candidate.id
+            ),
         )
 
     @app.post("/api/baselines", status_code=201)
@@ -430,7 +459,9 @@ def _version_json(version: PackVersion) -> dict:
     }
 
 
-def _candidate_json(candidate: Candidate) -> dict:
+def _candidate_json(
+    candidate: Candidate, *, is_current_canonical: bool
+) -> dict:
     return {
         "id": candidate.id,
         "cast_key": candidate.cast_key,
@@ -441,6 +472,7 @@ def _candidate_json(candidate: Candidate) -> dict:
         "scene_version": candidate.scene_version,
         "hero_asset_id": candidate.hero_asset_id,
         "canonical_candidate_id": candidate.canonical_candidate_id,
+        "is_current_canonical": is_current_canonical,
         "theme": candidate.theme,
         "changes": candidate.changes,
         "status": candidate.status,

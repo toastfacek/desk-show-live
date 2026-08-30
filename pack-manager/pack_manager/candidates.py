@@ -307,6 +307,27 @@ class CandidateService:
             ).fetchall()
         return [self._from_row(row) for row in rows]
 
+    def current_canonical_ids(self) -> set[str]:
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                "SELECT candidate_id FROM canonical_candidates"
+            ).fetchall()
+        return {row["candidate_id"] for row in rows}
+
+    def is_current_canonical(self, candidate_id: str) -> bool:
+        # Missing candidates remain a not-found error rather than silently false.
+        self.get(candidate_id)
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT 1
+                FROM canonical_candidates
+                WHERE candidate_id = ?
+                """,
+                (candidate_id,),
+            ).fetchone()
+        return row is not None
+
     def _validate_character_versions(
         self, character_versions: Mapping[str, tuple[str, int]]
     ) -> tuple[CharacterVersion, ...]:
