@@ -1,0 +1,99 @@
+# Runtime — studio bible
+#
+# The single source of truth for what the generated frame contains.
+# Read by the generator to assemble every take prompt (see the architecture
+# doc, §5.3) and by the OBS driver for box geometry and display names.
+#
+# Rules that hold everywhere in this file:
+#   - Never name a show, studio, artist or character. Describe, don't cite.
+#   - No readable text anywhere in the generated frame. Video models garble
+#     text and it flickers take to take. All text is drawn in OBS.
+#   - BOT1 is always camera-left, BOT2 always camera-right. Never swap.
+#   - display_name is drawn by OBS only. It never enters a generated prompt.
+
+studio:
+  frame: {w: 1344, h: 768, fps: 24}     # 768p 16:9, the H3 Max max
+
+  # The split layout crops these halves and lays the card over the seam.
+  zones:
+    left:  [0.00, 0.50]
+    right: [0.50, 1.00]
+
+  anchor: assets/hero_wide.png
+  reanchor_every: 5
+
+  # ---------------------------------------------------------------------
+  style: |
+    Flat 2D cartoon animation. Uniform heavy black outlines of consistent
+    weight. Large flat areas of saturated colour, minimal gradient, minimal
+    rendering. Simplified geometric construction. Large expressive eyes.
+    Limited-animation feel at 24fps: crisp holds, no motion blur, no
+    photorealism, no 3D shading. Retro-futurist production design — brushed
+    chrome, CRT monitors, neon tubing, chunky moulded plastic.
+
+  # ---------------------------------------------------------------------
+  set: |
+    A small television studio built inside a San Francisco startup office.
+    A long pale-grey desk runs across the lower third of frame, its front
+    edge parallel to camera. Two boom microphones angle in from off-frame
+    left and right. On the desk: two open laptops covered in stickers, tall
+    slim energy-drink cans, a glass water bottle, a scatter of index cards.
+
+    Behind the desk, a wall of mismatched CRT monitors in chrome and cream
+    housings, stacked unevenly. Some glow with abstract green line charts,
+    some with flat colour fields, some are dark. Loops of cable sag between
+    them. Above the wall, a length of bent neon tubing in an abstract
+    geometric shape — no letters, no words, no logos anywhere.
+
+    Lighting is motivated and asymmetric: a warm amber practical lamp off
+    frame-left, a cool teal neon wash off frame-right. The desk surface
+    catches both. Background falls off into a dark neutral so the two hosts
+    read cleanly against it.
+
+  # ---------------------------------------------------------------------
+  hosts:
+    BOT1:
+      display_name: PHASEONE[lol]     # what the lower third shows
+      seat: left
+      faces: right                    # slight inward turn, never breaks
+      accent: warm amber
+      sheet: |
+        A cartoon robot news anchor. Boxy head like a rounded television
+        set, brushed chrome with visible panel seams and two small rivets
+        at the temples. Two round amber lenses for eyes behind a gently
+        curved glass face, with simple black brow plates that tilt to
+        express. The mouth is a horizontal slot containing a glowing amber
+        LED waveform that moves when speaking. A short stubby antenna on
+        the left of the head. Broad squared shoulders. Wears a quilted
+        quarter-zip vest over a plain t-shirt, and a lanyard with a blank
+        badge. Sits upright, squared to the desk, forearms resting on it,
+        hands loosely folded. Calm, dry, unhurried.
+
+    BOT2:
+      display_name: deb              # lowercase, always
+      seat: right
+      faces: left
+      accent: cool cyan
+      sheet: |
+        A cartoon robot co-host. Tall capsule-shaped head in matte off-white
+        plastic, narrower than it is high, with a single wide visor band of
+        dark glass across the eyes. Two bright cyan dots float inside the
+        visor as pupils and move independently. Below the visor, a small
+        rigid hinged jaw plate that opens and closes in simple shapes when
+        speaking. A thin chrome collar ring at the neck. Narrower shoulders,
+        slightly slouched. Wears a zip hoodie with the hood down, a cap worn
+        backwards over the top of the head, and an oversized chrome watch.
+        Leans forward, elbows on the desk, hands often mid-gesture. Restless,
+        skeptical, needling.
+
+  # ---------------------------------------------------------------------
+  # Composition contract. Weak on purpose (architecture doc §4.1) — the card
+  # covers the seam, so only these need to hold.
+  composition: |
+    Wide two-shot. Locked-off camera at eye level, no camera movement.
+    BOT1 occupies the left half of frame, BOT2 the right half. Each is
+    fully inside their own half, torso and head, positioned slightly
+    outboard of the centre of that half so the middle of frame stays open.
+    Heads sit in the upper-middle of frame with clear headroom; neither is
+    cropped at the top. A visible gap of empty desk and background between
+    them at frame centre. Both are framed from roughly the waist up.
