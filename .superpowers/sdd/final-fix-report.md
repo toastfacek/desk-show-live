@@ -69,3 +69,57 @@ PASS
 No unresolved correctness concerns. `max_request_bytes` must remain greater
 than `max_upload_bytes`; the default and checked-in config reserve 1 MiB for
 multipart framing and headers.
+
+## Remaining-findings fix wave
+
+The follow-up review was handled test-first. New coverage includes exact
+two-host candidate contracts, strict variant section shapes, corrupted runtime
+slot metadata, active-export cleanup exclusion, all requested concurrency
+cases, OpenAPI mutation headers, and cast-scoped browser selection behavior.
+
+RED:
+
+```text
+python3 -m pytest tests/test_candidates.py tests/test_packs.py \
+  tests/test_assets.py tests/test_baselines.py tests/test_api.py \
+  tests/test_web_js.py -q
+20 failed, 122 passed in 2.75s
+```
+
+An initial focused GREEN run found one formatting-sensitive JavaScript source
+assertion (`1 failed, 142 passed`); the assertion was corrected to test behavior
+markers independently rather than source formatting.
+
+Final verification:
+
+```text
+cd pack-manager && python3 -m pytest -q -W error
+143 passed in 2.68s
+
+cd obs-harness && python3 -m pytest -q
+18 passed in 0.06s
+
+cd pack-manager && node --check pack_manager/web/app.js
+PASS
+
+cd pack-manager && node --check pack_manager/web/selection.js
+PASS
+
+cd pack-manager && python3 -m compileall -q pack_manager tests
+PASS
+
+git diff --check
+PASS
+
+git diff --name-only abb2937..HEAD -- obs-harness
+PASS (no output; no obs-harness changes)
+```
+
+Additional commits:
+
+- `f9220c7` Enforce two-host contracts and race-safe exports
+- `feb6cf6` Harden two-host web workflow and API docs
+- `9f9ed9d` Make dropdown behavior assertion formatting-independent
+
+The manager-wide export lock uses POSIX `fcntl.flock`, matching the documented
+macOS, Linux, and WSL target. There are no unresolved concerns for that target.
