@@ -28,7 +28,7 @@
 
 ### Fey, Origin and OpenSea — dense-data dark UI references
 - **Source:** https://mobbin.com/screens/4c06e82d-ede4-49b3-bd0d-62701780688e
-- **Steal:** Put neutral text and hairline data structure on near-black surfaces, then reserve restrained warm/cool colour for state and grouping rather than painting every panel.
+- **Steal:** Put neutral text on near-black surfaces, align changing values to a rigid grid, and use solid 3–4 px minimum separators at 1080p; reserve restrained warm/cool colour for state and grouping rather than painting every panel.
 - **Why it serves Runtime:** This serves constraints 3 and 4 by creating hierarchy chiefly through luminance and solid plates, which is more robust than low-contrast colour detail at 480p.
 - **Inspected references:** [Fey](https://mobbin.com/screens/4c06e82d-ede4-49b3-bd0d-62701780688e) uses off-white primary text, subdued gray metadata, and small teal/magenta market marks on nested near-black cards; [Origin](https://mobbin.com/screens/206ca1ac-9c43-4f86-82e8-98c0f24d1140) uses a black/charcoal shell with blue chart lines and compact green/red values; [OpenSea](https://mobbin.com/screens/02a825d8-2758-4c48-bf05-d0b6058d4b5b) uses a dense token table with neutral numerals and green/red deltas. These are **my visual observations from the retrieved screenshots**, not claims made by Mobbin.
 - **Inference — palette A, “signal desk”:** foundation `#101116`; raised plate `#171A20`; primary text `#F2F0E8`; secondary text `#A9ADB7`; warm amber `#F2A541`; cool teal `#2FB7B2`; gain `#4FC58B`; loss `#E05D68`.
