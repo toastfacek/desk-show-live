@@ -14,6 +14,28 @@ IBM Plex (Sans, Sans Condensed, Mono) is SIL Open Font License. Files are vendor
 
 The overlay always draws: LIVE, wordmark, clock, chyron, two tickers, name bars, host frames, center card. Layout (`wide` / `split` / `solo_l` / `solo_r` / `card_full` / `hold`) only shows or hides boxes. Tickers keep moving on hold.
 
+## Preview vs Program
+
+`preview.html` is a studio monitor. The dashed host wells and the warm/cool wash behind them are fake, so you can click layouts without OBS. They never go to Twitch.
+
+`overlay.html` is what actually sits on Program: a transparent 1080 Browser source named `FRAME`. Chyron, tickers, LIVE, names, frames, and the card are this file.
+
+The hosts on stream are not HTML. They are the OBS media source `HOST_WIDE` (a clip from `assets/clips/` today; fal later). OBS crops that file into the left and right boxes. This pack only draws the chrome around them.
+
+**What to edit for each layer**
+
+| What you want to change | Where |
+| :---- | :---- |
+| Look of the chrome (type, colour, bar height) | `overlay.css` / `overlay.html` |
+| Headline, which card, layout plan | `rundown.yaml` |
+| Post text on the card | `posts.json` |
+| Host names | `overlay.py` (`DEFAULT_HOSTS`) — display only, never in a video prompt |
+| Lines the hosts say | `script.jsonl` |
+| Pictures in the host boxes | `assets/clips/*.mp4`, pointed at `HOST_WIDE` in OBS |
+| Room / characters | Generated video + `studio.yaml`. Not this HTML. |
+
+The harness writes `out/overlay_state.json` on every cut. The overlay polls it. That is how a fake run or a later OBS run drives the furniture without you clicking preview buttons.
+
 ## Preview (no OBS)
 
 ```bash
@@ -39,7 +61,7 @@ Headline and names live here so the first drop-in looks like a show. H3 can stil
 
 ## Grid
 
-- Canvas 1920×1080. Side pad 32, gap 16. Stage 792 tall under the header.
-- Split is three equal columns: host · card · host. Nothing overlaps.
+- Canvas 1920×1080. Side pad 32, no gutter. Stage 792 tall under the header.
+- Split is three equal columns, flush: host · card · host.
 - `solo_l` is host left + info window right. `solo_r` is the mirror.
 - Host names: `PHASEONE[lol]` never lowercases; `deb` never capitalizes.

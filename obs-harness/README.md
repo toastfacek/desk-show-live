@@ -22,7 +22,7 @@ python3 -m http.server 8765
 ```
 
 Open http://127.0.0.1:8765/graphics/preview.html  
-That is the chyron, tickers, name bars, and host frames. Click the six layouts. The video wells are placeholders — real `HOST_WIDE` lives in OBS.
+The dashed wells and the background wash are a mock. What actually streams is `graphics/overlay.html` over the OBS source `HOST_WIDE`. See `graphics/README.md` for what to edit.
 
 ## Talk to OBS
 

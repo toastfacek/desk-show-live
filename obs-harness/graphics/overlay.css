@@ -44,11 +44,11 @@
   --cyan: #3ee0e8;
   --live: #ff5a4d;
   --pad: 32px;
-  --gap: 16px;
+  --gap: 0px;
   --stage-top: 96px;
   --stage-h: 792px;
-  --col: 608px;
-  --solo-host: 1184px;
+  --col: calc((1920px - (var(--pad) * 2)) / 3);
+  --solo-host: 1200px;
   --solo-info: 656px;
 }
 

@@ -76,13 +76,13 @@
       .well-l {
         top: 96px;
         left: 32px;
-        width: 608px;
+        width: calc((1920px - 64px) / 3);
         height: 792px;
       }
       .well-r {
         top: 96px;
-        left: 1280px;
-        width: 608px;
+        left: calc(32px + (2 * (1920px - 64px) / 3));
+        width: calc((1920px - 64px) / 3);
         height: 792px;
       }
       .well span {
@@ -114,7 +114,7 @@
         display: block;
         top: 96px;
         left: 32px;
-        width: 1184px;
+        width: 1200px;
         height: 792px;
       }
       .set[data-layout="solo_l"] .well-r {
@@ -123,8 +123,8 @@
       .set[data-layout="solo_r"] .well-r {
         display: block;
         top: 96px;
-        left: 704px;
-        width: 1184px;
+        left: 688px;
+        width: 1200px;
         height: 792px;
       }
       .set[data-layout="solo_r"] .well-l {
@@ -156,7 +156,7 @@
         <div class="well well-l"><span>HOST_WIDE · left crop</span></div>
         <div class="well well-r"><span>HOST_WIDE · right crop</span></div>
       </div>
-      <iframe id="ov" src="overlay.html?v=3" title="Runtime overlay"></iframe>
+      <iframe id="ov" src="overlay.html?v=4" title="Runtime overlay"></iframe>
     </div>
     <script>
       const set = document.getElementById("set");
