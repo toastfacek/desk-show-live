@@ -1,0 +1,15 @@
+[project]
+name = "obs-harness"
+version = "0.1.0"
+description = "Clock and OBS player for a live show. No video vendor. No text vendor."
+requires-python = ">=3.11"
+dependencies = [
+  "pyyaml>=6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

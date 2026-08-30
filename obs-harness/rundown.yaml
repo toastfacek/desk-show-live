@@ -1,0 +1,19 @@
+show:
+  name: demo
+  target_len_s: 90
+  mode: rehearse
+
+posts_file: posts.json
+script_file: script.jsonl
+clip_pool: assets/clips/
+
+segments:
+  - id: demo_1
+    kind: talk
+    target_len_s: 90
+    layout_plan: [wide, split, split, wide, split]
+    package:
+      item_id: "demo-1"
+      chyron: "A MOVE WITHOUT A THESIS"
+      center: {kind: card, id: "demo-1"}
+      spend_policy: normal

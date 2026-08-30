@@ -2,7 +2,9 @@
 
 **Status:** Draft for build · **Date:** 29 Aug 2026 · **Owner:** Jesse · **Author:** Claude (from Forge spec \+ 29 Aug Q\&A)
 
-**Parent docs:** "Desk Show — H3 Max Spec \+ Review \+ Drift Plan" (Drive \+ project). This TDD covers only the confirmed first-build slice.
+**Parent docs:** "Desk Show — H3 Max Spec \+ Review \+ Drift Plan" (Drive \+ project). This TDD covers only the confirmed first-build slice (one host, simple player, real fal).
+
+The OBS runner is a different slice and a separate release: `OBS Harness — TDD.md`. Text + fal accounts: `Live Sockets — TDD (text API + fal H3).md`.
 
 ---
 
