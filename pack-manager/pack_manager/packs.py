@@ -118,6 +118,24 @@ class PackService:
             raise KeyError((pack_id, version))
         return self._version_from_row(row)
 
+    def list_versions(self, pack_id: str) -> list[PackVersion]:
+        with self.database.connect() as connection:
+            pack = connection.execute(
+                "SELECT 1 FROM packs WHERE id = ?", (pack_id,)
+            ).fetchone()
+            if pack is None:
+                raise KeyError(pack_id)
+            rows = connection.execute(
+                """
+                SELECT pack_id, version, manifest, created_at
+                FROM pack_versions
+                WHERE pack_id = ?
+                ORDER BY version
+                """,
+                (pack_id,),
+            ).fetchall()
+        return [self._version_from_row(row) for row in rows]
+
     def list_packs(self, kind: str | None = None) -> list[Pack]:
         if kind is not None:
             self._validate_kind(kind)

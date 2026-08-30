@@ -300,6 +300,13 @@ class CandidateService:
     def get(self, candidate_id: str) -> Candidate:
         return self._get(candidate_id)
 
+    def list_candidates(self) -> list[Candidate]:
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM candidates ORDER BY created_at, rowid"
+            ).fetchall()
+        return [self._from_row(row) for row in rows]
+
     def _validate_character_versions(
         self, character_versions: Mapping[str, tuple[str, int]]
     ) -> tuple[CharacterVersion, ...]:

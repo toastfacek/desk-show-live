@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .db import Database
-from .errors import ValidationError
+from .errors import IntegrityError, ValidationError
 
 
 _EXTENSIONS = {
@@ -97,6 +97,23 @@ class AssetStore:
         if row is None:
             raise KeyError(asset_id)
         return self._from_row(row)
+
+    def list_assets(self) -> list[Asset]:
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM assets ORDER BY created_at, rowid"
+            ).fetchall()
+        return [self._from_row(row) for row in rows]
+
+    def read_verified(self, asset_id: str) -> tuple[Asset, bytes]:
+        asset = self.get(asset_id)
+        try:
+            content = asset.path.read_bytes()
+        except (FileNotFoundError, IsADirectoryError) as error:
+            raise IntegrityError(f"missing asset content: {asset_id}") from error
+        if hashlib.sha256(content).hexdigest() != asset.sha256:
+            raise IntegrityError(f"asset hash mismatch: {asset_id}")
+        return asset, content
 
     @staticmethod
     def _write_once(path: Path, content: bytes) -> bool:

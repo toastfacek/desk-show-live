@@ -10,9 +10,11 @@ from typing import Annotated, Literal
 import uvicorn
 import yaml
 from fastapi import FastAPI, File, Query, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .assets import Asset, AssetStore
 from .baselines import Baseline, BaselineService
@@ -129,6 +131,39 @@ def create_app(
     ):
         app.add_exception_handler(error_type, domain_error_handler)
 
+    @app.exception_handler(RequestValidationError)
+    async def request_validation_error_handler(
+        request: Request, error: RequestValidationError
+    ) -> JSONResponse:
+        del request
+        errors = error.errors()
+        malformed = any(item.get("type") == "json_invalid" for item in errors)
+        if malformed:
+            status, code, message = 400, "malformed_request", "malformed JSON body"
+        else:
+            first = errors[0] if errors else {}
+            location = ".".join(str(part) for part in first.get("loc", ()))
+            detail = first.get("msg", "invalid request")
+            message = f"{location}: {detail}" if location else detail
+            status, code = 422, "request_validation"
+        return _error_response(status, code, message)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_error_handler(
+        request: Request, error: StarletteHTTPException
+    ) -> JSONResponse:
+        del request
+        codes = {
+            400: "malformed_request",
+            404: "not_found",
+            405: "method_not_allowed",
+        }
+        return _error_response(
+            error.status_code,
+            codes.get(error.status_code, "http_error"),
+            str(error.detail),
+        )
+
     @app.exception_handler(KeyError)
     async def missing_error_handler(
         request: Request, error: KeyError
@@ -155,6 +190,13 @@ def create_app(
             content={"error": {"code": "conflict", "message": str(error)}},
         )
 
+    @app.exception_handler(Exception)
+    async def unexpected_error_handler(
+        request: Request, error: Exception
+    ) -> JSONResponse:
+        del request, error
+        return _error_response(500, "internal_error", "internal server error")
+
     @app.get("/api/packs")
     def list_packs(kind: Literal["character", "scene"] | None = Query(None)):
         return [_pack_json(pack) for pack in services.packs.list_packs(kind)]
@@ -165,17 +207,9 @@ def create_app(
 
     @app.get("/api/packs/{pack_id}/versions")
     def list_versions(pack_id: str):
-        # Establish a stable 404 before querying an otherwise empty history.
-        if not any(pack.id == pack_id for pack in services.packs.list_packs()):
-            raise KeyError(pack_id)
-        with services.database.connect() as connection:
-            rows = connection.execute(
-                "SELECT version FROM pack_versions WHERE pack_id = ? ORDER BY version",
-                (pack_id,),
-            ).fetchall()
         return [
-            _version_json(services.packs.get_version(pack_id, row["version"]))
-            for row in rows
+            _version_json(version)
+            for version in services.packs.list_versions(pack_id)
         ]
 
     @app.get("/api/packs/{pack_id}/versions/{version}")
@@ -190,14 +224,19 @@ def create_app(
 
     @app.get("/api/assets")
     def list_assets():
-        with services.database.connect() as connection:
-            rows = connection.execute(
-                "SELECT * FROM assets ORDER BY created_at, rowid"
-            ).fetchall()
-        return [
-            _asset_json(AssetStore._from_row(row))  # noqa: SLF001
-            for row in rows
-        ]
+        return [_asset_json(asset) for asset in services.assets.list_assets()]
+
+    @app.get("/api/assets/{asset_id}/content")
+    def get_asset_content(asset_id: str):
+        asset, content = services.assets.read_verified(asset_id)
+        return Response(
+            content=content,
+            media_type=asset.mime_type,
+            headers={
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
 
     @app.get("/api/assets/{asset_id}")
     def get_asset(asset_id: str):
@@ -215,6 +254,10 @@ def create_app(
             raise UploadTooLargeError(
                 f"upload size exceeds limit {max_upload_bytes}"
             )
+        if not _matches_image_signature(content, mime_type):
+            raise ValidationError(
+                f"file signature does not match {mime_type}"
+            )
         # The original filename is metadata only; AssetStore never uses it as a path.
         return _asset_json(
             services.assets.put_bytes(file.filename or "upload", content, mime_type)
@@ -222,13 +265,9 @@ def create_app(
 
     @app.get("/api/candidates")
     def list_candidates():
-        with services.database.connect() as connection:
-            rows = connection.execute(
-                "SELECT * FROM candidates ORDER BY created_at, rowid"
-            ).fetchall()
         return [
-            _candidate_json(CandidateService._from_row(row))  # noqa: SLF001
-            for row in rows
+            _candidate_json(candidate)
+            for candidate in services.candidates.list_candidates()
         ]
 
     @app.post("/api/candidates/generate", status_code=201)
@@ -320,27 +359,19 @@ def create_app(
 
     @app.get("/api/baselines")
     def list_baselines():
-        with services.database.connect() as connection:
-            rows = connection.execute(
-                """
-                SELECT id, cast_key, candidate_id, canonical_candidate_id,
-                       fallback_reason, manifest_sha256, created_at
-                FROM baselines ORDER BY created_at, rowid
-                """
-            ).fetchall()
-        return [dict(row) for row in rows]
+        return [
+            _baseline_json(baseline)
+            for baseline in services.baselines.list_baselines()
+        ]
 
     @app.get("/api/baselines/{baseline_id}")
     def get_baseline(baseline_id: str):
-        loaded = services.baselines.load(baseline_id)
-        manifest = loaded.manifest
+        baseline = services.baselines.get(baseline_id)
         return {
             "id": baseline_id,
-            "candidate_id": manifest["candidate_id"],
-            "fallback_reason": manifest["fallback_reason"],
-            "manifest_sha256": _baseline_manifest_sha(
-                services.database, baseline_id
-            ),
+            "candidate_id": baseline.candidate_id,
+            "fallback_reason": baseline.fallback_reason,
+            "manifest_sha256": baseline.manifest_sha256,
             "verified": True,
         }
 
@@ -350,11 +381,17 @@ def create_app(
 
     @app.get("/api/baselines/{baseline_id}/download/manifest")
     def download_manifest(baseline_id: str):
-        loaded = services.baselines.load(baseline_id)
-        return FileResponse(
-            loaded.manifest_path,
+        content = services.baselines.read_manifest_verified(baseline_id)
+        return Response(
+            content=content,
             media_type="application/json",
-            filename=f"{baseline_id}-manifest.json",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="{baseline_id}-manifest.json"'
+                ),
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+            },
         )
 
     @app.delete("/api/baselines/{baseline_id}")
@@ -425,14 +462,25 @@ def _baseline_json(baseline: Baseline) -> dict:
     }
 
 
-def _baseline_manifest_sha(database: Database, baseline_id: str) -> str:
-    with database.connect() as connection:
-        row = connection.execute(
-            "SELECT manifest_sha256 FROM baselines WHERE id = ?", (baseline_id,)
-        ).fetchone()
-    if row is None:
-        raise KeyError(baseline_id)
-    return row["manifest_sha256"]
+def _error_response(status: int, code: str, message: str) -> JSONResponse:
+    return JSONResponse(
+        status_code=status,
+        content={"error": {"code": code, "message": message}},
+    )
+
+
+def _matches_image_signature(content: bytes, mime_type: str) -> bool:
+    if mime_type == "image/png":
+        return content.startswith(b"\x89PNG\r\n\x1a\n")
+    if mime_type == "image/jpeg":
+        return content.startswith(b"\xff\xd8\xff")
+    if mime_type == "image/webp":
+        return (
+            len(content) >= 12
+            and content.startswith(b"RIFF")
+            and content[8:12] == b"WEBP"
+        )
+    return False
 
 
 def _load_config(path: Path) -> dict:

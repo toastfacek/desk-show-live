@@ -127,6 +127,28 @@ class BaselineService:
     def verify(self, baseline_id: str) -> None:
         self.load(baseline_id)
 
+    def get(self, baseline_id: str) -> Baseline:
+        row = self._get_row(baseline_id)
+        loaded = self.load(baseline_id)
+        return self._baseline_from_row(row, loaded)
+
+    def list_baselines(self) -> list[Baseline]:
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM baselines ORDER BY created_at, rowid"
+            ).fetchall()
+        return [
+            self._baseline_from_row(row, self.load(row["id"])) for row in rows
+        ]
+
+    def read_manifest_verified(self, baseline_id: str) -> bytes:
+        loaded = self.load(baseline_id)
+        content = self._read_file(loaded.manifest_path)
+        row = self._get_row(baseline_id)
+        if self._digest(content) != row["manifest_sha256"]:
+            raise IntegrityError("manifest hash mismatch after verification")
+        return content
+
     def load(self, baseline_id: str) -> LoadedBaseline:
         row = self._get_row(baseline_id)
         export_dir = self.export_root / baseline_id
@@ -343,6 +365,22 @@ class BaselineService:
         if row is None:
             raise KeyError(baseline_id)
         return row
+
+    @staticmethod
+    def _baseline_from_row(
+        row: sqlite3.Row, loaded: LoadedBaseline
+    ) -> Baseline:
+        return Baseline(
+            id=row["id"],
+            cast_key=row["cast_key"],
+            candidate_id=row["candidate_id"],
+            canonical_candidate_id=row["canonical_candidate_id"],
+            fallback_reason=row["fallback_reason"],
+            manifest_path=loaded.manifest_path,
+            manifest_sha256=row["manifest_sha256"],
+            hero_path=loaded.hero_path,
+            created_at=row["created_at"],
+        )
 
     @staticmethod
     def _verify_identity(manifest: dict, row: sqlite3.Row) -> None:

@@ -66,6 +66,9 @@ function render() {
   );
   refill(".candidate-options", state.candidates, (item) => `${item.id} · ${item.status}`, true);
 
+  const assets = document.querySelector("#assets");
+  assets.replaceChildren(...state.assets.map(assetCard));
+
   const packs = document.querySelector("#packs");
   packs.replaceChildren(...state.packs.map((pack) => {
     const card = document.createElement("article");
@@ -109,14 +112,71 @@ function render() {
   }));
 }
 
+function assetCard(asset) {
+  const card = document.createElement("article");
+  const image = document.createElement("img");
+  image.src = `/api/assets/${encodeURIComponent(asset.id)}/content`;
+  image.alt = `Preview of ${asset.id}`;
+  image.loading = "lazy";
+  card.append(image);
+  const id = document.createElement("code");
+  id.textContent = asset.id;
+  card.append(id);
+  const detail = document.createElement("p");
+  detail.textContent = `${asset.mime_type} · ${asset.size} bytes`;
+  card.append(detail);
+  card.append(
+    actionButton("Copy ID", async () => {
+      try {
+        await navigator.clipboard.writeText(asset.id);
+        show("Asset ID copied.");
+      } catch (error) {
+        show(`Copy failed: ${error.message}`, true);
+      }
+    }),
+    actionButton("Use in version manifest", () => useAssetInManifest(asset.id)),
+    actionButton("Select as candidate hero", () => selectAsset("#candidate-form [name=hero_asset_id]", asset.id)),
+    actionButton("Select as generation reference", () => selectAsset("#generate-form [name=reference_asset_id]", asset.id)),
+    actionButton("Select as variant hero", () => selectAsset("#variant-form [name=hero_asset_id]", asset.id)),
+  );
+  return card;
+}
+
+function useAssetInManifest(assetId) {
+  const textarea = document.querySelector("#version-form [name=manifest]");
+  try {
+    const manifest = JSON.parse(textarea.value);
+    if (!Array.isArray(manifest.asset_ids)) manifest.asset_ids = [];
+    if (!manifest.asset_ids.includes(assetId)) manifest.asset_ids.push(assetId);
+    textarea.value = JSON.stringify(manifest, null, 2);
+    textarea.focus();
+    show("Asset added to the version manifest.");
+  } catch (error) {
+    show(`Manifest JSON must be valid first: ${error.message}`, true);
+  }
+}
+
+function selectAsset(selector, assetId) {
+  const select = document.querySelector(selector);
+  select.value = assetId;
+  select.focus();
+  show("Asset selected.");
+}
+
 function candidateCard(candidate) {
   const card = document.createElement("article");
+  const image = document.createElement("img");
+  image.src = `/api/assets/${encodeURIComponent(candidate.hero_asset_id)}/content`;
+  image.alt = `Hero preview for ${candidate.id}`;
+  image.className = "candidate-preview";
+  card.append(image);
   card.innerHTML = `
     <h3>${escapeHtml(candidate.theme || "Canonical candidate")}</h3>
     <p><code>${escapeHtml(candidate.id)}</code></p>
     <p><span class="status ${candidate.status}">${candidate.status}</span></p>
     <p>Hero: <code>${escapeHtml(candidate.hero_asset_id)}</code></p>
     <p>Cast: <code>${escapeHtml(candidate.cast_key)}</code></p>`;
+  card.prepend(image);
   if (candidate.status === "draft") {
     const note = document.createElement("input");
     note.placeholder = "Review note";
