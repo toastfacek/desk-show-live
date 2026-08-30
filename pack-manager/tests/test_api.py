@@ -162,6 +162,75 @@ def test_upload_validation_and_stable_errors(tmp_path):
         assert missing.json()["error"]["code"] == "not_found"
 
 
+def test_asset_content_is_verified_and_available_for_previews(tmp_path):
+    app = create_app(tmp_path / "data")
+    with TestClient(app) as client:
+        asset = upload(client, "preview.png")
+
+        content = client.get(f"/api/assets/{asset['id']}/content")
+
+        assert content.status_code == 200
+        assert content.headers["content-type"] == "image/png"
+        assert content.content == PNG
+        app.state.services.assets.get(asset["id"]).path.write_bytes(b"tampered")
+        tampered = client.get(f"/api/assets/{asset['id']}/content")
+        assert tampered.status_code == 409
+        assert tampered.json()["error"]["code"] == "integrity_error"
+
+
+def test_rejects_image_mime_with_forged_file_signature(tmp_path):
+    with TestClient(create_app(tmp_path / "data")) as client:
+        forged = client.post(
+            "/api/assets",
+            files={"file": ("forged.png", b"not a png", "image/png")},
+        )
+
+        assert forged.status_code == 422
+        assert forged.json() == {
+            "error": {
+                "code": "validation_error",
+                "message": "file signature does not match image/png",
+            }
+        }
+
+
+def test_all_request_and_routing_failures_have_stable_envelopes(tmp_path):
+    with TestClient(create_app(tmp_path / "data")) as client:
+        cases = [
+            (
+                client.post("/api/packs", json={"kind": "character"}),
+                422,
+                "request_validation",
+            ),
+            (
+                client.post(
+                    "/api/packs",
+                    content=b"{",
+                    headers={"content-type": "application/json"},
+                ),
+                400,
+                "malformed_request",
+            ),
+            (
+                client.post(
+                    "/api/assets",
+                    content=b"broken multipart",
+                    headers={"content-type": "multipart/form-data"},
+                ),
+                400,
+                "malformed_request",
+            ),
+            (client.get("/api/does-not-exist"), 404, "not_found"),
+            (client.put("/api/packs"), 405, "method_not_allowed"),
+        ]
+
+        for response, status, code in cases:
+            assert response.status_code == status
+            assert response.json()["error"]["code"] == code
+            assert isinstance(response.json()["error"]["message"], str)
+            assert set(response.json()) == {"error"}
+
+
 def test_conflicts_and_locked_mutation(tmp_path):
     with TestClient(create_app(tmp_path / "data")) as client:
         hero = upload(client, "hero.png")
@@ -210,3 +279,68 @@ def test_conflicts_and_locked_mutation(tmp_path):
         locked = client.delete(f"/api/baselines/{baseline['id']}")
         assert locked.status_code == 409
         assert locked.json()["error"]["code"] == "conflict"
+
+
+def test_verified_manifest_download_rechecks_in_memory_bytes(tmp_path):
+    app = create_app(tmp_path / "data")
+    with TestClient(app) as client:
+        hero = upload(client, "hero.png")
+        character = client.post(
+            "/api/packs", json={"kind": "character", "name": "BOT1"}
+        ).json()
+        scene = client.post(
+            "/api/packs", json={"kind": "scene", "name": "Studio"}
+        ).json()
+        client.post(
+            f"/api/packs/{character['id']}/versions",
+            json={"manifest": character_manifest(hero["id"])},
+        )
+        client.post(
+            f"/api/packs/{scene['id']}/versions",
+            json={"manifest": scene_manifest(hero["id"])},
+        )
+        candidate = client.post(
+            "/api/candidates",
+            json={
+                "character_versions": {"BOT1": [character["id"], 1]},
+                "scene_pack_id": scene["id"],
+                "scene_version": 1,
+                "hero_asset_id": hero["id"],
+            },
+        ).json()
+        client.post(
+            f"/api/candidates/{candidate['id']}/approve",
+            json={"canonical": True, "review_note": "approved"},
+        )
+        baseline = client.post(
+            "/api/baselines", json={"cast_key": candidate["cast_key"]}
+        ).json()
+
+        service = app.state.services.baselines
+        original_load = service.load
+
+        def load_then_tamper(baseline_id):
+            loaded = original_load(baseline_id)
+            loaded.manifest_path.write_bytes(b"changed after verification")
+            return loaded
+
+        service.load = load_then_tamper
+        response = client.get(
+            f"/api/baselines/{baseline['id']}/download/manifest"
+        )
+
+        assert response.status_code == 409
+        assert response.json()["error"]["code"] == "integrity_error"
+
+
+def test_browser_ui_exposes_asset_inventory_and_image_previews(tmp_path):
+    with TestClient(create_app(tmp_path / "data")) as client:
+        html = client.get("/").text
+        javascript = client.get("/static/app.js").text
+
+    assert 'id="assets"' in html
+    assert "Uploaded asset inventory" in html
+    assert "/content" in javascript
+    assert 'document.createElement("img")' in javascript
+    assert "Use in version manifest" in javascript
+    assert "Copy ID" in javascript
