@@ -1,88 +1,95 @@
-# How the show is run
+# Conductor layer
 
-This is a plan, not an app. No code. Nothing here spends money.
+This is a requirements brief, not a build. No code. Nothing here calls fal (the video API we buy clips from).
 
-This repo is for a fake live desk show: a cartoon host sits at a desk and talks about posts from a feed (like Twitter). We buy short talking clips from a video service, then play them in a row so it feels live. The host has to look like the same person from clip to clip, so each new clip starts on the last picture of the last clip.
+## What this project is
 
-This page is about the extra piece we need around those clips: a picker (the conductor) that decides what is on screen when a clip is late or we want a breath. It does not write the jokes. It only picks the picture and how long it stays.
+`desk-show-live` is the spec for a fake live desk show. An original cartoon host sits at a desk and comments on a feed (Twitter/X). We do not generate a whole new world each time. We buy short talking-head clips from MiniMax H3 Max on fal, play them in a row, and composite the host over a static set plus a real tweet card.
 
-The rest of this repo still has the older, longer notes. This page is the short version you can decide from.
+H3 Max is a clip model, not a livestream. You send a prompt (and usually a first-frame image), wait, and get back a 5-second mp4 with picture and sound welded together. A 5-second clip at 768p costs $0.04/s on the promo rate through 1 Sep 2026, then $0.08/s. It takes about as long to render as it lasts.
 
-## The whole thing
+To keep the host looking like the same person, each new clip starts on the last frame of the last clip. That is the last-frame chain. The last frame does not exist until the clip finishes, downloads, and we extract the PNG. So we cannot start take N+1 when N is submitted. We play N while N+1 cooks. That is the only overlap.
 
-We have one talking picture. Making five seconds of it takes about five seconds.
+The rest of this repo has the older TDD and H3 Max spec. Those stay. This page adds the layer around the clips.
 
-If that talking picture is the only thing on screen, the show freezes the first time a clip is late.
+## What the conductor is
 
-So someone has to pick what you look at while the next clip is cooking. That someone is the conductor. It never writes jokes. It only picks the picture and how long it stays.
+The conductor is the piece that decides, at each cut, what is on screen and for how long. It is a director sitting in front of a switcher. It never writes dialogue.
 
-Three seconds of a frozen face looks broken. Three seconds on a tweet card, with music still going, looks like the show taking a breath.
+H3 Max is one camera, and it is a slow camera. If that camera is the only thing on screen, the show freezes the first time a take is late. Three seconds of a frozen face looks broken. The same three seconds on a tweet card, with the music bed still up, looks like a show taking a beat. The conductor's job is to turn generation delay into that beat.
 
 ## Who does what
 
-The writer decides what is said.
-
-The conductor decides what is seen, and when.
-
-The video model only acts out a line it already has.
-
-The person who pastes the tweet on screen just follows orders. They do not pick shots.
-
-You can override anything, but only when a clip ends. A clip is one piece of picture and sound stuck together. You cannot cut it in half.
+- **Ingest** pulls posts. It does not rank or write.
+- **Segmenter** turns the pile into a short "talk about this next" queue.
+- **Writer** writes the spoken line from that brief. It can run a line or two ahead. It never picks a layout.
+- **H3 Max** only performs a line it is already given. It returns no transcript.
+- **Compositor** lays the host clip over the set and the tweet card. Deterministic. No opinions.
+- **Playhead** is what is actually playing right now. Wall-clock truth.
+- **Conductor** picks layout, source, and duration. It may set resolution and whether the next take chains off the last frame or re-anchors to the hero still. It does not touch prompt text.
+- **Operator (Jesse)** can override at the next clip boundary. Clips are atomic: picture and sound are welded, so no mid-clip cut.
+- **Spend meter** can refuse a submission. It is a brake.
 
 ## What can be on screen
 
-Almost everything is free.
+Sort sources by how they bill, not by "camera vs graphic."
 
-The talking host clip costs money every time.
+**Metered:** the H3 Max host window. This is the only thing that costs money every time.
 
-A still of the host sitting there, a tweet card, the desk picture, a freeze on the last frame, and the music: those are free or we make them once and reuse them.
+**Bake once:** the set plate, the hero still, an idle/listening loop, a short sting, the outro. Made offline, reused forever.
 
-So we have one camera that costs money, and a pile of pictures that do not.
+**Free:** the tweet card (real post text, never baked into H3), lower thirds, clock, music bed, a freeze on the last frame.
 
-Do not make eight talking cameras. That is eight bills.
+Day one is one metered window plus those graphics. Do not generate eight extra angles. That is eight bills. Two generated windows on screen at once is worse than 2x cost: both have to be ready at the same instant, so stall risk goes up faster than the bill.
 
-## The rule that makes the math mean
+## Timing
 
-The next talking clip has to start from the last frame of the last talking clip. That last frame does not exist until the last clip is fully done and we pull the picture off it.
+The TDD said generation of N+1 starts when N is submitted. That is not possible while the last-frame chain is in use. Play N while N+1 cooks.
 
-So we cannot start the next clip the moment we press go on this one. We play this clip while the next one cooks. That is the only overlap we get.
+Turnaround (submit to next-frame-ready) is about 4–6 seconds. Playback is 5 seconds. The one-host chained loop sits at roughly 100% duty cycle: no slack. If turnaround lands above ~4.5s, some of the show *must* be non-host material. Graphics beats are how the 60-second test passes on purpose, not by luck.
 
-If cooking takes longer than playing, we must show a free picture in the gap. That is not decoration. That is how the show stays on.
+With one window on air, you never bill more than 60 generated seconds per show-minute: $2.40/min promo, $4.80/min list. Every graphics beat is a discount. Waste (takes you generate and never air) is the only way past that ceiling.
 
-## Three things to lock
+Log `chain_ready_at` per take: the timestamp the next take's anchor frame became usable. That number sizes the graphics share. Guessing it is how this whole page stays fiction.
 
-1. Only one talking video on screen. Ever. The other "cameras" are pictures.
-2. Writer writes. Conductor shows. The conductor does not touch the words.
-3. Practice with fake clips (no money) until the picking rules work. Then spend.
+## Lock these
 
-## Three things only you can pick
+1. One generated video window on screen, ever, in v1. Graphics and bake-once assets are the other cameras.
+2. Writer decides what is said. Conductor decides what is seen and when. The conductor never writes prompt text.
+3. Rehearsal mode first: a stub performer that returns existing clips after a jittered delay, fal off, spend at zero. Tune the rules there. Live conductor time is ~$2.40/min promo.
 
-1. Does the host's voice come from the video, or from a cheaper voice tool? If the voice is separate, we can talk over a tweet card for free. The trade is the mouth may not match.
-2. Is this a timed episode, or does it just keep going?
-3. Are you watching when it runs? If yes, you can skip a bad clip. If no, the rules have to be more careful on their own.
+On day one the conductor can just return "host full screen" every time, and "hold" when the queue is dry. Same behavior as the TDD. The point is the seam exists.
+
+## Jesse still has to pick
+
+1. **Audio:** keep H3's welded audio, or move voice to TTS? Host-talking-over-a-graphic costs full price today, because you pay for pixels you cover up. TTS makes that beat free and makes clip length predictable. The trade is lip sync. Wait for the TDD's E1/E2 results. No default.
+2. **Clock or open-ended?** A 12-minute episode with a rundown is a different machine from a block that just has to stay alive. No default.
+3. **Attended or unattended?** If someone is at the desk, a ~5s review delay buys a veto on ugly takes. If not, the layout mix has to be more conservative on its own.
+
+Also still open, with defaults: cards are text-only, truncated, images stripped, until a safety pass exists. Whose feed is still unset.
 
 ## The surprise
 
-A second host is almost free if they take turns.
+A second host is a timing fix, and it is close to free.
 
-You still only show one talking picture, so the bill per minute stays the same.
+The older spec said two hosts double the bill. True only if both are on screen at once. If they alternate (the locked design), only one window airs, so cost per show-minute does not change.
 
-While A talks, B's next clip can cook. While B talks, A's next clip can cook. Each host gets extra time. The show stops almost dying, without costing more.
+The last-frame chain is per host. Sequence A1, B1, A2, B2: A2 needs A1's last frame, which was ready long before B1 finished airing. Each host's chain gets two playback windows of slack instead of one. A loop at ~110% duty cycle with one host runs at ~55% with two. Same bill. Continuity holds. The new risk is waste: generating ahead means sometimes paying for a take you never air.
 
-That is a stronger reason for a second host than "they can banter."
+That is a stronger argument for the second host than banter. Do it after the one-host 60s loop holds.
 
-## What we do not do yet
+## Out of scope for now
 
-No live stream.
-No wall of screens for you to click.
-No second talking window at the same time.
-No generating extra angles just to have angles.
+No livestream / RTMP.
+No video-wall UI.
+No second generated window at the same time.
+No generated cutaways.
+No plugging into fal's own H3 Max Live Twitch bot. Same clip API. We can steal a playhead-to-stream layer later.
 
-First job is still the same: sixty seconds of one host that does not stall. The conductor starts as a tiny picker that, on day one, just shows the host full screen and only switches when the next clip is not ready.
+First build is unchanged: one host, 5s, 768p, last-frame chain, static JPEG, no tweets, no cutout. Done when 60s does not stall, hold fires on purpose, the chain is visible across 8+ takes, and we have a real $/min including retries.
 
-## Two cheap tests worth a couple dollars
+## Two cheap measurements
 
-Try 8-second and 10-second clips once (about $1.20). Longer clips might give us more slack for the same money.
+8s and 10s takes once (~$1.20 promo). A chunk of turnaround is fixed per take (queue, download, extract, upload). Longer clips may give slack for the same money per show-minute. Render time may also grow worse than linear. Nobody knows until we measure.
 
-Try the new "pin this face" video call once (about $2). If a pinned still is enough, we may not need the last-frame chain at all, and a lot of this page gets simpler.
+`minimax/h3-max/reference-to-video` shipped 29 Aug. Ten takes (~$2 promo). If a pinned host still holds identity without the previous last frame, the serial chain this page is designed around goes away, and takes can cook in parallel. Measure before we commit to conductor rules that only exist to work around that chain.
