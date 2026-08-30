@@ -96,6 +96,31 @@ First build is unchanged: one host, 5s, 768p, last-frame chain, static JPEG, no 
 
 ## I/O map (one turn)
 
+```mermaid
+flowchart TB
+  Feed["Twitter/X feed"] --> Ingest
+  Ingest -->|posts| Segmenter
+  Segmenter -->|one brief| Writer
+  Writer -->|line as text| Conductor
+
+  Playhead -->|"clock, ready, cooking"| Conductor
+  Spend["spend meter"] --> Conductor
+
+  Conductor -->|"layout beat"| Compositor
+  Conductor -->|"submit only if last-frame exists"| H3["H3 Max"]
+
+  H3 -->|mp4| Post
+  Post -->|ready clip| Playhead
+  Post -->|"last-frame PNG"| H3
+  Compositor --> Playhead
+
+  Conductor -->|"chain not ready"| Card["tweet card / hold"]
+  Card --> Playhead
+```
+
+A layout beat is one cut: which shot (`host_full`, `host_plus_card`, `card_full`, `idle`, `hold`), the source, and the duration. It is not a line of dialogue.
+
+
 This is the contract, not a schema to implement. One fake tweet walks every step so you can see what each piece is allowed to know and what it is allowed to emit. First-slice code (the TDD) only runs writer → H3 Max → post → playhead. Ingest, segmenter, conductor, and compositor are the show path around that.
 
 Shared clock at the start of this turn:
