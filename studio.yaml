@@ -53,7 +53,7 @@ studio:
   # ---------------------------------------------------------------------
   hosts:
     BOT1:
-      display_name: PHASETWO[lol]     # what the lower third shows
+      display_name: PHASEONE[lol]     # what the lower third shows
       seat: left
       faces: right                    # slight inward turn, never breaks
       accent: warm amber
@@ -70,7 +70,7 @@ studio:
         hands loosely folded. Calm, dry, unhurried.
 
     BOT2:
-      display_name: TBD              # partner name, still open
+      display_name: deb              # lowercase, always
       seat: right
       faces: left
       accent: cool cyan
