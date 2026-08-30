@@ -591,8 +591,8 @@ def test_wrong_cast_requested_candidate_falls_back(
     service = candidate_setup["candidate_service"]
     other_root = service.create(
         character_versions={
-            "BOT2": (candidate_setup["bot2"].pack_id, 1),
-            "BOT1": (candidate_setup["bot1"].pack_id, 1),
+            "BOT1": (candidate_setup["bot2"].pack_id, 1),
+            "BOT2": (candidate_setup["bot1"].pack_id, 1),
         },
         scene_pack_id=candidate_setup["scene"].pack_id,
         scene_version=1,
