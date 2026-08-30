@@ -50,7 +50,7 @@ class BaselineService:
         self.asset_store = asset_store
         self.pack_service = pack_service
         self.candidate_service = candidate_service
-        self.export_root = (asset_store.data_dir / "exports").resolve()
+        self.export_root = (asset_store.data_dir / "exports").absolute()
 
     def lock_run(
         self, cast_key: str, requested_candidate_id: str | None = None
@@ -130,6 +130,7 @@ class BaselineService:
     def load(self, baseline_id: str) -> LoadedBaseline:
         row = self._get_row(baseline_id)
         export_dir = self.export_root / baseline_id
+        self._reject_symlinked_export_ancestors(export_dir)
         manifest_path = Path(row["manifest_path"])
         expected_manifest_path = export_dir / "manifest.json"
         if self._resolved(manifest_path) != self._resolved(expected_manifest_path):
@@ -410,6 +411,19 @@ class BaselineService:
         expected_paths = {"manifest.json", *verified_relative_paths}
         if actual_paths != expected_paths:
             raise IntegrityError("export contains missing or untracked files")
+
+    def _reject_symlinked_export_ancestors(self, export_dir: Path) -> None:
+        try:
+            relative_parts = export_dir.relative_to(self.export_root).parts
+        except ValueError as error:
+            raise IntegrityError("baseline root path escape") from error
+
+        paths = [self.export_root]
+        for part in relative_parts:
+            paths.append(paths[-1] / part)
+        for path in paths:
+            if path.is_symlink():
+                raise IntegrityError(f"symlinked export root: {path.name}")
 
     @staticmethod
     def _read_file(path: Path) -> bytes:
