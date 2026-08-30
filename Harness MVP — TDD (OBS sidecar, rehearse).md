@@ -1,16 +1,27 @@
-# TDD — Harness MVP (OBS sidecar, rehearse)
+# TDD — Harness MVP (OBS sidecar, then live sockets)
 
 **Status:** Draft for build · **Date:** 30 Aug 2026 · **Owner:** Jesse
 
-**Parent docs:** `Agentic Live Streaming Harness — Plan.md` (org chart), `Desk Show — Two-Host Architecture & Harness.md` (show design). This TDD is the first build slice of the harness only.
+**Parent docs:** `Agentic Live Streaming Harness — Plan.md` (org chart), `Desk Show — Two-Host Architecture & Harness.md` (show design).
 
-The older file `Desk Show MVP — TDD (H3 Max, one robot host).md` is a different slice: one host, a simple file player, real fal. Do not mix the two. That slice still matters for “does the video model say the line.” This slice is “does the clock and the switcher work with fake clips, at zero dollars.”
+The product is a **local studio with three sockets**. The user plugs in their own accounts. We do not sell the models and we do not sit in the middle of their billing.
+
+| Socket | What they connect | Who pays |
+| :---- | :---- | :---- |
+| **Player** | Their OBS, on the same computer | Free (OBS) |
+| **Text** | Their own text-API account (OpenAI-shaped: URL, key, model name) | Them, to that vendor |
+| **Video** | Their fal account, MiniMax H3 Max | Them, to fal |
+
+Slice A (H0–H4) is the player socket: clock, hold, OBS. Fake clips. **$0.**  
+Slice B (H5–H7) is the other two sockets: save their keys on the machine, write lines through their text API, buy clips through fal H3.
+
+The older file `Desk Show MVP — TDD (H3 Max, one robot host).md` is a one-host fal test with a simple player. Do not mix it with Slice A. Its measurements (did the model say the line?) still apply once Slice B is on.
 
 No code in this file. After it is accepted, implementation follows these contracts.
 
 ---
 
-## 1. Overview and goals
+## 1. Slice A — overview and goals
 
 A program on the same computer as OBS. It runs a 90-second show list in **rehearse** mode: no fal, no writer model, no producer model. A stub “performer” hands back existing video files after a fake delay. The director is a function. OBS is the player. We sit beside OBS. We do not fork it. We do not replace it.
 
@@ -29,9 +40,9 @@ A program on the same computer as OBS. It runs a 90-second show list in **rehear
 - Director tests pass with the fake player (no OBS).
 - Crop-sync check passes on a real OBS (or we write down that it failed and stop).
 
-**Out of this slice**
+**Out of Slice A** (these are Slice B, §16)
 
-fal, writer model, producer model, spend in real dollars, Twitch, a public installer, a custom switcher, creating or deleting OBS scenes from code, two paid pictures, chat driving the show.
+fal, writer model, producer model, spend in real dollars, saving a user’s API keys, Twitch, a public installer, a custom switcher, creating or deleting OBS scenes from code, two paid pictures, chat driving the show. We do **not** log into fal or a text vendor for them in Slice A.
 
 Art approval (`hero_wide.png`) is **not** a gate for this slice. Rehearse plays canned files. The two-host look tests (E1 composition) stay on the other track. If those fail, the *show* changes. The harness contracts here still hold.
 
@@ -482,7 +493,7 @@ D2 is the acceptance run. Record `out/takes.jsonl` from that run in the notes wh
 | **H3** | `player_obs.py` + D1. Hand-drivable. | Scenes switch; no scene created. |
 | **H4** | Full `rehearse` on the desk. D2, D3. | §1 done-criteria. |
 
-Do not start a fal performer, a writer model, or a producer model before H4.
+Do not start Slice B (real keys, fal, text API) before H4.
 
 H0 can proceed in parallel with H1–H2. H3 needs H0.
 
@@ -508,6 +519,16 @@ harness/
   out/takes.jsonl
   tests/test_director.py
   tests/test_loop.py
+  # Slice B
+  writer.py
+  writer_file.py
+  writer_openai.py
+  performer_fal.py
+  spend.py
+  secrets.env.example          # names only, no keys
+  tests/test_writer_openai.py
+  tests/test_performer_fal.py
+  tests/test_spend.py
 ```
 
 **`config.yaml` (excerpt)**
@@ -536,7 +557,7 @@ Secrets only from the environment. Repo contains none.
 
 **$0.** No fal. No writer API. If a future change imports a fal client in this slice, that is a bug.
 
-The two-host live budget and the 1 Sep promo do not apply here. They apply when a later TDD turns `live` on.
+The two-host live budget and the 1 Sep promo do not apply here. They apply in Slice B.
 
 ---
 
@@ -551,22 +572,182 @@ The two-host live budget and the 1 Sep promo do not apply here. They apply when 
 
 ---
 
-## 16. What the next TDD is (not this one)
+## 16. Slice B — connect their text account and fal H3
 
-After H4:
+This is the product people think they are installing: **plug OBS, plug a text key, plug a fal key, run a show.**
 
-1. **Live performer** — fal, last-frame PNG, spend cap, the older one-host measurements (verbatim, drift) if they are still unproven.
-2. **Writer agent** — same thought schema, model instead of `script.jsonl`.
-3. **Producer agent** — same package schema, model instead of the block in `rundown.yaml`.
+We do not create accounts for them. We do not OAuth through our servers. We do not proxy their calls (that would put us on the bill and in the outage). The desktop app stores *their* keys on *their* machine and calls the vendors directly.
 
-Each keeps the player interface and the director function. If those change, this TDD was wrong.
+A later hosted “log into our site and connect accounts” is a different product. Out of scope here.
+
+### 16.1 Three sockets, one config
+
+`config.yaml` names the backends. Secrets stay in the environment or in a local file that is gitignored (`~/.runtime/secrets.env` or `harness/.env`). Never in the repo. Never in `out/takes.jsonl`. Never in a beat.
+
+```yaml
+mode: live                    # rehearse | live | replay
+player: obs                   # fake | obs
+
+text:
+  enabled: true
+  kind: openai_compatible     # the only kind in v1
+  base_url_env: TEXT_BASE_URL
+  api_key_env: TEXT_API_KEY
+  model_env: TEXT_MODEL
+  # defaults if env empty: none. Refuse to start live without all three.
+
+video:
+  enabled: true
+  kind: fal_h3_max            # the only kind in v1
+  key_env: FAL_KEY
+  endpoint: minimax/h3-max/image-to-video
+  duration: 5
+  resolution: 768p
+  prompt_expansion_mode: balanced
+
+spend:
+  cap_usd: 20.0
+  rate_768p_usd_per_s: 0.08   # list; override in config if promo
+```
+
+**Connect** means a small local settings step (file or a one-page form that writes the env file):
+
+1. OBS host / port / password (already in Slice A).
+2. Text: base URL, API key, model name.
+3. Video: fal key.
+
+A `check` command calls each vendor with a cheap probe and prints ok / fail. Do not start `live` if a required probe fails.
+
+| Probe | What we send | Pass |
+| :---- | :---- | :---- |
+| OBS | `get_program_state` | `connected: true` |
+| Text | One chat call, `max_tokens` 8, prompt `reply with the word pong` | Body contains `pong` (case-insensitive) |
+| Video | fal platform/queue health or a 1-clip dry-run only when `--probe-video` is set (video probes cost money; default off) | Key accepted (HTTP 401 = fail) |
+
+Default video probe is “key present and looks like a fal key,” not a paid clip. The first real clip is take 1 of a live run.
+
+### 16.2 Text socket — `Writer` interface
+
+Same thought object as `script.jsonl`. The file writer from Slice A implements this. The live writer does too.
+
+```
+write_thought(package, script_so_far, next_speaker, thought_open) -> Thought
+```
+
+**Thought** (unchanged):
+
+```json
+{"speaker": "BOT1", "text": "Fear has a ticker now, and it shrugs.", "thought_open": false, "angle_used": "a ticker that shrugs is still a ticker"}
+```
+
+**Live implementation:** one HTTP POST to `{base_url}/chat/completions` (OpenAI shape). System prompt = host voices + the hard rules from the conductor brief (JSON only, spoken text only, do not fetch posts, do not write to the clock). User payload = package + script so far + next speaker.
+
+Why this shape: one adapter covers OpenAI, Groq, Together, OpenRouter, Fireworks, and any local server that pretends to be OpenAI. We do not ship a vendor SDK per company.
+
+**Must not:** see playhead time, spend, last-frame URLs, or OBS. The harness calls the writer, the writer does not call the harness.
+
+**Failure:** timeout 8s. On fail, leave the written-ahead slot short; the director already knows how to hold. After 3 failures in a row, stop submitting and log `writer_down`. Do not invent a line.
+
+**Producer in Slice B:** still a file. A producer *model* is Slice C. The live writer is enough to make the text socket real.
+
+### 16.3 Video socket — `Performer` interface
+
+Same `submit` object the director already emits. The stub from Slice A implements this. The fal performer does too.
+
+```
+start(submit) -> None     # async; later calls ready()
+```
+
+When done: file at `out/ready/{take:03d}.mp4`, last-frame PNG at `out/frames/{take:03d}.png`, public URL for that PNG if fal hosted it, row in `out/takes.jsonl`.
+
+**Live implementation (`performer_fal.py`):**
+
+1. Refuse if spend meter says the next clip would cross the cap.
+2. Build the prompt from `studio.yaml` + who is speaking + the line in quotes. Do not improvise.
+3. `fal.subscribe("minimax/h3-max/image-to-video", { prompt, image_url, duration, resolution, prompt_expansion_mode })`.
+4. `image_url` = last take’s frame URL, or the hero still on take 1 and every re-anchor.
+5. Download mp4. Extract last frame with ffmpeg as PNG (never JPEG). Upload PNG (fal upload is fine).
+6. Log timings and `cost_usd` (output seconds × rate).
+
+**Must not:** change the line. Pick a layout. Talk to OBS.
+
+**Failure:** HTTP 422 → drop take, cost still counts, writer is asked again with `reissue: shorter, blander`, director holds. Other errors → retry once, then hold. 3 consecutive fails → graceful stop.
+
+### 16.4 Spend meter
+
+A function. Wraps every fal call. Not an agent.
+
+- Adds `duration * rate` on submit (bill is on output seconds; we count the requested duration).
+- Refuses the next `start` when `spend_usd + next >= cap`.
+- Rehearse: always $0, meter still records `cost_usd: 0`.
+
+### 16.5 Mode switch
+
+`run.py --mode rehearse` → file writer + stub performer. Ignores text/video keys if present.  
+`run.py --mode live` → live writer + fal performer. Refuses to start if text or fal config is missing.  
+`run.py --mode replay` → Slice C.
+
+The director and the player interface **do not change** between rehearse and live. If they need to, Slice A was wrong.
+
+### 16.6 Slice B tests
+
+| ID | Test | Pass |
+| :---- | :---- | :---- |
+| T11 | Live mode without `TEXT_API_KEY` refuses to start | Exit ≠ 0, no fal call |
+| T12 | Live mode without `FAL_KEY` refuses to start | Exit ≠ 0 |
+| T13 | Rehearse with keys present still uses stub, cost 0 | No HTTP to fal |
+| T14 | Writer adapter: mocked chat response → valid Thought | Schema |
+| T15 | Writer adapter: timeout → no invented line | Slot unchanged |
+| T16 | Fal adapter: mocked subscribe → file + PNG + log row | Paths exist |
+| T17 | Fal adapter: mock 422 → status `dropped_422`, hold path | No retry of same prompt |
+| T18 | Spend meter refuses when cap would break | No `start` |
+| T19 | Secrets do not appear in `takes.jsonl` or beats | Grep |
+
+On-desk (paid, small):
+
+| ID | Check | Pass |
+| :---- | :---- | :---- |
+| D4 | `check` text probe with a real key | pong |
+| D5 | One live take: their text API writes a line, fal returns 5s, OBS plays it | One log row, cost > 0 |
+| D6 | Second take chains on the first PNG | `anchor: chain` |
+
+D5–D6 are the first dollars. Cap at $2 for the first sitting unless Jesse raises it.
+
+### 16.7 Slice B milestones
+
+| # | Deliverable | Gate |
+| :---- | :---- | :---- |
+| **H5** | Settings / env contract + `check` probes (OBS, text; fal key present). T11–T13, T19. | Live will not start half-plugged. |
+| **H6** | `Writer` live adapter. T14–T15. Rehearse still default. | Their text account writes thoughts. |
+| **H7** | `Performer` fal adapter + spend meter. T16–T18, D5–D6. | Their fal account buys the clip; OBS already knows how to play it. |
+
+Producer-as-a-model stays out until H7. One live brain (the writer) is enough to prove the sockets.
+
+### 16.8 What we will not do in Slice B
+
+- Store keys on our servers.
+- Offer “Runtime’s OpenAI” or “Runtime’s fal” as a billed feature.
+- Talk to MiniMax’s own (slow) H3 as the live path. fal H3 Max only.
+- Add a second video vendor. The interface allows it later; v1 is `fal_h3_max`.
+- Add a second text shape (Anthropic raw, Gemini raw). OpenAI-shape only. Most hosts already pretend to be that.
+- Let the writer or the fal client import the OBS player.
 
 ---
 
 ## 17. Open questions for review
+
+**Slice A (OBS)**
 
 1. Python + asyncio on the desk is still the language. Agree?
 2. Fake-player tests are the merge gate; OBS checks are on the desk. Agree?
 3. Take 3 is the forced-late take. Agree, or pick another?
 4. Tickers and stings wait. Agree?
 5. Crop-sync fail means stop, not “add a second source.” Agree?
+
+**Slice B (accounts)**
+
+6. Keys live on the user’s machine. We do not OAuth through our cloud. Agree?
+7. Text is “OpenAI-shaped” (URL + key + model), so people can point at any compatible host. Agree?
+8. Video is fal MiniMax H3 Max only in v1. Agree?
+9. Producer stays a file until after H7. Only the writer becomes a model. Agree?
+10. First live sitting hard-caps at $2 unless raised. Agree?

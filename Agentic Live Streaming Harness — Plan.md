@@ -11,7 +11,7 @@ Read this first if you have not read the other files. The other files assume you
 - `Desk Show — Two-Host Architecture & Harness.md` — current show design. Still in force. This plan sits on top of it.
 - `Desk Show — Conductor Layer Brief.md` — who is allowed to know what. The permission rules here are the same idea, with fewer job titles.
 - `Desk Show — Character & Set Bible.md` and `studio.yaml` — what the hosts and set look like. Not needed to review this plan.
-- `Harness MVP — TDD (OBS sidecar, rehearse).md` — first build slice of this plan: clock, OBS as a backend, stub clips, $0.
+- `Harness MVP — TDD (OBS sidecar, rehearse).md` — build spec. Slice A: clock + OBS. Slice B: user plugs in their text-API account and their fal H3 key.
 - `Desk Show MVP — TDD` and `Desk Show — H3 Max Spec` — older. Useful for cost and the first video test. Do not treat them as the live-show design.
 
 ---
@@ -557,7 +557,7 @@ The two-host milestones stay. This plan does not insert a new first step in fron
 | M2 — composition and “who is speaking” tests | Unchanged. Stop if the split fails. |
 | M3 — OBS command list, drivable by hand | First harness slice. See `Harness MVP — TDD` (H3). |
 | M4 — harness in `rehearse`, stub clips, $0 | Director is a function. Producer is a file of packages. See that TDD (H4). |
-| M5 — live writer + video + spend cap | Writer agent on. Producer agent on, once per segment. Critics off. |
+| M5 — live writer + video + spend cap | Slice B of the TDD: their text key + their fal key. Producer still a file. |
 | M6 — Twitch out | Unchanged. |
 
 **Do not build the producer as a model before M4 holds.** M4 is where we learn whether the clock works. A clever agent on a broken clock is noise.
