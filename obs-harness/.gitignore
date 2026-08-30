@@ -1,0 +1,7 @@
+out/
+.pytest_cache
+__pycache__/
+*.pyc
+.env
+secrets.env
+.venv/

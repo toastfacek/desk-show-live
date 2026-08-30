@@ -1,0 +1,9 @@
+{
+  "posts": [
+    {
+      "id": "demo-1",
+      "author": "example",
+      "text": "the vix just did a thing and nobody knows why"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+mode: rehearse
+player: fake
+rundown: rundown.yaml
+obs:
+  host: 127.0.0.1
+  port: 4455
+  password_env: OBS_WEBSOCKET_PASSWORD
+stub:
+  delay_s: 4.0
+  delay_jitter_s: 0.5
+  forced_late_takes: [3]
+  forced_late_delay_s: 8.0
+clip_duration_s: 5
