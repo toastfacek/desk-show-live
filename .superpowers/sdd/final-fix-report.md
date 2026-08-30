@@ -123,3 +123,59 @@ Additional commits:
 
 The manager-wide export lock uses POSIX `fcntl.flock`, matching the documented
 macOS, Linux, and WSL target. There are no unresolved concerns for that target.
+
+## Final acceptance fix wave
+
+Added test-first coverage for deterministic BOT1/BOT2 cast identity, normalized
+nonblank pack names, an API-valid browser variant default, and payload-to-
+manifest pack metadata consistency.
+
+RED:
+
+```text
+python3 -m pytest tests/test_candidates.py tests/test_packs.py \
+  tests/test_api.py tests/test_baselines.py -q
+12 failed, 128 passed in 2.80s
+```
+
+The first focused GREEN run exposed one remaining legacy wrong-cast test that
+still used JSON key insertion order (`1 failed, 139 passed`). It was corrected
+to swap the actual BOT1/BOT2 assignments. The focused suites then passed:
+
+```text
+python3 -m pytest tests/test_candidates.py tests/test_packs.py \
+  tests/test_api.py tests/test_baselines.py -q
+140 passed in 2.54s
+```
+
+Final verification:
+
+```text
+cd pack-manager && python3 -m pytest -q -W error
+154 passed in 2.85s
+
+cd obs-harness && python3 -m pytest -q
+18 passed in 0.06s
+
+cd pack-manager && node --check pack_manager/web/app.js
+PASS
+
+cd pack-manager && node --check pack_manager/web/selection.js
+PASS
+
+cd pack-manager && python3 -m compileall -q pack_manager tests
+PASS
+
+git diff --check
+PASS
+
+git diff --name-only 291ff50..HEAD -- obs-harness
+PASS (no output; no obs-harness changes)
+```
+
+Additional commits:
+
+- `e7d6b76` Close final Character Pack Manager acceptance gaps
+- `e5073f8` Align wrong-cast test with normalized slot identity
+
+No unresolved concerns.
