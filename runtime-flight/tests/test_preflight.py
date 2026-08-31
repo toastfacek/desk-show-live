@@ -399,6 +399,18 @@ def test_recording_configured_probe_fails_when_status_unreadable(ready_config, m
     assert ("start_record",) not in client.calls
 
 
+def test_recording_configured_probe_fails_when_already_recording(ready_config, monkeypatch):
+    fal_calls = _fal_spy(monkeypatch)
+    client = complete_obs_client()
+    client.recording = True
+    with pytest.raises(PreflightError, match="record"):
+        run_preflight(ready_config, session=ObsSession(client=client))
+    assert fal_calls == []
+    assert ("start_record",) not in client.calls
+    assert ("stop_record",) not in client.calls
+    assert client.recording is True
+
+
 def test_text_configuration_probe_fails_when_missing(ready_config, monkeypatch):
     fal_calls = _fal_spy(monkeypatch)
     broken = replace(ready_config, text_api_key=None)
@@ -444,22 +456,23 @@ def test_default_preflight_skips_text_http(ready_config, monkeypatch):
     assert result.fal_key_present is True
 
 
-def test_probe_text_without_confirm_skips_http(ready_config):
+@pytest.mark.parametrize("confirm", [0, 2])
+def test_probe_text_without_confirm_fails_before_http(ready_config, confirm):
     http_calls: list = []
 
     def forbidden(*args, **kwargs):
         http_calls.append(1)
         raise AssertionError("text HTTP requires confirm-text-requests 1")
 
-    result = run_preflight(
-        ready_config,
-        session=_session(),
-        probe_text=True,
-        confirm_text_requests=0,
-        http_post=forbidden,
-    )
+    with pytest.raises(PreflightError, match="confirm-text-requests"):
+        run_preflight(
+            ready_config,
+            session=_session(),
+            probe_text=True,
+            confirm_text_requests=confirm,
+            http_post=forbidden,
+        )
     assert http_calls == []
-    assert result.text_probe is None
 
 
 def test_text_probe_requires_pong_and_counts_before_http(ready_config):
@@ -602,9 +615,11 @@ def test_check_cli_probe_text_requires_confirm(
         obs_session=_session(),
         http_post=forbidden,
     )
-    assert code == 0
+    captured = capsys.readouterr()
+    assert code == 1
     assert http_calls == []
-    capsys.readouterr()
+    assert "confirm-text-requests" in captured.err
+    assert SECRET_API_KEY not in captured.err
 
 
 def test_check_cli_probe_text_with_confirm_runs_http(

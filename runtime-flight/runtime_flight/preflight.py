@@ -125,7 +125,9 @@ def run_preflight(
     _probe_text_configuration(config)
 
     text_probe: TextProbeResult | None = None
-    if probe_text and confirm_text_requests == 1:
+    if probe_text:
+        if confirm_text_requests != 1:
+            raise PreflightError("--probe-text requires --confirm-text-requests 1")
         text_probe = _run_text_probe(
             config,
             http_post=http_post,
@@ -370,7 +372,11 @@ def _probe_recording_configured(config: RuntimeConfig, session: ObsSession) -> N
     if not config.obs_record:
         raise PreflightError("recording is not configured")
     try:
+        if session._recording_active():
+            raise PreflightError("OBS recording is already active")
         session.recording_duration_s()
+    except PreflightError:
+        raise
     except Exception as error:
         raise PreflightError(f"OBS record status is not readable: {error}") from error
 
