@@ -8,7 +8,7 @@ PHASEONE[lol] and deb are not missing. They are not loose PNGs next to `studio.y
 | Character packs, scene packs, hero candidates, locked 1344×768 baseline | `pack-manager/` |
 | Live image bytes on a machine that already approved them | `pack-manager/data/` — **gitignored**. Hashed blobs, not filenames. |
 | A locked run you can hand to flight | `pack-manager/data/exports/<baseline-id>/` |
-| Seed still for empty clones / this Cloud Agent environment | `pack-manager/fixtures/hero_wide.png` (1344×768). Mouthless software sprites on a light broadcast desk. Lock it with `python3 -m pack_manager.hosts`. |
+| Seed still for empty clones / this Cloud Agent environment | `pack-manager/fixtures/hero_wide.png` (1344×768). Approved Light Media Club wide: orange pebble left, cobalt lozenge right, walnut desk. Lock it with `python3 -m pack_manager.hosts`. |
 | OBS timing placeholders (not the hosts) | `obs-harness/assets/clips/*.mp4` |
 | Old one-host bake (`hero.png`, `hold.mp4`) | Root `assets/` — also gitignored. `bake_assets.py` / `run_live.py`. Different show. |
 

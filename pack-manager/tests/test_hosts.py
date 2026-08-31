@@ -20,8 +20,9 @@ FIXTURE_HERO = Path(__file__).resolve().parents[1] / "fixtures" / "hero_wide.png
 
 
 def test_canonical_copy_is_light_broadcast_sprites():
-    assert SCENE_NAME == "Light broadcast desk"
-    assert "light-mode technology broadcast studio" in SCENE_MANIFEST["set"]
+    assert SCENE_NAME == "Light Media Club"
+    assert "live media clubhouse" in SCENE_MANIFEST["set"]
+    assert "pill-shaped desk" in SCENE_MANIFEST["set"]
     assert SCENE_MANIFEST["palette"] == [
         "warm white",
         "forest green",

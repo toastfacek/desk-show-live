@@ -6,7 +6,7 @@ This page preserves the original reasoning and bake prompts. Root `studio.yaml` 
 
 Everything here is a starting point to argue with. The *structure* is load-bearing; the specific design is not.
 
-**Current amendment:** the robot-specific visual draft below is historical. Approved Character and Scene Pack v2 exports now hold runtime visual truth. The locked hosts are mouthless software sprites on a clean light-mode broadcast desk (orange mass left, cobalt mass right). The converted-office CRT robots were an explore, not the lock. The first flight keeps H3's native audio and deliberately injects each host's `voice_direction` into the H3 prompt so voice and gesture are tested together. Character Packs reserve optional licensed TTS settings for a follow-up only if native voice fails. References below to LED mouths, hinged jaws, or automatic TTS fallback do not govern the live flight.
+**Current amendment:** the robot-specific visual draft below is historical. Approved Character and Scene Pack v2 exports now hold runtime visual truth. The locked hosts are mouthless software sprites on the Light Media Club wide (orange pebble left, cobalt lozenge right, walnut pill desk, forest-green pillars). That still is the approved plate from the archived visual-board chat. The converted-office CRT robots were an explore, not the lock. The first flight keeps H3's native audio and deliberately injects each host's `voice_direction` into the H3 prompt so voice and gesture are tested together. Character Packs reserve optional licensed TTS settings for a follow-up only if native voice fails. References below to LED mouths, hinged jaws, or automatic TTS fallback do not govern the live flight.
 
 ---
 

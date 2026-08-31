@@ -26,35 +26,30 @@ studio:
 
   # ---------------------------------------------------------------------
   style: |
-    Original flat 2D cartoon animation built from a few large interlocking
-    geometric masses. Heavy, uniform near-black contour lines; hard-edged,
-    unmodulated colour fields; at most one broad shadow shape. Large simple
-    eyes and clear head posture carry expression. Limited-animation movement
-    at 24fps: stable conversational holds, slow deliberate head and brow
-    changes, no motion blur. The image is normally stable; any signal fault is
-    rare, brief, broad and horizontal. No photorealism, fine texture, hatching,
-    gradients, transparent materials, intricate reflections or 3D rendering.
-    Tactile retro-future materials read only as coarse moulded plastic,
-    painted metal, thick glass and broad areas of worn finish.
+    Polished illustrated cartoon still, clean bold shapes, warm even studio
+    light. Hosts are simple geometric colour masses with two solid cream
+    eyes and no mouths. The room is a believable rectangular broadcast
+    studio: walnut, forest green, cream, light wood. Limited-animation
+    movement at 24fps: stable conversational holds, slow deliberate eye
+    and body tilts, no motion blur. No photorealism, no fine texture
+    obsession, no readable text, letters, numbers, logos or UI.
 
   # ---------------------------------------------------------------------
   set: |
-    A clean light-mode technology broadcast studio. A long pale desk runs
-    across the lower third, parallel to camera, with a broad uncluttered
-    centre. Two simple boom microphones enter from the outer edges. Desk
-    dressing is limited to one plain closed device and one large unlabelled
-    drink vessel near each outer edge; no stickers, papers, cards, labels
-    or readable displays.
+    A clean light-mode live media clubhouse. A substantial dark walnut
+    pill-shaped desk sits on a cream oval rug over light wood floor,
+    vertical ribbing on the desk face and a warm recessed glow at centre.
+    Two short black desk-stand microphones sit in front of the hosts.
+    The centre wall is a quiet cream panel between forest-green pillars.
+    Outer thirds hold recessed white shelves with plants, lamps and
+    abstract colour-block art, plus one large colourful puzzle cube on
+    the left floor and one oversized dark chess knight on the right.
+    A black lighting grid with square soft panels hangs above. No papers,
+    stickers, logos or readable displays.
 
-    Scenic richness stays in the outer thirds. Far left and far right hold
-    a few large unlabelled monitor shapes and soft broadcast fixtures.
-    Screens are blank colour fields only — warm white, forest green, cobalt
-    or signal orange — never diagrams or type. Forms are chunky and sparse.
-    The central vertical zone is an uninterrupted warm-white wall.
-
-    Lighting is bright, soft, and even. Colour lives on the hosts and a few
-    outer fixtures, not as a room-wide wash. Both hosts receive a soft
-    neutral rim so neither silhouette merges into the wall.
+    Lighting is bright, soft, and even. Colour lives on the hosts and a
+    few outer props, not as a room-wide wash. Both hosts receive a soft
+    neutral rim so neither silhouette merges into the cream centre wall.
 
   # ---------------------------------------------------------------------
   hosts:

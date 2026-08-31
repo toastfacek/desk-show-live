@@ -17,7 +17,7 @@ HERO_WIDTH = 1344
 HERO_HEIGHT = 768
 BOT1_NAME = "PHASEONE[lol]"
 BOT2_NAME = "deb"
-SCENE_NAME = "Light broadcast desk"
+SCENE_NAME = "Light Media Club"
 DEFAULT_HERO = Path(__file__).resolve().parents[1] / "fixtures" / "hero_wide.png"
 
 DISABLED_TTS = {
@@ -72,13 +72,16 @@ BOT2_MANIFEST = {
 SCENE_MANIFEST = {
     "schema_version": 2,
     "set": (
-        "A clean light-mode technology broadcast studio. A long pale desk runs "
-        "across the lower third, parallel to camera, with a broad uncluttered "
-        "centre. Two simple boom microphones enter from the outer edges. Outer "
-        "thirds hold a few large unlabelled monitor shapes and soft broadcast "
-        "fixtures. Screens are blank colour fields only. The central vertical "
-        "zone is an uninterrupted warm-white wall. No papers, stickers, logos "
-        "or readable displays."
+        "A clean light-mode live media clubhouse. A substantial dark walnut "
+        "pill-shaped desk sits on a cream oval rug over light wood floor, "
+        "vertical ribbing on the desk face and a warm recessed glow at centre. "
+        "Two short black desk-stand microphones sit in front of the hosts. "
+        "The centre wall is a quiet cream panel between forest-green pillars. "
+        "Outer thirds hold recessed white shelves with plants, lamps and "
+        "abstract colour-block art, plus one large colourful puzzle cube on "
+        "the left floor and one oversized dark chess knight on the right. "
+        "A black lighting grid with square soft panels hangs above. No "
+        "papers, stickers, logos or readable displays."
     ),
     "palette": ["warm white", "forest green", "cobalt", "signal orange"],
     "lighting": "Bright soft broadcast light.",
@@ -134,7 +137,7 @@ def lock_canonical_hosts(
     approved = candidates.approve(
         candidate.id,
         canonical=True,
-        review_note="Canonical PHASEONE[lol] / deb light broadcast still.",
+        review_note="Canonical Light Media Club still from the archived visual board.",
     )
     return baselines.lock_run(approved.cast_key)
 
