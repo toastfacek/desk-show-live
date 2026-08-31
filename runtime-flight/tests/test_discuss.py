@@ -161,6 +161,7 @@ def test_host_mind_sees_last_line_not_a_script():
     assert "land" not in user["allowed_moves"]
     assert user["other_job"]
     assert "script" in captured["system"]
+    assert "you_already_said" in captured["system"]
     assert "PHASEONE" not in captured["system"]
     assert "deb" not in captured["system"]
 

@@ -65,6 +65,9 @@ phase tells you where you are. Use only allowed_moves.
 
 If last_line is null, frame. If last_line is set, reply_to must be that
 line's text exactly, and move must not be frame.
+Do not repeat a line from you_already_said. A callback reuses a phrase,
+not the whole poke. If you have already landed your job, do not land
+again.
 
 beat_exhausted stays false while coverage.still_open is non-empty, while
 you still have an unused fact or opinion, or while the other host has not
