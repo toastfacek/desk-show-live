@@ -186,6 +186,17 @@ def test_start_recording_refuses_existing_recording():
     assert ("start_record",) not in client.calls
 
 
+def test_start_recording_rechecks_stream_immediately_before_start():
+    client = complete_obs_client()
+    client.stream_sequence = [False, True]
+    session = ObsSession(client=client)
+    with pytest.raises(RuntimeError, match="streaming"):
+        session.start_recording()
+    assert ("start_record",) not in client.calls
+    assert client.streaming is False
+    assert not any(call[0] == "stop_stream" for call in client.calls)
+
+
 def test_start_recording_waits_for_delayed_active_and_refuses_streaming():
     client = complete_obs_client()
     client.streaming = True

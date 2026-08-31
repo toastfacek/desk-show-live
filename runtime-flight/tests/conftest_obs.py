@@ -30,6 +30,8 @@ class FakeObsClient:
     supported_kinds: tuple[str, ...] = SUPPORTED_KINDS
     calls: list[tuple] = field(default_factory=list)
     streaming: bool = False
+    stream_sequence: list[bool] | None = None
+    stream_polls: int = 0
     recording: bool = False
     record_duration_ms: int = 0
     output_path: str = "/tmp/recording.mkv"
@@ -132,6 +134,12 @@ class FakeObsClient:
         return item_id
 
     def get_stream_status(self):
+        self.calls.append(("get_stream_status",))
+        if self.stream_sequence:
+            index = min(self.stream_polls, len(self.stream_sequence) - 1)
+            active = self.stream_sequence[index]
+            self.stream_polls += 1
+            return type("StreamStatus", (), {"output_active": active})()
         return type("StreamStatus", (), {"output_active": self.streaming})()
 
     def get_record_status(self):

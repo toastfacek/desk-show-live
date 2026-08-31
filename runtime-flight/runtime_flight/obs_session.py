@@ -85,6 +85,7 @@ class ObsSession:
         self.refuse_streaming()
         if self._recording_active():
             raise RuntimeError("OBS is already recording; refusing to continue")
+        self.refuse_streaming()
 
         self._client.start_record()
         self._owns_recording = True
