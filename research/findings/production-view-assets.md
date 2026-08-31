@@ -6,7 +6,7 @@ Named shows stay in this file. They never enter a generation prompt, a Writer sy
 
 The locked pixel grammar is [runtime-graphics-spec.md](../runtime-graphics-spec.md). Type and colour evidence is [L5](L5-type-color.md). Motion family is [L6](L6-motion-idents.md). Layout wells are [L4](L4-multibox-layouts.md). This note is the **asset bill**: what files and templates must exist before that spec can appear on programme.
 
-A static 1920×1080 target frame lives at [../mocks/production-view.html](../mocks/production-view.html).
+A static 1920×1080 target frame lives at [../mocks/production-view.html](../mocks/production-view.html). The design-agent contract (brief, file manifest, overlay schema, first fixture) is [../deliverables/ASSET_MANIFEST.md](../deliverables/ASSET_MANIFEST.md).
 
 ## What “on par” means here
 

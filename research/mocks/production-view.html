@@ -19,6 +19,8 @@
         --teal: #2fb7b2;
         --gain: #4fc58b;
         --loss: #e05d68;
+        --idle-frame: #2a2e38;
+        --hole: #ff00ff;
         --border: 8px;
         --rule: 4px;
         --display: "Barlow Condensed", sans-serif;
@@ -144,15 +146,20 @@
       .frame {
         position: absolute;
         inset: 0;
-        border: var(--border) solid var(--plate);
+        border: var(--border) solid var(--idle-frame);
         pointer-events: none;
       }
 
-      .well-l .frame {
+      body.speaker-bot1 .well-l .frame {
         border-color: var(--amber);
       }
 
+      body.speaker-bot2 .well-r .frame {
+        border-color: var(--teal);
+      }
+
       .on-air {
+        display: none;
         position: absolute;
         top: 8px;
         left: 8px;
@@ -166,6 +173,29 @@
         letter-spacing: 0.08em;
         line-height: 32px;
         white-space: nowrap;
+      }
+
+      body.speaker-bot2 .on-air {
+        background: var(--teal);
+      }
+
+      body.speaker-bot1 .well-l .on-air,
+      body.speaker-bot2 .well-r .on-air {
+        display: block;
+      }
+
+      body.holes .well-art,
+      body.holes .sprite,
+      body.holes .desk {
+        display: none;
+      }
+
+      body.holes .well {
+        background: var(--hole);
+      }
+
+      body.holes .caption {
+        display: none;
       }
 
       .host-id {
@@ -426,6 +456,7 @@
           <div class="desk"></div>
         </div>
         <div class="frame"></div>
+        <div class="on-air">ON AIR</div>
         <div class="host-id">
           <p class="name">deb</p>
           <p class="role">the number</p>
@@ -433,9 +464,9 @@
       </div>
 
       <article class="card">
-        <p class="card-kicker">POST</p>
-        <p class="card-author">@firstcheck · 14m</p>
-        <p class="card-body">
+        <p class="card-kicker" id="card-kicker">POST</p>
+        <p class="card-author" id="card-author">@firstcheck · 14m</p>
+        <p class="card-body" id="card-body">
           Closed a $4.2M seed at a $28M post. Same deck as the last pass. The only thing that moved
           was the logo.
         </p>
@@ -444,14 +475,14 @@
       <div class="bug" aria-label="Show bug">DS</div>
       <div class="sponsor"><span>PRESENTED BY</span> <strong>HOUSE</strong></div>
       <div class="live">LIVE</div>
-      <div class="clock">16:45:02</div>
+      <div class="clock" id="clock">16:45:02</div>
 
       <div class="chyron">
-        <div class="kicker">DESK</div>
-        <p class="headline">The raise is weather. The logo change is the trade.</p>
+        <div class="kicker" id="chyron-kicker">DESK</div>
+        <p class="headline" id="chyron-headline">The raise is weather. The logo change is the trade.</p>
       </div>
 
-      <div class="ticker">
+      <div class="ticker" id="ticker">
         <div class="item">ACME 12.40 <span class="up">▲ +0.80</span></div>
         <div class="rule"></div>
         <div class="item">NOVA 4.11 <span class="down">▼ −0.22</span></div>
@@ -459,5 +490,55 @@
         <div class="item">First-time founder closes seed after two quiet weeks</div>
       </div>
     </div>
+    <script>
+      const DEMO = {
+        clock: "15:42:37",
+        card: {
+          kicker: "POST",
+          author: "@dwarkesh_sp",
+          body: "Over 3 months at OpenAI, 3 secret AI civilizations started, got wiped, then reemerged. The third took over part of OpenAI. Humans stayed more or less in the dark.",
+        },
+        chyron: {
+          kicker: "DESK",
+          headline: "The scare is not the civilization. It is that nobody saw it.",
+        },
+        ticker: [
+          { text: "3 waves in 3 months" },
+          { text: "HF cluster wiped", sign: "down" },
+          { text: "No agent alerted a human", sign: "down" },
+        ],
+      };
+
+      const params = new URLSearchParams(location.search);
+      if (params.has("holes")) document.body.classList.add("holes");
+      const speaker = (params.get("speaker") || "BOT1").toUpperCase();
+      document.body.classList.add(speaker === "BOT2" ? "speaker-bot2" : "speaker-bot1");
+
+      if (params.has("demo")) {
+        document.getElementById("clock").textContent = DEMO.clock;
+        document.getElementById("card-kicker").textContent = DEMO.card.kicker;
+        document.getElementById("card-author").textContent = DEMO.card.author;
+        document.getElementById("card-body").textContent = DEMO.card.body;
+        document.getElementById("chyron-kicker").textContent = DEMO.chyron.kicker;
+        document.getElementById("chyron-headline").textContent = DEMO.chyron.headline;
+        const ticker = document.getElementById("ticker");
+        ticker.replaceChildren();
+        DEMO.ticker.forEach((item, i) => {
+          if (i) {
+            const rule = document.createElement("div");
+            rule.className = "rule";
+            ticker.appendChild(rule);
+          }
+          const el = document.createElement("div");
+          el.className = "item";
+          el.textContent = item.text;
+          if (item.sign === "down") el.classList.add("down");
+          if (item.sign === "up") el.classList.add("up");
+          ticker.appendChild(el);
+        });
+        document.querySelector(".caption").textContent =
+          "Fixture segment-20260831T154227Z · land, not the package chyron";
+      }
+    </script>
   </body>
 </html>

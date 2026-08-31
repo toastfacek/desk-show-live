@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runtime.local/overlay-state.schema.json",
+  "title": "Desk Show overlay state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["layout", "live", "hold", "speaker", "hosts", "card", "chyron", "ticker"],
+  "properties": {
+    "layout": {
+      "type": "string",
+      "enum": ["split", "paired", "wide", "solo_l", "solo_r", "card_full", "hold"]
+    },
+    "live": { "type": "boolean" },
+    "hold": { "type": "boolean", "description": "Panic/standby. Default false." },
+    "clock": {
+      "type": "string",
+      "pattern": "^[0-2][0-9]:[0-5][0-9]:[0-5][0-9]$"
+    },
+    "speaker": {
+      "type": ["string", "null"],
+      "enum": ["BOT1", "BOT2", null],
+      "description": "Director-intended speaker. Null = neither ON AIR."
+    },
+    "hosts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["BOT1", "BOT2"],
+      "properties": {
+        "BOT1": { "$ref": "#/$defs/host" },
+        "BOT2": { "$ref": "#/$defs/host" }
+      }
+    },
+    "card": {
+      "type": "object",
+      "required": ["template"],
+      "properties": {
+        "template": {
+          "type": "string",
+          "enum": ["post", "chart", "image", "guest", "error"]
+        },
+        "kicker": { "type": "string", "maxLength": 12 },
+        "author": { "type": "string", "maxLength": 48 },
+        "body": { "type": "string", "maxLength": 240 },
+        "title": { "type": "string", "maxLength": 80 }
+      }
+    },
+    "chyron": {
+      "type": "object",
+      "required": ["kicker", "headline"],
+      "properties": {
+        "kicker": { "type": "string", "maxLength": 12 },
+        "headline": { "type": "string", "maxLength": 90 }
+      }
+    },
+    "ticker": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/tickerItem" }
+    },
+    "sponsor": {
+      "type": "object",
+      "properties": {
+        "label": { "type": "string", "const": "PRESENTED BY" },
+        "name": { "type": "string", "maxLength": 24 }
+      }
+    }
+  },
+  "$defs": {
+    "host": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "id_visible": { "type": "boolean" },
+        "axis": { "type": "string", "maxLength": 24 }
+      }
+    },
+    "tickerItem": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "symbol": { "type": "string", "maxLength": 8 },
+        "value": { "type": "string", "maxLength": 12 },
+        "change": { "type": "string", "maxLength": 12 },
+        "sign": { "type": "string", "enum": ["up", "down", "flat"] },
+        "text": { "type": "string", "maxLength": 80 }
+      }
+    }
+  }
+}

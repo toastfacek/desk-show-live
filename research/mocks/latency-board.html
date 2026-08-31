@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>segment-20260831T154227Z latency</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        background: #101116;
+        color: #f2f0e8;
+        font-family: Inter, "IBM Plex Sans", sans-serif;
+      }
+      .wrap {
+        padding: 72px 96px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 42px;
+        font-weight: 700;
+      }
+      .sub {
+        margin: 0 0 48px;
+        color: #a9adb7;
+        font-size: 22px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 220px 1fr 160px;
+        align-items: center;
+        gap: 16px;
+        margin: 0 0 28px;
+      }
+      .label {
+        font-size: 20px;
+        color: #a9adb7;
+      }
+      .track {
+        position: relative;
+        height: 40px;
+        background: #171a20;
+      }
+      .bar {
+        position: absolute;
+        top: 0;
+        height: 40px;
+      }
+      .fal {
+        background: #f2a541;
+      }
+      .play {
+        background: #2fb7b2;
+      }
+      .late {
+        background: #e05d68;
+      }
+      .gap {
+        background: #2a2e38;
+      }
+      .val {
+        font-variant-numeric: tabular-nums;
+        font-size: 22px;
+        font-weight: 700;
+        text-align: right;
+      }
+      .axis {
+        display: flex;
+        justify-content: space-between;
+        margin: 8px 0 40px 236px;
+        width: calc(100% - 396px);
+        color: #a9adb7;
+        font-variant-numeric: tabular-nums;
+        font-size: 18px;
+      }
+      .notes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px 48px;
+        font-size: 22px;
+        line-height: 1.45;
+      }
+      .notes strong {
+        color: #f2a541;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>10.4s picture, 17.88s of fal</h1>
+      <p class="sub">
+        segment-20260831T154227Z · no-OBS smoke · two 768p H3 takes · writer wall not logged
+      </p>
+
+      <div class="row">
+        <div class="label">Take 1 fal</div>
+        <div class="track">
+          <div class="bar fal" style="left: 0; width: 44.5%"></div>
+        </div>
+        <div class="val">7.96s</div>
+      </div>
+      <div class="row">
+        <div class="label">Gap</div>
+        <div class="track">
+          <div class="bar gap" style="left: 44.5%; width: 6.7%"></div>
+        </div>
+        <div class="val">1.20s</div>
+      </div>
+      <div class="row">
+        <div class="label">Take 2 fal</div>
+        <div class="track">
+          <div class="bar fal" style="left: 51.2%; width: 48.8%"></div>
+        </div>
+        <div class="val">8.72s</div>
+      </div>
+      <div class="row">
+        <div class="label">Picture aired</div>
+        <div class="track">
+          <div class="bar play" style="left: 0; width: 58.2%"></div>
+        </div>
+        <div class="val">10.40s</div>
+      </div>
+      <div class="row">
+        <div class="label">If live-overlap</div>
+        <div class="track">
+          <div class="bar play" style="left: 44.5%; width: 29.0%"></div>
+          <div class="bar late" style="left: 73.5%; width: 19.8%"></div>
+        </div>
+        <div class="val">late 3.54s</div>
+      </div>
+      <div class="axis">
+        <span>0s</span><span>5s</span><span>10s</span><span>15s</span><span>17.9s</span>
+      </div>
+
+      <div class="notes">
+        <div>
+          This flight <strong>generated, then concatenated</strong>. It did not
+          play-while-generate. Furniture adds <strong>0 ms</strong> to fal.
+        </div>
+        <div>
+          Writer budget is <strong>1.5s</strong> / line. Three text requests ran;
+          per-call wall was not written to the flight log.
+        </div>
+        <div>
+          Live path: start take 2 when take 1 is ready (t=7.96). Take 1 ends at
+          13.14. Take 2 ready at 16.68. Director holds or bumpers the 3.5s miss.
+        </div>
+        <div>
+          Overlay clock, card, chyron, and speaker tab are free minutes. They
+          hide the hold. They do not make H3 faster.
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
