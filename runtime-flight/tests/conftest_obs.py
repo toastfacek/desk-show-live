@@ -71,7 +71,6 @@ class FakeObsClient:
 
     def get_input_kind_list(self, unversioned: bool):
         self.calls.append(("get_input_kind_list", unversioned))
-        assert unversioned is True
         return type(
             "InputKindList",
             (),

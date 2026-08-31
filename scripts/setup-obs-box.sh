@@ -40,7 +40,11 @@ if [[ ! -f "$CONFIG_YAML" ]]; then
   echo "wrote $CONFIG_YAML from example"
 fi
 
-if ! ss -ltn | grep -q ':4455 '; then
+port_open() {
+  "${ROOT}/.venv/bin/python" -c 'import socket,sys; s=socket.socket(); s.settimeout(1); sys.exit(0 if s.connect_ex(("127.0.0.1", 4455))==0 else 1)'
+}
+
+if ! port_open; then
   mkdir -p "$(dirname "$LOG_PATH")"
   echo "starting OBS on DISPLAY=${DISPLAY_VALUE}"
   DISPLAY="$DISPLAY_VALUE" \
@@ -57,12 +61,12 @@ fi
 
 echo "waiting for websocket :4455"
 for _ in $(seq 1 60); do
-  if ss -ltn | grep -q ':4455 '; then
+  if port_open; then
     break
   fi
   sleep 1
 done
-if ! ss -ltn | grep -q ':4455 '; then
+if ! port_open; then
   echo "OBS websocket did not bind :4455. last log lines:" >&2
   tail -n 40 "$LOG_PATH" >&2 || true
   exit 1

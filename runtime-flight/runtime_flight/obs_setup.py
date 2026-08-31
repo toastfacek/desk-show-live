@@ -164,12 +164,19 @@ def _input_kinds(client: ObsSetupClient) -> dict[str, str]:
     return kinds
 
 
-def _supported_input_kinds(client: ObsSetupClient) -> set[str]:
-    response = client.get_input_kind_list(True)
+def _kind_list(client: ObsSetupClient, unversioned: bool) -> set[str]:
+    response = client.get_input_kind_list(unversioned)
     kinds = getattr(response, "input_kinds", None)
     if kinds is None:
         kinds = getattr(response, "inputKinds", None) or []
-    return {normalize_input_kind(str(kind)) for kind in kinds}
+    return {str(kind) for kind in kinds}
+
+
+def _supported_input_kinds(client: ObsSetupClient) -> set[str]:
+    # Linux OBS 32 registers CreateInput kinds as versioned
+    # (text_ft2_source_v2, color_source_v3). The unversioned list is
+    # still required so existing Windows kinds keep matching.
+    return _kind_list(client, False) | _kind_list(client, True)
 
 
 def _scene_items(client: ObsSetupClient, scene_name: str) -> list[tuple[str, int]]:
@@ -223,16 +230,27 @@ def _required_roles() -> set[str]:
     return {INPUT_ROLE[input_name] for input_name in REQUIRED_INPUTS}
 
 
+def _preferred_kind(supported_kinds: set[str], candidates: tuple[str, ...]) -> str | None:
+    """Pick a CreateInput kind. Prefer a versioned name OBS actually registers."""
+    best: str | None = None
+    best_key: tuple[int, int] | None = None
+    for kind in supported_kinds:
+        normalized = normalize_input_kind(kind)
+        if normalized not in candidates:
+            continue
+        # Higher is better: versioned kinds first, then ROLE_KIND_CANDIDATES order.
+        key = (1 if kind != normalized else 0, -candidates.index(normalized))
+        if best_key is None or key > best_key:
+            best = kind
+            best_key = key
+    return best
+
+
 def resolve_role_kinds(supported_kinds: set[str]) -> dict[str, str]:
-    normalized_supported = {normalize_input_kind(kind) for kind in supported_kinds}
     resolved: dict[str, str] = {}
     missing_roles: list[str] = []
     for role in sorted(_required_roles()):
-        candidates = ROLE_KIND_CANDIDATES[role]
-        chosen = next(
-            (kind for kind in candidates if kind in normalized_supported),
-            None,
-        )
+        chosen = _preferred_kind(supported_kinds, ROLE_KIND_CANDIDATES[role])
         if chosen is None:
             missing_roles.append(role)
         else:

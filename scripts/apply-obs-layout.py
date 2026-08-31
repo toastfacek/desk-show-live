@@ -181,6 +181,26 @@ def apply_layout(client: ReqClient, *, clip: Path, watchdog_url: str) -> dict:
         },
         overlay=False,
     )
+    # Color sources default to a 1920×1080 plate and would cover the desk.
+    # Size them as 8px speaking bars and hide until set_speaking.
+    for name, well, x in (
+        ("HL_A", left, left["x"] - 8),
+        ("HL_B", right, right["x"] + right["w"]),
+    ):
+        client.set_input_settings(
+            name=name,
+            settings={"width": 8, "height": int(well["h"]), "color": 0xFF2EE6A6},
+            overlay=True,
+        )
+        for scene in ("wide", "split", "solo_l", "solo_r"):
+            for item_id in _ids(client, scene, name):
+                client.set_scene_item_transform(
+                    scene,
+                    item_id,
+                    _bounds(x, well["y"], 8, well["h"]),
+                )
+                client.set_scene_item_enabled(scene, item_id, False)
+
     client.set_current_program_scene("split")
 
     errors = validate_contract(client)
