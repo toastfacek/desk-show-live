@@ -8,8 +8,9 @@ version = "0.1.0"
 description = "One-tweet live runtime flight orchestration."
 requires-python = ">=3.11"
 dependencies = [
-    "pack-manager>=0.1.0",
-    "obs-harness>=0.1.0",
+    "pyyaml>=6.0.3",
+    "httpx2>=2.12.0",
+    "fal-client>=1.0.1,<2",
     "pillow>=12.3.0,<13",
 ]
 

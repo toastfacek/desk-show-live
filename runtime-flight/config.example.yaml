@@ -1,0 +1,34 @@
+# Runtime flight configuration example.
+#
+# Root config.yaml and requirements.txt are NOT flight configuration. They belong
+# to the deprecated single-host mpv research scaffold and must not be copied here.
+
+mode: live
+pack_manager_data_dir: ../pack-manager/data
+baseline_id_env: RUNTIME_BASELINE_ID
+source_packet: inputs/source_packet.local.json
+source_lock: inputs/source_packet.lock.json
+target_duration_s: 90
+text:
+  base_url_env: TEXT_BASE_URL
+  api_key_env: TEXT_API_KEY
+  model_env: TEXT_MODEL
+  timeout_s: 8
+  smoke_max_requests: 4
+  flight_max_requests: 24
+video:
+  endpoint: minimax/h3-max/image-to-video
+  duration_s: 5
+  resolution: 768P
+  prompt_expansion_mode: balanced
+  safety_checker: true
+spend:
+  cap_env: RUNTIME_SPEND_CAP_USD
+  rate_768p_usd_per_s: 0.08
+obs:
+  host: 127.0.0.1
+  port: 4455
+  password_env: OBS_WEBSOCKET_PASSWORD
+  record: true
+stream:
+  enabled: false

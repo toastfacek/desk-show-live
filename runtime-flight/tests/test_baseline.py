@@ -281,11 +281,19 @@ def test_baseline_context_does_not_reopen_verified_export_bytes(flight_setup, mo
     BaselineContext._from_loaded(loaded, hero_bytes)
 
 
-def test_runtime_flight_declares_pack_manager_dependency():
+def test_runtime_flight_bootstrap_installs_local_distributions():
     pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    bootstrap = Path(__file__).resolve().parents[1] / "scripts" / "bootstrap-local.sh"
     metadata = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     dependencies = metadata["project"]["dependencies"]
-    assert any(dep.startswith("pack-manager>=") for dep in dependencies)
+    bootstrap_text = bootstrap.read_text(encoding="utf-8")
+
+    assert "pyyaml>=6.0.3" in dependencies
+    assert "httpx2>=2.12.0" in dependencies
+    assert "fal-client>=1.0.1,<2" in dependencies
+    assert "pack-manager>=" not in " ".join(dependencies)
+    assert "../pack-manager" in bootstrap_text
+    assert "../obs-harness" in bootstrap_text
 
     from pack_manager.runtime import load_locked_baseline
 
