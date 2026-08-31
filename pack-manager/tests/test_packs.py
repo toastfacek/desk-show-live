@@ -417,6 +417,36 @@ def test_v2_character_rejects_extra_closed_schema_keys(pack_service, mutator, me
         pack_service.create_version(pack.id, manifest)
 
 
+def test_v2_character_accepts_optional_soul_and_opinions(pack_service):
+    pack = pack_service.create_pack("character", "flight")
+    manifest = character_manifest_v2()
+    manifest["soul"] = "You would rather be bored than impressed."
+    manifest["opinions"] = ["A wipe after the fact is weather."]
+    version = pack_service.create_version(pack.id, manifest)
+    assert version.manifest["soul"].startswith("You would rather")
+    assert version.manifest["opinions"] == ["A wipe after the fact is weather."]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("soul", ""),
+        ("soul", "   "),
+        ("soul", 1),
+        ("opinions", "Name the cluster."),
+        ("opinions", []),
+        ("opinions", [""]),
+    ],
+)
+def test_v2_character_rejects_invalid_soul_or_opinions(pack_service, field, value):
+    pack = pack_service.create_pack("character", "flight")
+    manifest = character_manifest_v2()
+    manifest[field] = value
+
+    with pytest.raises(ValidationError, match=field):
+        pack_service.create_version(pack.id, manifest)
+
+
 def test_v2_scene_rejects_extra_closed_schema_keys(pack_service):
     pack = pack_service.create_pack("scene", "flight")
     manifest = scene_manifest_v2()
