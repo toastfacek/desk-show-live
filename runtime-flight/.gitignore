@@ -10,3 +10,4 @@ inputs/*.local.json
 inputs/*.lock.json
 inputs/dwarkesh-agent-civilizations.txt
 out/
+overlay/state/

@@ -34,13 +34,20 @@ def test_validate_contract_accepts_versioned_existing_kinds():
 
 def test_resolve_role_kinds_uses_exact_unversioned_candidates():
     kinds = resolve_role_kinds(
-        {"ffmpeg_source", "text_gdiplus", "color_source", "image_source"}
+        {
+            "ffmpeg_source",
+            "text_gdiplus",
+            "color_source",
+            "image_source",
+            "browser_source",
+        }
     )
     assert kinds == {
         "media": "ffmpeg_source",
         "text": "text_gdiplus",
         "color": "color_source",
         "image": "image_source",
+        "browser": "browser_source",
     }
 
 

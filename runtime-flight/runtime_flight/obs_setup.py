@@ -17,6 +17,7 @@ REQUIRED_INPUTS = (
     "HL_A",
     "HL_B",
     "BED",
+    "WATCHDOG",
 )
 HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
 
@@ -27,6 +28,7 @@ ROLE_KIND_CANDIDATES: dict[str, tuple[str, ...]] = {
     "text": ("text_gdiplus", "text_ft2_source"),
     "color": ("color_source",),
     "image": ("image_source",),
+    "browser": ("browser_source",),
 }
 
 INPUT_ROLE: dict[str, str] = {
@@ -38,6 +40,7 @@ INPUT_ROLE: dict[str, str] = {
     "HL_A": "color",
     "HL_B": "color",
     "CENTER": "image",
+    "WATCHDOG": "browser",
 }
 
 
@@ -57,6 +60,7 @@ SCENE_ITEM_REQUIREMENTS: dict[str, tuple[SceneItemRequirement, ...]] = {
         SceneItemRequirement("NAME_B"),
         SceneItemRequirement("HL_A"),
         SceneItemRequirement("HL_B"),
+        SceneItemRequirement("WATCHDOG"),
     ),
     "split": (
         SceneItemRequirement("HOST_WIDE", minimum=2, maximum=2, distinct_ids=True),
@@ -66,6 +70,7 @@ SCENE_ITEM_REQUIREMENTS: dict[str, tuple[SceneItemRequirement, ...]] = {
         SceneItemRequirement("NAME_B"),
         SceneItemRequirement("HL_A"),
         SceneItemRequirement("HL_B"),
+        SceneItemRequirement("WATCHDOG"),
     ),
     "solo_l": (
         SceneItemRequirement("HOST_WIDE"),
@@ -74,6 +79,7 @@ SCENE_ITEM_REQUIREMENTS: dict[str, tuple[SceneItemRequirement, ...]] = {
         SceneItemRequirement("NAME_B"),
         SceneItemRequirement("HL_A"),
         SceneItemRequirement("HL_B"),
+        SceneItemRequirement("WATCHDOG"),
     ),
     "solo_r": (
         SceneItemRequirement("HOST_WIDE"),
@@ -82,9 +88,17 @@ SCENE_ITEM_REQUIREMENTS: dict[str, tuple[SceneItemRequirement, ...]] = {
         SceneItemRequirement("NAME_B"),
         SceneItemRequirement("HL_A"),
         SceneItemRequirement("HL_B"),
+        SceneItemRequirement("WATCHDOG"),
     ),
-    "card_full": (SceneItemRequirement("CENTER"),),
-    "hold": (SceneItemRequirement("CENTER"), SceneItemRequirement("BED")),
+    "card_full": (
+        SceneItemRequirement("CENTER"),
+        SceneItemRequirement("WATCHDOG"),
+    ),
+    "hold": (
+        SceneItemRequirement("CENTER"),
+        SceneItemRequirement("BED"),
+        SceneItemRequirement("WATCHDOG"),
+    ),
 }
 
 
@@ -299,7 +313,11 @@ def _missing_scene_item_counts(
     return missing
 
 
-def setup_obs(client: ObsSetupClient) -> dict[str, list[str]]:
+def setup_obs(
+    client: ObsSetupClient,
+    *,
+    watchdog_url: str = "http://127.0.0.1:8765/",
+) -> dict[str, list[str]]:
     kind_errors = _input_kind_errors(client)
     if kind_errors:
         raise RuntimeError(kind_errors[0])
@@ -320,11 +338,19 @@ def setup_obs(client: ObsSetupClient) -> dict[str, list[str]]:
     anchor_scene = "wide"
     for input_name in REQUIRED_INPUTS:
         if input_name not in inputs:
+            settings: dict[str, Any] = {}
+            if input_name == "WATCHDOG":
+                settings = {
+                    "url": watchdog_url,
+                    "width": 1920,
+                    "height": 1080,
+                    "reroute_audio": False,
+                }
             client.create_input(
                 anchor_scene,
                 input_name,
                 input_kinds[input_name],
-                {},
+                settings,
                 True,
             )
             created_inputs.append(input_name)

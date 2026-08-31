@@ -66,11 +66,31 @@ def test_validate_contract_rejects_split_with_duplicate_host_wide_ids():
     assert any("distinct" in error.lower() for error in errors)
 
 
-def test_validate_contract_excludes_watchdog_until_task_12():
+def test_validate_contract_requires_watchdog():
     client = complete_obs_client()
     errors = validate_contract(client)
     assert errors == []
-    assert "WATCHDOG" not in REQUIRED_INPUTS
+    assert REQUIRED_INPUTS[-1] == "WATCHDOG"
+
+
+def test_setup_obs_places_watchdog_last_in_every_scene():
+    client = FakeObsClient()
+    setup_obs(client, watchdog_url="http://127.0.0.1:8765/")
+    watchdog_calls = [
+        call
+        for call in client.calls
+        if call[0] == "create_input" and call[2] == "WATCHDOG"
+    ]
+    assert len(watchdog_calls) == 1
+    assert watchdog_calls[0][3] == "browser_source"
+    assert watchdog_calls[0][4] == {
+        "url": "http://127.0.0.1:8765/",
+        "width": 1920,
+        "height": 1080,
+        "reroute_audio": False,
+    }
+    for scene in REQUIRED_SCENES:
+        assert client.scene_items[scene][-1].source_name == "WATCHDOG"
 
 
 def test_validate_contract_rejects_incompatible_existing_input_kind():

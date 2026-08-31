@@ -12,6 +12,7 @@ SUPPORTED_KINDS = (
     "text_ft2_source",
     "text_gdiplus",
     "color_source",
+    "browser_source",
 )
 
 
@@ -223,6 +224,7 @@ def complete_obs_client() -> FakeObsClient:
             "HL_A": "color_source",
             "HL_B": "color_source",
             "BED": "ffmpeg_source",
+            "WATCHDOG": "browser_source",
         },
         scene_items=scene_items_for_contract(),
     )
