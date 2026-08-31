@@ -149,12 +149,12 @@ baseline:
       silhouette: broad rounded orange software sprite
       eye_design: two solid cream ovals without pupils
       proportions: low and wide
-      voice_direction: low, measured, dry, warm
+      voice_direction: low chest voice, slow and even, dry, almost bored
     BOT2:
       silhouette: tall cobalt software sprite
       eye_design: two solid cream rounded rectangles without pupils
       proportions: tall and narrow
-      voice_direction: quicker, curious, playful
+      voice_direction: higher thinner voice, quick and clipped, bright, slightly nasal
   scene:
     set: clean light-mode technology broadcast studio
     palette: warm white, forest green, cobalt, signal orange

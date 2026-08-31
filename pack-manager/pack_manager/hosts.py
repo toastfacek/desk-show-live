@@ -48,7 +48,10 @@ BOT1_MANIFEST = {
         "Make one clear claim per thought.",
         "Stay dry and unhurried.",
     ],
-    "voice_direction": "Low, measured, dry, warm, with restrained energy.",
+    "voice_direction": (
+        "Low chest voice, slow and even, dry, almost bored, "
+        "no lift at the end of sentences."
+    ),
     "tts": DISABLED_TTS,
 }
 
@@ -65,7 +68,10 @@ BOT2_MANIFEST = {
         "Ask what moved, by how much, for whom.",
         "Stay curious; do not let a shrug pass.",
     ],
-    "voice_direction": "Quicker, curious, playful, with restless lift.",
+    "voice_direction": (
+        "Higher thinner voice, quick and clipped, bright, slightly nasal, "
+        "restless upward energy."
+    ),
     "tts": DISABLED_TTS,
 }
 
