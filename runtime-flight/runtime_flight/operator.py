@@ -1,0 +1,153 @@
+"""Operator command wiring. Gates live here; the harness owns the show clock."""
+
+from __future__ import annotations
+
+import os
+from collections.abc import Callable
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
+from typing import Any, Literal
+
+from runtime_flight.config import RuntimeConfig, load_config, validate_config
+from runtime_flight.obs_session import ObsSession
+from runtime_flight.obs_setup import setup_obs
+from runtime_flight.source import SourceError, load_source_packet
+from runtime_flight.signals import install_panic_handler
+
+PAID_FLAG_ENV = "RUNTIME_ALLOW_PAID"
+SMOKE_MAX_TEXT = 4
+LIVE_MAX_TEXT = 24
+SMOKE_FAL_ATTEMPTS = frozenset({1, 2})
+
+
+class OperatorError(Exception):
+    """Raised when an operator command is refused before work starts."""
+
+
+FlightRunner = Callable[..., int]
+
+
+def require_paid_flag() -> None:
+    if os.environ.get(PAID_FLAG_ENV) != "1":
+        raise OperatorError("paid flag absent")
+
+
+def require_confirm_spend(config: RuntimeConfig, confirm: str | None) -> Decimal:
+    if confirm is None or str(confirm).strip() == "":
+        raise OperatorError("confirm-spend does not match spend cap")
+    try:
+        value = Decimal(str(confirm))
+    except InvalidOperation as error:
+        raise OperatorError("confirm-spend does not match spend cap") from error
+    if config.spend_cap_usd is None or value != config.spend_cap_usd:
+        raise OperatorError("confirm-spend does not match spend cap")
+    return value
+
+
+def require_text_request_limit(mode: Literal["smoke", "live"], count: int) -> None:
+    limit = SMOKE_MAX_TEXT if mode == "smoke" else LIVE_MAX_TEXT
+    if count > limit:
+        raise OperatorError(
+            f"text request limit exceeded: {count} > {limit} for mode {mode}"
+        )
+
+
+def require_smoke_fal_limit(max_fal_submissions: int) -> None:
+    if max_fal_submissions not in SMOKE_FAL_ATTEMPTS:
+        raise OperatorError("smoke --max-fal-submissions must be 1 or 2")
+
+
+def load_reviewed_source(config: RuntimeConfig) -> Any:
+    try:
+        return load_source_packet(config.source_packet, config.source_lock)
+    except SourceError as error:
+        raise OperatorError(str(error)) from error
+
+
+def refuse_active_stream(session: ObsSession) -> None:
+    try:
+        session.refuse_streaming()
+    except RuntimeError as error:
+        raise OperatorError(str(error)) from error
+
+
+def cmd_setup_obs(
+    config: RuntimeConfig,
+    session: ObsSession,
+    *,
+    watchdog_url: str,
+) -> dict[str, list[str]]:
+    refuse_active_stream(session)
+    return setup_obs(session._client, watchdog_url=watchdog_url)
+
+
+def cmd_rehearse(run_rehearsal: Callable[[], int]) -> int:
+    return run_rehearsal()
+
+
+def cmd_paid_flight(
+    config: RuntimeConfig,
+    *,
+    mode: Literal["smoke", "live"],
+    confirm_spend: str | None,
+    max_text_requests: int,
+    max_fal_submissions: int | None,
+    session: ObsSession,
+    run_flight: FlightRunner,
+    cleanup: Callable[[], None],
+    panic_installer=install_panic_handler,
+) -> int:
+    require_paid_flag()
+    require_confirm_spend(config, confirm_spend)
+    require_text_request_limit(mode, max_text_requests)
+    if mode == "smoke":
+        if max_fal_submissions is None:
+            raise OperatorError("smoke --max-fal-submissions must be 1 or 2")
+        require_smoke_fal_limit(max_fal_submissions)
+    load_reviewed_source(config)
+    refuse_active_stream(session)
+    panic_installer(cleanup)
+    return run_flight(
+        config=config,
+        mode=mode,
+        max_text_requests=max_text_requests,
+        max_fal_submissions=max_fal_submissions,
+        session=session,
+    )
+
+
+def cmd_replay(bundle: Path, *, network_call: Callable[..., Any] | None = None) -> dict[str, Any]:
+    if network_call is not None:
+        raise OperatorError("replay performs no network calls")
+    flight_path = Path(bundle) / "flight.json"
+    if not flight_path.is_file():
+        raise OperatorError("replay evidence bundle is missing flight.json")
+    import json
+
+    return json.loads(flight_path.read_text(encoding="utf-8"))
+
+
+def cmd_verify_flight(
+    bundle: Path,
+    *,
+    mode: Literal["automated", "final"],
+    verify,
+) -> int:
+    result = verify(Path(bundle), mode=mode)
+    return int(result.exit_code)
+
+
+def latest_bundle(out_dir: Path) -> Path:
+    root = Path(out_dir)
+    if not root.is_dir():
+        raise OperatorError(f"no flights directory: {root}")
+    children = [path for path in root.iterdir() if path.is_dir()]
+    if not children:
+        raise OperatorError("no flight evidence bundles")
+    return max(children, key=lambda path: path.stat().st_mtime)
+
+
+def load_validated_config(path: Path) -> RuntimeConfig:
+    config = load_config(path)
+    validate_config(config)
+    return config

@@ -1,0 +1,644 @@
+"""Realtime live-flight state machine. Tests drive a fake clock; Director stays pure."""
+
+from __future__ import annotations
+
+import asyncio
+import math
+from typing import Any, Literal, Protocol
+
+from obs_harness.director import decide
+from runtime_flight.baseline import BaselineContext
+from runtime_flight.models import SegmentPackage, Thought
+from runtime_flight.performer_fal import ReadyTake, TakeRequest
+from runtime_flight.prompt import assemble_prompt
+from runtime_flight.spend import SpendMeter
+from runtime_flight.writer_pipeline import WriterPipeline, WriterPipelineStopped
+
+CLIP_DURATION_S = 5.0
+POLL_INTERVAL_S = 0.2
+STREAM_POLL_INTERVAL_S = 1.0
+HERO_IMAGE_PLACEHOLDER = "hero"
+HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
+
+
+def remaining_submit_slots(target_duration_s: float, elapsed_s: float) -> int:
+    return max(0, math.floor((target_duration_s - elapsed_s) / CLIP_DURATION_S) - 1)
+
+
+def writer_phase(
+    remaining: int, opener_done: bool
+) -> Literal["open", "develop", "close"]:
+    if remaining <= 2:
+        return "close"
+    if opener_done:
+        return "develop"
+    return "open"
+
+
+class Clock(Protocol):
+    def monotonic(self) -> float: ...
+
+
+class FakeClock:
+    def __init__(self, start: float = 0.0) -> None:
+        self._t = float(start)
+
+    def monotonic(self) -> float:
+        return self._t
+
+    def advance(self, dt: float) -> None:
+        if dt < 0:
+            raise ValueError("clock cannot go backwards")
+        self._t += dt
+
+    def advance_to(self, t: float) -> None:
+        if t > self._t:
+            self._t = t
+
+
+class Performer(Protocol):
+    def start(self, request: TakeRequest) -> asyncio.Task[ReadyTake]: ...
+
+    @property
+    def stop_requested(self) -> bool: ...
+
+    @property
+    def active_requests(self) -> int: ...
+
+
+class LiveHarness:
+    def __init__(
+        self,
+        *,
+        clock: FakeClock,
+        player: Any,
+        pipeline: WriterPipeline,
+        performer: Performer,
+        meter: SpendMeter,
+        baseline: BaselineContext,
+        package: SegmentPackage,
+        target_duration_s: float = 90.0,
+        clip_duration_s: float = CLIP_DURATION_S,
+        layout_plan: tuple[str, ...] | None = None,
+        overlay: Any | None = None,
+        obs_session: Any | None = None,
+    ) -> None:
+        self.clock = clock
+        self.player = player
+        self.pipeline = pipeline
+        self.performer = performer
+        self.meter = meter
+        self.baseline = baseline
+        self.package = package
+        self.target_duration_s = target_duration_s
+        self.clip_duration_s = clip_duration_s
+        self.layout_plan = list(layout_plan or HOST_LAYOUTS)
+        self.overlay = overlay
+        self.obs_session = obs_session
+        self.started_at = clock.monotonic()
+        self.baseline_id = baseline.baseline_id
+        self.spend_policy = "normal"
+        self._stop_submits = False
+        self._opener_done = False
+        self._programme_hold = False
+        self._last_stream_poll_t: float | None = None
+        self.stop_reason: str | None = None
+        self.recording_path: str | None = None
+        self.after_step = None
+        self.flags = {"hold": False, "panic": False}
+        self.ready: list[ReadyTake] = []
+        self.cooking: dict[str, Any] | None = None
+        self.on_air: dict[str, Any] | None = None
+        self.next_take = 1
+        self.layout_i = 0
+        self.done = False
+        self.beats: list[dict] = []
+        self.events: list[dict] = []
+        self.requests: list[TakeRequest] = []
+        self.log: list[dict] = []
+        self._thought_by_take: dict[int, Thought] = {}
+        self._completed: dict[int, ReadyTake] = {}
+
+    @property
+    def t(self) -> float:
+        return self.clock.monotonic()
+
+    @property
+    def elapsed_s(self) -> float:
+        return self.t - self.started_at
+
+    @property
+    def aired_count(self) -> int:
+        return sum(1 for row in self.log if row.get("t_on_air") is not None)
+
+    def remaining_slots(self) -> int:
+        return remaining_submit_slots(self.target_duration_s, self.elapsed_s)
+
+    def current_writer_phase(self) -> Literal["open", "develop", "close"]:
+        return writer_phase(self.remaining_slots(), self._opener_done)
+
+    def snapshot(self) -> dict:
+        thought = self.pipeline.peek_ready()
+        return {
+            "t": self.t,
+            "on_air": self.on_air,
+            "ready": [
+                {
+                    "take": item.take,
+                    "path": str(item.clip_path) if item.clip_path is not None else "",
+                    "speaker": item.speaker,
+                    "line": item.line,
+                    "duration_s": self.clip_duration_s,
+                }
+                for item in self.ready
+            ],
+            "cooking": (
+                {
+                    "take": self.cooking["take"],
+                    "submitted_at": self.cooking["submitted_at"],
+                }
+                if self.cooking
+                else None
+            ),
+            "chain_ready": self.cooking is None,
+            "next_line": (
+                {"speaker": thought.speaker, "text": thought.text}
+                if thought is not None
+                else None
+            ),
+            "flags": dict(self.flags),
+            "next_take": self.next_take,
+            "layout_i": self.layout_i,
+            "segment": {
+                "layout_plan": self.layout_plan,
+                "center": self._center(),
+                "chyron": self.package.chyron,
+                "spend_policy": self.spend_policy,
+            },
+        }
+
+    async def step(self) -> None:
+        self.player.t = self.t
+        self._poll_stream_status()
+        self._observe_player()
+        if self.elapsed_s + 1e-9 >= self.target_duration_s:
+            self._enter_programme_hold()
+        await self._collect_cooking()
+        await self._ensure_writer_ahead()
+        self._update_policies()
+        if self.performer.stop_requested and not self._stop_submits:
+            self._stop_safely("performer down")
+        if self._should_cut():
+            beat = decide(self.snapshot())
+            self.beats.append(beat)
+            await self._execute(beat)
+        if self.after_step is not None:
+            self.after_step()
+
+    async def run_simulated(
+        self,
+        *,
+        until_aired: int | None = None,
+        max_t: float = 90.0,
+    ) -> None:
+        await self.step()
+        while self.t < max_t and not self.done:
+            self.clock.advance_to(self._next_event_t())
+            await self.step()
+            if until_aired is not None and self.aired_count >= until_aired:
+                return
+
+    async def run_with_obs(self, *, max_t: float | None = None) -> None:
+        if self.obs_session is None:
+            raise RuntimeError("OBS session required")
+        self.obs_session.start_recording()
+        try:
+            await self.run_simulated(
+                max_t=max_t if max_t is not None else self.target_duration_s
+            )
+            if self.stop_reason != "obs streaming":
+                await self._post_roll_recording()
+        finally:
+            self.recording_path = self.obs_session.stop_recording()
+            self.events.append(
+                {"t": self.t, "kind": "recording_stopped", "path": self.recording_path}
+            )
+
+    def _next_event_t(self) -> float:
+        now = self.t
+        next_t = now + POLL_INTERVAL_S
+        if self.cooking is not None:
+            ready_at = self.cooking.get("ready_at")
+            if ready_at is not None:
+                next_t = min(next_t, float(ready_at))
+        if self.on_air is not None:
+            ends = self.on_air.get("ends_at")
+            if ends is not None:
+                next_t = min(next_t, float(ends))
+        if self.obs_session is not None:
+            last = self._last_stream_poll_t
+            next_poll = (last if last is not None else now) + STREAM_POLL_INTERVAL_S
+            next_t = min(next_t, next_poll)
+        if next_t <= now:
+            next_t = now + POLL_INTERVAL_S
+        return next_t
+
+    def _mark_unhealthy(self) -> None:
+        if self.overlay is not None:
+            self.overlay.mark_unhealthy()
+        self.events.append({"t": self.t, "kind": "watchdog_unhealthy"})
+
+    def _obs_command(self, method: str, *args: Any, **kwargs: Any) -> bool:
+        try:
+            getattr(self.player, method)(*args, **kwargs)
+            return True
+        except Exception:
+            self._mark_unhealthy()
+            self._stop_safely("obs disconnect")
+            return False
+
+    def _observe_player(self) -> None:
+        getter = getattr(self.player, "get_program_state", None)
+        if getter is None:
+            if getattr(self.player, "connected", True) is False:
+                self._mark_unhealthy()
+                self._stop_safely("obs disconnect")
+            return
+        try:
+            state = getter()
+        except Exception:
+            self._mark_unhealthy()
+            self._stop_safely("obs disconnect")
+            return
+        if state.get("connected") is False or state.get("media_ok") is False:
+            self._mark_unhealthy()
+            self._stop_safely("obs disconnect")
+
+    def _poll_stream_status(self) -> None:
+        if self.obs_session is None:
+            return
+        last = self._last_stream_poll_t
+        if last is not None and self.t + 1e-9 < last + STREAM_POLL_INTERVAL_S:
+            return
+        try:
+            active = bool(self.obs_session.is_streaming())
+        except Exception:
+            self._mark_unhealthy()
+            self._stop_safely("obs disconnect")
+            return
+        self._last_stream_poll_t = self.t
+        self.events.append({"t": self.t, "kind": "stream_status", "active": active})
+        if active:
+            self._handle_stream_active()
+
+    def _handle_stream_active(self) -> None:
+        self._stop_submits = True
+        self.spend_policy = "stop"
+        self.flags["hold"] = True
+        self.stop_reason = "obs streaming"
+        self.on_air = {"kind": "hold", "take": None, "ends_at": None}
+        self.done = True
+        try:
+            self.player.set_layout("hold")
+        except Exception:
+            self._mark_unhealthy()
+        self.events.append({"t": self.t, "kind": "stream_active_abort"})
+
+    def _enter_programme_hold(self) -> None:
+        if self._programme_hold:
+            return
+        self._programme_hold = True
+        self._stop_submits = True
+        self.spend_policy = "stop"
+        self.flags["hold"] = True
+        self.events.append({"t": self.t, "kind": "programme_hold"})
+        self._obs_command("set_layout", "hold")
+
+    async def _post_roll_recording(self) -> None:
+        self._enter_programme_hold()
+        if self.obs_session is None:
+            return
+        deadline = self.t + max(30.0, self.target_duration_s)
+        while self.obs_session.recording_duration_s() + 1e-9 < self.target_duration_s:
+            if self.t + 1e-9 >= deadline:
+                raise RuntimeError("post-roll exceeded recording duration target")
+            self.clock.advance(POLL_INTERVAL_S)
+            self.player.t = self.t
+            self.events.append(
+                {
+                    "t": self.t,
+                    "kind": "post_roll",
+                    "recording_s": self.obs_session.recording_duration_s(),
+                }
+            )
+
+    def _center(self) -> dict[str, str]:
+        return {
+            "kind": "card",
+            "id": self.package.item_id,
+            "author": self.package.center.author,
+            "text": self.package.center.text,
+        }
+
+    def _can_reserve(self) -> bool:
+        if self._stop_submits:
+            return False
+        if self.meter.mode == "smoke" and len(self.meter.ledger.records()) >= 2:
+            return False
+        return self.meter.total + self.meter.next_cost <= self.meter.cap_usd
+
+    def _update_policies(self) -> None:
+        if self.remaining_slots() == 0 or not self._can_reserve():
+            self.spend_policy = "stop"
+            self._stop_submits = True
+        elif not self._stop_submits:
+            self.spend_policy = "normal"
+
+    async def _ensure_writer_ahead(self) -> None:
+        if self._stop_submits or self.pipeline.stopped:
+            return
+        if self.pipeline.ready.qsize() >= 2:
+            return
+        if self.remaining_slots() == 0:
+            return
+        try:
+            await self.pipeline.fill(
+                self.package,
+                segment_phase=self.current_writer_phase(),
+            )
+            self._opener_done = True
+        except WriterPipelineStopped:
+            self._stop_safely("writer down")
+        except Exception:
+            if self.pipeline.stopped:
+                self._stop_safely("writer down")
+
+    async def _collect_cooking(self) -> None:
+        if self.cooking is None:
+            return
+        task: asyncio.Task[ReadyTake] = self.cooking["task"]
+        if not task.done():
+            await asyncio.sleep(0)
+        if not task.done():
+            if self.on_air and self.on_air.get("kind") == "host":
+                ends = self.on_air.get("ends_at")
+                if ends is not None and self.t + 1e-9 >= ends:
+                    self.cooking["missed_cut"] = True
+            return
+        ready = task.result()
+        take = self.cooking["take"]
+        missed = bool(self.cooking.get("missed_cut"))
+        self.cooking = None
+        if ready.status == "dropped_422":
+            await self._handle_422(ready)
+            return
+        if ready.status != "ready":
+            self.events.append(
+                {
+                    "t": self.t,
+                    "kind": "performer_failed",
+                    "take": take,
+                    "status": ready.status,
+                }
+            )
+            if self.performer.stop_requested:
+                self._stop_safely("performer down")
+            return
+        self._completed[take] = ready
+        self.ready.append(ready)
+        row = self._row(take)
+        row["t_ready"] = self.t
+        row["status"] = "late" if missed else "ready"
+        row["clip"] = str(ready.clip_path) if ready.clip_path else None
+        row["frame_url"] = ready.frame_url
+        row["anchor"] = ready.anchor
+        row["request_id"] = ready.request_id
+        self.events.append({"t": self.t, "kind": "ready", "take": take})
+
+    async def _handle_422(self, ready: ReadyTake) -> None:
+        thought = self._thought_by_take.get(ready.take)
+        self.events.append({"t": self.t, "kind": "dropped_422", "take": ready.take})
+        row = self._row(ready.take)
+        row["status"] = "dropped_422"
+        if thought is None:
+            return
+        try:
+            await self.pipeline.drop_take(
+                thought,
+                self.package,
+                segment_phase=self.current_writer_phase(),
+            )
+        except WriterPipelineStopped:
+            self._stop_safely("writer down")
+
+    def _should_cut(self) -> bool:
+        if self.done:
+            return False
+        if self.flags.get("panic"):
+            if self.on_air and self.on_air.get("kind") == "host":
+                ends = self.on_air.get("ends_at")
+                if ends is not None and self.t + 1e-9 < ends:
+                    return False
+            return True
+        if self.on_air is None:
+            return True
+        ends = self.on_air.get("ends_at")
+        if ends is not None and self.t + 1e-9 >= ends:
+            return True
+        if self.on_air.get("kind") != "host":
+            if self.ready:
+                return True
+            if (
+                self.cooking is None
+                and self.pipeline.peek_ready() is not None
+                and self.spend_policy == "normal"
+            ):
+                return True
+        return False
+
+    async def _execute(self, beat: dict) -> None:
+        self.player.t = self.t
+        if not self._obs_command("set_layout", beat["layout"]):
+            return
+        if not self._obs_command("set_headline", beat.get("chyron") or ""):
+            return
+        center = beat.get("center") or {"kind": "none"}
+        if not self._obs_command("set_center", center.get("kind") or "none", center):
+            return
+        if not self._obs_command(
+            "set_speaking", self._mapped_speaking(beat.get("speaking"))
+        ):
+            return
+        if not self._obs_command("duck_music", -6.0 if beat.get("speaking") else 0.0):
+            return
+
+        if beat.get("host_source"):
+            take = int(str(beat["host_source"]).split(":")[1])
+            clip = next(item for item in self.ready if item.take == take)
+            self.ready = [item for item in self.ready if item.take != take]
+            path = str(clip.clip_path) if clip.clip_path is not None else ""
+            if not self._obs_command("play_clip", path):
+                return
+            self.on_air = {
+                "kind": "host",
+                "take": take,
+                "speaker": clip.speaker,
+                "ends_at": self.t + self.clip_duration_s,
+                "path": path,
+                "layout": beat["layout"],
+            }
+            self.layout_i += 1
+            thought = self._thought_by_take.get(take)
+            if thought is not None:
+                self.pipeline.mark_aired(thought)
+            row = self._row(take)
+            row["t_on_air"] = self.t
+            row["layout_on_air"] = beat["layout"]
+            row["line"] = clip.line
+            row["speaker"] = clip.speaker
+            if row["status"] not in ("late",):
+                row["status"] = "ready"
+            self.events.append(
+                {
+                    "t": self.t,
+                    "kind": "on_air",
+                    "take": take,
+                    "layout": beat["layout"],
+                    "speaker": clip.speaker,
+                }
+            )
+        elif beat.get("submit"):
+            self.on_air = {
+                "kind": "card" if beat["layout"] == "card_full" else "hold",
+                "take": None,
+                "ends_at": None,
+            }
+        else:
+            if beat.get("why") == "panic" or (
+                beat["layout"] == "hold"
+                and not self.ready
+                and self.cooking is None
+                and self._stop_submits
+            ):
+                self.done = True
+            self.on_air = {
+                "kind": "hold" if beat["layout"] == "hold" else "card",
+                "take": None,
+                "ends_at": None,
+            }
+
+        if beat.get("submit"):
+            await self._submit(beat["submit"])
+
+    async def _submit(self, submit: dict) -> None:
+        if self.cooking is not None:
+            raise RuntimeError("one performer request max")
+        if submit.get("take") != self.next_take:
+            raise RuntimeError("director take drifted from harness next_take")
+        thought = self.pipeline.ready.get_nowait()
+        if thought.text != submit["line"] or thought.speaker != submit["speaker"]:
+            raise RuntimeError("director submit does not match Writer thought")
+        if thought.speaker not in {"BOT1", "BOT2"}:
+            raise RuntimeError("submit speaker must stay BOT1/BOT2")
+        request = self._enrich(submit)
+        if request.baseline_id != self.baseline_id:
+            raise RuntimeError("baseline ID must not change")
+        delay = 0.0
+        delay_for = getattr(self.performer, "delay_for", None)
+        if callable(delay_for):
+            delay = float(delay_for(request.take))
+        task = self.performer.start(request)
+        if self.performer.active_requests > 1:
+            raise RuntimeError("one performer request max")
+        self.requests.append(request)
+        self._thought_by_take[request.take] = thought
+        self.cooking = {
+            "take": request.take,
+            "task": task,
+            "submitted_at": self.t,
+            "ready_at": self.t + delay,
+            "missed_cut": False,
+            "request": request,
+        }
+        row = self._row(request.take)
+        row["line"] = request.line
+        row["speaker"] = request.speaker
+        row["t_submit"] = self.t
+        row["anchor"] = request.anchor
+        row["image_url"] = request.image_url
+        row["prompt"] = request.prompt
+        self.next_take = request.take + 1
+        self.events.append(
+            {
+                "t": self.t,
+                "kind": "submit",
+                "take": request.take,
+                "anchor": request.anchor,
+                "speaker": request.speaker,
+            }
+        )
+
+    def _enrich(self, submit: dict) -> TakeRequest:
+        speaker: Literal["BOT1", "BOT2"] = submit["speaker"]
+        line = submit["line"]
+        take = int(submit["take"])
+        anchor, image_url = self._anchor_for(take)
+        return TakeRequest(
+            take=take,
+            speaker=speaker,
+            line=line,
+            prompt=assemble_prompt(self.baseline, speaker, line),
+            anchor=anchor,
+            image_url=image_url,
+            baseline_id=self.baseline_id,
+        )
+
+    def _anchor_for(self, take: int) -> tuple[Literal["hero", "chain"], str]:
+        if take == 1:
+            return "hero", HERO_IMAGE_PLACEHOLDER
+        interval = self.baseline.reanchor_every
+        if interval and (take - 1) % interval == 0:
+            return "hero", HERO_IMAGE_PLACEHOLDER
+        previous = self._completed.get(take - 1)
+        if previous is not None and previous.frame_url:
+            return "chain", previous.frame_url
+        return "hero", HERO_IMAGE_PLACEHOLDER
+
+    def _mapped_speaking(self, speaker: str | None) -> str | None:
+        if speaker is None:
+            return None
+        if speaker not in {"BOT1", "BOT2"}:
+            raise RuntimeError("speaking must stay BOT1/BOT2 until host_map")
+        return str(self.baseline.host_map[speaker])
+
+    def _stop_safely(self, why: str) -> None:
+        self._stop_submits = True
+        self.spend_policy = "stop"
+        self.flags["hold"] = True
+        self.stop_reason = why
+        self.events.append({"t": self.t, "kind": "stop", "why": why})
+        if self.on_air is None or self.on_air.get("kind") != "host":
+            self.done = True
+
+    def _row(self, take: int) -> dict:
+        for row in self.log:
+            if row["take"] == take:
+                return row
+        row = {
+            "take": take,
+            "line": None,
+            "speaker": None,
+            "clip": None,
+            "status": "ready",
+            "layout_on_air": None,
+            "t_submit": None,
+            "t_ready": None,
+            "t_on_air": None,
+            "anchor": None,
+            "image_url": None,
+            "frame_url": None,
+            "prompt": None,
+            "request_id": None,
+        }
+        self.log.append(row)
+        return row

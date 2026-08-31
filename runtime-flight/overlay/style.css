@@ -1,0 +1,75 @@
+html,
+body {
+  margin: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: transparent;
+  color: #f4efe6;
+  font-family: "IBM Plex Sans", "Helvetica Neue", sans-serif;
+}
+
+#hold-card {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 24px;
+  background: #0b0d12;
+}
+
+body.hold {
+  background: #0b0d12;
+}
+
+body.hold #hold-card {
+  display: flex;
+}
+
+.brand {
+  margin: 0;
+  letter-spacing: 0.42em;
+  font-size: 28px;
+  font-weight: 700;
+  color: #e8c36a;
+}
+
+.hold-label {
+  margin: 0;
+  letter-spacing: 0.18em;
+  font-size: 72px;
+  font-weight: 600;
+}
+
+#tweet-card {
+  position: absolute;
+  left: 72px;
+  bottom: 72px;
+  width: 640px;
+  padding: 28px 32px;
+  background: rgba(11, 13, 18, 0.82);
+  border-left: 6px solid #e8c36a;
+}
+
+#author {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #e8c36a;
+}
+
+#tweet {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+#timestamp {
+  margin: 12px 0 0;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  color: #b7b1a6;
+}

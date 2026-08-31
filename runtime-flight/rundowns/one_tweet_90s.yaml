@@ -1,0 +1,18 @@
+show:
+  name: one-tweet-live
+  target_len_s: 90
+  mode: live
+
+source:
+  tweet_url: https://x.com/dwarkesh_sp/status/2093833419377815719
+  tweet_id: "2093833419377815719"
+  author: dwarkesh_sp
+  article_url: https://www.dwarkesh.com/p/openai-huggingface
+  article_title: The Rise and Fall of Agent Civilizations
+
+segments:
+  - id: dwarkesh_agent_civilizations
+    kind: talk
+    target_len_s: 90
+    layout_plan: [wide, split, solo_l, solo_r, wide]
+    spend_policy: normal

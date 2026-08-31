@@ -82,5 +82,4 @@ def _submit_from_line(snapshot: dict, next_line: dict) -> dict:
         "take": snapshot.get("next_take", 1),
         "line": next_line["text"],
         "speaker": next_line.get("speaker"),
-        "anchor": "stub",
     }
