@@ -139,9 +139,34 @@ def test_submit_performs_exactly_one_post_on_timeout_429_or_5xx(failure: Any) ->
             return FakeResponse(int(failure), {"error": "busy"})
         raise AssertionError(f"unexpected {method} {url}")
 
-    with pytest.raises((FalUnknownSubmission, FalGatewayError, TimeoutError)):
+    with pytest.raises(FalUnknownSubmission):
         _run(_gateway(http_request).submit(ARGUMENTS))
     assert posts == 1
+
+
+def test_submit_422_is_definitive_reject_not_unknown() -> None:
+    posts = 0
+
+    async def http_request(method: str, url: str, **kwargs: Any) -> FakeResponse:
+        nonlocal posts
+        posts += 1
+        return FakeResponse(422, {"detail": "safety"})
+
+    with pytest.raises(FalGatewayError) as caught:
+        _run(_gateway(http_request).submit(ARGUMENTS))
+    assert isinstance(caught.value, FalGatewayError)
+    assert not isinstance(caught.value, FalUnknownSubmission)
+    assert caught.value.status_code == 422
+    assert caught.value.unknown_submission is False
+    assert posts == 1
+
+
+def test_submit_2xx_with_empty_request_id_is_unknown() -> None:
+    async def http_request(method: str, url: str, **kwargs: Any) -> FakeResponse:
+        return FakeResponse(200, _enqueue_body(request_id=""))
+
+    with pytest.raises(FalUnknownSubmission):
+        _run(_gateway(http_request).submit(ARGUMENTS))
 
 
 def test_submit_rejects_non_https_or_wrong_host_urls() -> None:
@@ -157,9 +182,9 @@ def test_submit_rejects_non_https_or_wrong_host_urls() -> None:
             _enqueue_body(status_url="https://evil.example/requests/x/status"),
         )
 
-    with pytest.raises(FalGatewayError, match="https|host|queue.fal.run"):
+    with pytest.raises(FalUnknownSubmission):
         _run(_gateway(http_http).submit(ARGUMENTS))
-    with pytest.raises(FalGatewayError, match="https|host|queue.fal.run"):
+    with pytest.raises(FalUnknownSubmission):
         _run(_gateway(http_host).submit(ARGUMENTS))
 
 

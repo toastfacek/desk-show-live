@@ -138,9 +138,11 @@ class FalGateway:
                 response_url=body["response_url"],
                 cancel_url=body["cancel_url"],
             )
-        except KeyError as error:
-            raise FalUnknownSubmission("queue submit missing request fields") from error
-        self._validate_handle(handle)
+            self._validate_handle(handle)
+        except (KeyError, TypeError, ValueError, FalGatewayError) as error:
+            raise FalUnknownSubmission(
+                "queue submit returned an unusable handle"
+            ) from error
         return handle
 
     async def reconcile(self, handle: QueueHandle) -> QueueResult:
