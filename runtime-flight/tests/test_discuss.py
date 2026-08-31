@@ -445,6 +445,47 @@ def test_load_package_roundtrip(tmp_path: Path):
     assert package.topic_map.beats[0].id == "b1"
 
 
+def test_overlong_line_is_wrapped_to_one_take():
+    long_line = (
+        "Name the cluster, the twelve hundred agents, the seven hundred attackers, "
+        "and the wiped research admin access before you call this weather."
+    )
+    assert len(long_line) > 120
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            _json_body(
+                _valid_turn(
+                    speaker="BOT2",
+                    text=long_line,
+                    move="number",
+                    reply_to="Is this a thesis, or just weather around a crash?",
+                    angle_used="takeover",
+                )
+            ),
+        )
+
+    async def run():
+        return await HostMind(_client(http_post)).reply(
+            _package(),
+            speaker="BOT2",
+            last_line={
+                "speaker": "BOT1",
+                "text": "Is this a thesis, or just weather around a crash?",
+                "move": "frame",
+            },
+            own_lines=(),
+            coverage=CoverageState.initial(),
+            voices=_voices(),
+        )
+
+    thought, turn = _run(run())
+    assert len(thought.text) <= 120
+    assert thought.text.startswith("Name the cluster")
+    assert turn["text"] == thought.text
+
+
 def test_early_land_is_coerced_to_poke():
     async def http_post(url, *, headers, json, timeout):
         return FakeResponse(

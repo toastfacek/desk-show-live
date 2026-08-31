@@ -361,8 +361,7 @@ def _turn_from_model(
         raise DiscussError("line is empty")
     if any(unicodedata.category(char) == "Cc" for char in text):
         raise DiscussError("line contains a control character")
-    if len(text) > MAX_LINE_CHARS:
-        raise DiscussError("line exceeds 120 characters")
+    text = _fit_line(text)
     move = raw.get("move")
     if move not in MOVES:
         raise DiscussError("move must be a known conversational move")
@@ -416,6 +415,23 @@ def _turn_from_model(
         "beat_exhausted": beat_exhausted,
     }
     return thought, turn
+
+
+def _fit_line(text: str) -> str:
+    if len(text) <= MAX_LINE_CHARS:
+        return text
+    words = text.split()
+    if not words or any(len(word) > MAX_LINE_CHARS for word in words):
+        raise DiscussError("line exceeds 120 characters")
+    current = ""
+    for word in words:
+        candidate = word if not current else f"{current} {word}"
+        if len(candidate) > MAX_LINE_CHARS:
+            break
+        current = candidate
+    if not current:
+        raise DiscussError("line exceeds 120 characters")
+    return current
 
 
 def _transcript_text(payload: dict[str, Any]) -> str:
