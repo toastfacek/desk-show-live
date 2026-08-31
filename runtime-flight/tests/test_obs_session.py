@@ -283,7 +283,7 @@ def test_recording_duration_reports_seconds():
     assert session.recording_duration_s() == pytest.approx(91.5)
 
 
-def test_stop_recording_runs_in_finally():
+def test_stop_recording_runs_in_finally_on_body_exception():
     client = complete_obs_client()
     client.polls_until_record_inactive = 2
     session = ObsSession(client=client, poll_interval_s=0.0)
@@ -300,3 +300,31 @@ def test_stop_recording_runs_in_finally():
     assert client.post_stop_polls >= 2
     assert ("stop_record",) in client.calls
     assert session.owns_recording is False
+
+
+def test_recording_session_normal_exit_finalize_failure_propagates():
+    client = complete_obs_client()
+    client.stop_never_finalizes = True
+    session = ObsSession(client=client, poll_interval_s=0.0, finalize_timeout_s=0.01)
+    with pytest.raises(RuntimeError, match="did not finalize"):
+        with session.recording_session():
+            pass
+    assert ("stop_record",) in client.calls
+    assert client.post_stop_polls >= 1
+    assert session.owns_recording is True
+
+
+def test_recording_session_body_exception_preserves_original_on_stop_failure():
+    client = complete_obs_client()
+    client.stop_never_finalizes = True
+    session = ObsSession(client=client, poll_interval_s=0.0, finalize_timeout_s=0.01)
+
+    class Boom(Exception):
+        pass
+
+    with pytest.raises(Boom):
+        with session.recording_session():
+            raise Boom()
+    assert ("stop_record",) in client.calls
+    assert client.post_stop_polls >= 1
+    assert session.owns_recording is True

@@ -123,10 +123,15 @@ class ObsSession:
     @contextmanager
     def recording_session(self) -> Iterator[None]:
         self.start_recording()
+        body_error: BaseException | None = None
         try:
             yield
+        except BaseException as exc:
+            body_error = exc
+            raise
         finally:
             try:
                 self.stop_recording()
             except RuntimeError:
-                pass
+                if body_error is None:
+                    raise
