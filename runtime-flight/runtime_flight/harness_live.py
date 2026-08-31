@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import math
+import time
+from collections.abc import Awaitable, Callable
 from typing import Any, Literal, Protocol
 
 from obs_harness.director import decide
@@ -56,6 +58,14 @@ class FakeClock:
             self._t = t
 
 
+class WallClock:
+    def monotonic(self) -> float:
+        return time.monotonic()
+
+
+SleepFn = Callable[[float], Awaitable[None]]
+
+
 class Performer(Protocol):
     def start(self, request: TakeRequest) -> asyncio.Task[ReadyTake]: ...
 
@@ -70,7 +80,7 @@ class LiveHarness:
     def __init__(
         self,
         *,
-        clock: FakeClock,
+        clock: Clock,
         player: Any,
         pipeline: WriterPipeline,
         performer: Performer,
@@ -82,6 +92,8 @@ class LiveHarness:
         layout_plan: tuple[str, ...] | None = None,
         overlay: Any | None = None,
         obs_session: Any | None = None,
+        max_attempts: int | None = None,
+        sleep: SleepFn | None = None,
     ) -> None:
         self.clock = clock
         self.player = player
@@ -95,6 +107,8 @@ class LiveHarness:
         self.layout_plan = list(layout_plan or HOST_LAYOUTS)
         self.overlay = overlay
         self.obs_session = obs_session
+        self.max_attempts = max_attempts
+        self._sleep = sleep
         self.started_at = clock.monotonic()
         self.baseline_id = baseline.baseline_id
         self.spend_policy = "normal"
@@ -208,14 +222,35 @@ class LiveHarness:
             if until_aired is not None and self.aired_count >= until_aired:
                 return
 
+    async def run_wall(
+        self,
+        *,
+        until_aired: int | None = None,
+        max_t: float = 90.0,
+        sleep: SleepFn | None = None,
+    ) -> None:
+        sleeper = sleep or self._sleep or asyncio.sleep
+        await self.step()
+        deadline = self.started_at + max_t
+        while self.t < deadline and not self.done:
+            target = min(self._next_event_t(), deadline)
+            delay = target - self.t
+            if delay > 0:
+                await sleeper(delay)
+            await self.step()
+            if until_aired is not None and self.aired_count >= until_aired:
+                return
+
     async def run_with_obs(self, *, max_t: float | None = None) -> None:
         if self.obs_session is None:
             raise RuntimeError("OBS session required")
         self.obs_session.start_recording()
         try:
-            await self.run_simulated(
-                max_t=max_t if max_t is not None else self.target_duration_s
-            )
+            limit = max_t if max_t is not None else self.target_duration_s
+            if hasattr(self.clock, "advance_to"):
+                await self.run_simulated(max_t=limit)
+            else:
+                await self.run_wall(max_t=limit)
             if self.stop_reason != "obs streaming":
                 await self._post_roll_recording()
         finally:
@@ -319,10 +354,14 @@ class LiveHarness:
         if self.obs_session is None:
             return
         deadline = self.t + max(30.0, self.target_duration_s)
+        sleeper = self._sleep or asyncio.sleep
         while self.obs_session.recording_duration_s() + 1e-9 < self.target_duration_s:
             if self.t + 1e-9 >= deadline:
                 raise RuntimeError("post-roll exceeded recording duration target")
-            self.clock.advance(POLL_INTERVAL_S)
+            if hasattr(self.clock, "advance"):
+                self.clock.advance(POLL_INTERVAL_S)
+            else:
+                await sleeper(POLL_INTERVAL_S)
             self.player.t = self.t
             self.events.append(
                 {
@@ -343,7 +382,10 @@ class LiveHarness:
     def _can_reserve(self) -> bool:
         if self._stop_submits:
             return False
-        if self.meter.mode == "smoke" and len(self.meter.ledger.records()) >= 2:
+        reserved = len(self.meter.ledger.records())
+        if self.max_attempts is not None and reserved >= self.max_attempts:
+            return False
+        if self.meter.mode == "smoke" and reserved >= 2:
             return False
         return self.meter.total + self.meter.next_cost <= self.meter.cap_usd
 
