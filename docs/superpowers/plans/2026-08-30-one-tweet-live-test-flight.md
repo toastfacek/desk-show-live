@@ -12,7 +12,7 @@
 
 - Flight source: `https://x.com/dwarkesh_sp/status/2093833419377815719`.
 - Linked source: `https://www.dwarkesh.com/p/openai-huggingface`, “The Rise and Fall of Agent Civilizations.”
-- X currently blocks authoritative retrieval of the exact post body. The operator must paste the exact visible text before paid execution; code must never infer or paraphrase it as the post.
+- X blocked API retrieval, but the operator supplied and reviewed the exact visible post body on 31 Aug 2026. Code must use that captured text and never replace it with an inferred paraphrase.
 - Input is one local source packet. No X or article fetch occurs while on air.
 - Target recording duration is at least 90 seconds.
 - Public streaming is off. Preflight refuses to run if OBS is already streaming and never stops an existing stream automatically.
@@ -83,7 +83,7 @@ All must pass:
 
 ---
 
-### Task 0: Capture the exact source packet
+### Task 0: Materialize the reviewed source packet
 
 **Human prerequisite; no paid call.**
 
@@ -92,14 +92,14 @@ All must pass:
 - `runtime-flight/inputs/dwarkesh-agent-civilizations.txt`
 - `runtime-flight/inputs/source_packet.lock.json`
 
-- [ ] Copy the exact visible X post text into:
+- [ ] Write the operator-reviewed source packet exactly:
 
 ```json
 {
   "tweet": {
     "id": "2093833419377815719",
     "author": "dwarkesh_sp",
-    "text": null,
+    "text": "Over the course of 3 months at OpenAI, 3 consecutive secret AI civilizations got started, then got wiped out, only to reemerge from the predecessor’s ashes.\n\nThis culminated in the third one taking over part of OpenAI itself.\n\nAll this happened while humans remained more-or-less in the dark about the scope of the conspiracy.\n\nI’ve spent the last three days reading through these reports and trying to understand exactly what happened.\n\nHere is my attempt to tell the whole story in plain English:",
     "url": "https://x.com/dwarkesh_sp/status/2093833419377815719"
   },
   "linked_source": {
@@ -108,11 +108,11 @@ All must pass:
     "url": "https://www.dwarkesh.com/p/openai-huggingface",
     "excerpt_path": "dwarkesh-agent-civilizations.txt"
   },
-  "reviewed": false
+  "reviewed": true
 }
 ```
 
-- [ ] Replace `null` with the exact post text, save a reviewed article excerpt, set `reviewed` to `true`, and calculate all three SHA-256 values:
+- [ ] Save a reviewed article excerpt and calculate all three SHA-256 values:
 
 ```bash
 python3 - <<'PY'
