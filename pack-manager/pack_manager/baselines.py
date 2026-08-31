@@ -38,6 +38,7 @@ class LoadedBaseline:
     hero_path: Path
     pack_paths: tuple[Path, ...]
     asset_paths: tuple[Path, ...]
+    verified_bytes: dict[str, bytes]
 
 
 class BaselineService:
@@ -47,13 +48,16 @@ class BaselineService:
         asset_store: AssetStore,
         pack_service: PackService,
         candidate_service: CandidateService,
+        *,
+        maintenance: bool = True,
     ):
         self.database = database
         self.asset_store = asset_store
         self.pack_service = pack_service
         self.candidate_service = candidate_service
         self.export_root = (asset_store.data_dir / "exports").absolute()
-        self._cleanup_orphan_exports()
+        if maintenance:
+            self._cleanup_orphan_exports()
 
     def lock_run(
         self, cast_key: str, requested_candidate_id: str | None = None
@@ -187,6 +191,8 @@ class BaselineService:
         if not isinstance(files, list):
             raise IntegrityError("invalid baseline file list")
         verified_paths: dict[str, Path] = {}
+        verified_bytes: dict[str, bytes] = {}
+        verified_bytes["manifest.json"] = manifest_bytes
         for record in files:
             if not isinstance(record, dict):
                 raise IntegrityError("invalid baseline file record")
@@ -205,6 +211,7 @@ class BaselineService:
             if self._digest(content) != expected_hash:
                 raise IntegrityError(f"hash mismatch: {relative_path}")
             verified_paths[relative_path] = path
+            verified_bytes[relative_path] = content
 
         hero_relative, pack_relatives, asset_relatives = self._referenced_paths(
             manifest
@@ -222,6 +229,7 @@ class BaselineService:
             hero_path=verified_paths[hero_relative],
             pack_paths=tuple(verified_paths[path] for path in pack_relatives),
             asset_paths=tuple(verified_paths[path] for path in asset_relatives),
+            verified_bytes=verified_bytes,
         )
 
     def _export(

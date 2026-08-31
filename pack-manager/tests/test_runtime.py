@@ -222,6 +222,7 @@ def test_load_locked_baseline_rejects_invalid_host_mapping_or_display_names(
         ["BOT1"],
         ["BOT1", "BOT2", "BOT3"],
         ["BOT1", "HOST_B"],
+        ["BOT1", "BOT1"],
     ],
 )
 def test_load_locked_baseline_rejects_invalid_character_slots(flight_data_dir, slots):
@@ -264,9 +265,134 @@ def test_load_locked_baseline_rejects_invalid_character_slots(flight_data_dir, s
 
     with pytest.raises(
         (IntegrityError, ValidationError),
-        match="slot|BOT1|BOT2|manifest file references|character pack metadata|display names",
+        match=(
+            "exactly two character packs|exact character slots|"
+            "manifest file references|character pack metadata|display names"
+        ),
     ):
         load_locked_baseline(flight_data_dir["data_dir"], malicious_id)
+
+
+def test_load_locked_baseline_rejects_wrong_kind_at_character_position(flight_data_dir):
+    service = flight_data_dir["baseline_service"]
+    locked = flight_data_dir["locked"]
+    malicious_id = "baseline_runtime_scene_at_character"
+    export_dir = locked.manifest_path.parent
+    manifest = json.loads(locked.manifest_path.read_text())
+    manifest["baseline_id"] = malicious_id
+    character_path = manifest["packs"]["characters"][0]["path"]
+    payload = json.loads((export_dir / character_path).read_text())
+    payload["kind"] = "scene"
+    payload_bytes = service._normalized_json(payload)
+    malicious_dir = service.export_root / malicious_id
+    shutil.copytree(export_dir, malicious_dir)
+    (malicious_dir / character_path).write_bytes(payload_bytes)
+    for file_record in manifest["files"]:
+        if file_record["path"] == character_path:
+            file_record["sha256"] = hashlib.sha256(payload_bytes).hexdigest()
+    manifest_bytes = service._normalized_json(manifest)
+    manifest_path = malicious_dir / "manifest.json"
+    manifest_path.write_bytes(manifest_bytes)
+    with service.database.connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO baselines (
+                id, cast_key, candidate_id, canonical_candidate_id,
+                fallback_reason, manifest_path, manifest_sha256, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                malicious_id,
+                locked.cast_key,
+                locked.candidate_id,
+                locked.canonical_candidate_id,
+                None,
+                str(manifest_path),
+                hashlib.sha256(manifest_bytes).hexdigest(),
+                locked.created_at,
+            ),
+        )
+
+    with pytest.raises(IntegrityError, match="character export kind mismatch"):
+        load_locked_baseline(flight_data_dir["data_dir"], malicious_id)
+
+
+def test_load_locked_baseline_rejects_wrong_kind_at_scene_position(flight_data_dir):
+    service = flight_data_dir["baseline_service"]
+    locked = flight_data_dir["locked"]
+    malicious_id = "baseline_runtime_character_at_scene"
+    export_dir = locked.manifest_path.parent
+    manifest = json.loads(locked.manifest_path.read_text())
+    manifest["baseline_id"] = malicious_id
+    scene_path = manifest["packs"]["scene"]["path"]
+    payload = json.loads((export_dir / scene_path).read_text())
+    payload["kind"] = "character"
+    payload_bytes = service._normalized_json(payload)
+    malicious_dir = service.export_root / malicious_id
+    shutil.copytree(export_dir, malicious_dir)
+    (malicious_dir / scene_path).write_bytes(payload_bytes)
+    for file_record in manifest["files"]:
+        if file_record["path"] == scene_path:
+            file_record["sha256"] = hashlib.sha256(payload_bytes).hexdigest()
+    manifest_bytes = service._normalized_json(manifest)
+    manifest_path = malicious_dir / "manifest.json"
+    manifest_path.write_bytes(manifest_bytes)
+    with service.database.connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO baselines (
+                id, cast_key, candidate_id, canonical_candidate_id,
+                fallback_reason, manifest_path, manifest_sha256, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                malicious_id,
+                locked.cast_key,
+                locked.candidate_id,
+                locked.canonical_candidate_id,
+                None,
+                str(manifest_path),
+                hashlib.sha256(manifest_bytes).hexdigest(),
+                locked.created_at,
+            ),
+        )
+
+    with pytest.raises(IntegrityError, match="scene export kind mismatch"):
+        load_locked_baseline(flight_data_dir["data_dir"], malicious_id)
+
+
+def test_load_locked_baseline_fails_when_database_missing(tmp_path):
+    data_dir = tmp_path / "pack-data"
+    data_dir.mkdir()
+
+    with pytest.raises(IntegrityError, match="missing manager database"):
+        load_locked_baseline(data_dir, "baseline_missing")
+
+
+def test_load_locked_baseline_does_not_initialize_database_or_cleanup(flight_data_dir):
+    data_dir = flight_data_dir["data_dir"]
+    exports_dir = data_dir / "exports"
+    orphan = exports_dir / "baseline_orphan_runtime"
+    orphan.mkdir()
+    database_path = data_dir / "manager.sqlite3"
+    db_mtime_before = database_path.stat().st_mtime_ns
+    export_entries_before = set(exports_dir.iterdir())
+
+    load_locked_baseline(data_dir, flight_data_dir["locked"].id)
+
+    assert database_path.is_file()
+    assert database_path.stat().st_mtime_ns == db_mtime_before
+    assert orphan.exists()
+    assert set(exports_dir.iterdir()) == export_entries_before
+
+
+def test_load_locked_baseline_returns_verified_bytes_without_reopen(flight_data_dir):
+    loaded = load_locked_baseline(flight_data_dir["data_dir"], flight_data_dir["locked"].id)
+    hero_relative = loaded.manifest["hero"]["path"]
+    assert hero_relative in loaded.verified_bytes
+    for record in loaded.manifest["packs"]["characters"]:
+        assert record["path"] in loaded.verified_bytes
+    assert loaded.manifest["packs"]["scene"]["path"] in loaded.verified_bytes
 
 
 def test_load_locked_baseline_returns_pack_truth_scene_and_reset_interval(flight_data_dir):
