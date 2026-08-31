@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from loop import Harness
+from obs_harness.loop import Harness
 
 
 def _pack(tmp_path: Path, n_lines: int = 8) -> Path:
@@ -93,7 +93,7 @@ def test_t9_script_slot_stays_at_two(tmp_path):
 
 
 def test_t10_director_does_not_import_player_obs():
-    text = Path(__file__).resolve().parents[1].joinpath("director.py").read_text()
+    text = Path(__file__).resolve().parents[1].joinpath("obs_harness", "director.py").read_text()
     assert "player_obs" not in text
 
 

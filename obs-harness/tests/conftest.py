@@ -1,1 +1,1 @@
-# Makes `import director` work when pytest is run from obs-harness/.
+# Package imports use obs_harness.* via pythonpath in pyproject.toml.
