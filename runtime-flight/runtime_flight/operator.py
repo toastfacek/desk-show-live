@@ -25,6 +25,7 @@ SMOKE_MAX_TEXT = 6
 LIVE_MAX_TEXT = 24
 SMOKE_FAL_ATTEMPTS = frozenset({1, 2})
 LIVE_SEGMENT_MAX_FAL = 18
+DISCUSS_MAX_TURNS = 12
 
 
 class OperatorError(Exception):
@@ -155,6 +156,42 @@ def cmd_segment(
         config=config,
         max_text_requests=max_text_requests,
         max_fal_submissions=max_fal_submissions,
+    )
+
+
+def cmd_discuss(
+    config: RuntimeConfig,
+    *,
+    confirm_text_requests: int,
+    max_turns: int,
+    package_path: Path | None,
+    run_discuss,
+    load_package=None,
+) -> dict[str, Any]:
+    if package_path is None:
+        if confirm_text_requests != max_turns + 1:
+            raise OperatorError(
+                "discuss --confirm-text-requests must be --max-turns plus one planner call"
+            )
+    elif confirm_text_requests != max_turns:
+        raise OperatorError(
+            "discuss --confirm-text-requests must match --max-turns when a package is supplied"
+        )
+    if max_turns < 1 or max_turns > DISCUSS_MAX_TURNS:
+        raise OperatorError("discuss --max-turns must be 1 to 12")
+    require_text_request_limit(config.mode, confirm_text_requests)
+    load_reviewed_source(config)
+    package = None
+    if package_path is not None:
+        loader = load_package
+        if loader is None:
+            from runtime_flight.discuss import load_package as loader
+        package = loader(package_path)
+    return run_discuss(
+        config=config,
+        max_text_requests=confirm_text_requests,
+        max_turns=max_turns,
+        package=package,
     )
 
 
