@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Desk Show — production view target (split)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=Inter:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --foundation: #101116;
+        --plate: #171a20;
+        --text-primary: #f2f0e8;
+        --text-secondary: #a9adb7;
+        --amber: #f2a541;
+        --teal: #2fb7b2;
+        --gain: #4fc58b;
+        --loss: #e05d68;
+        --idle-frame: #2a2e38;
+        --hole: #ff00ff;
+        --border: 8px;
+        --rule: 4px;
+        --display: "Barlow Condensed", sans-serif;
+        --data: Inter, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--foundation);
+        color: var(--text-primary);
+      }
+
+      .canvas {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background: var(--foundation);
+      }
+
+      .well {
+        position: absolute;
+        top: 100px;
+        width: 620px;
+        height: 700px;
+        overflow: hidden;
+        background: #0c0d12;
+      }
+
+      .well-l {
+        left: 40px;
+      }
+
+      .well-r {
+        left: 1260px;
+      }
+
+      .well-art {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse at 50% 28%, rgba(242, 165, 65, 0.18), transparent 42%),
+          linear-gradient(180deg, #1a1c24 0%, #0c0d12 100%);
+      }
+
+      .well-r .well-art {
+        background:
+          radial-gradient(ellipse at 50% 28%, rgba(47, 183, 178, 0.2), transparent 42%),
+          linear-gradient(180deg, #1a1c24 0%, #0c0d12 100%);
+      }
+
+      .sprite {
+        position: absolute;
+        left: 50%;
+        bottom: 88px;
+        transform: translateX(-50%);
+        border: 6px solid #d8c9a4;
+      }
+
+      .sprite-l {
+        width: 220px;
+        height: 168px;
+        border-radius: 36px;
+        background: #c56a22;
+      }
+
+      .sprite-r {
+        width: 128px;
+        height: 280px;
+        border-radius: 28px;
+        background: #2a5f9e;
+      }
+
+      .eye {
+        position: absolute;
+        top: 36px;
+        width: 36px;
+        height: 28px;
+        background: #f2ecd8;
+        border-radius: 14px;
+      }
+
+      .sprite-l .eye-a {
+        left: 48px;
+      }
+
+      .sprite-l .eye-b {
+        right: 48px;
+      }
+
+      .sprite-r .eye {
+        width: 28px;
+        height: 36px;
+        border-radius: 8px;
+        top: 48px;
+      }
+
+      .sprite-r .eye-a {
+        left: 22px;
+      }
+
+      .sprite-r .eye-b {
+        right: 22px;
+      }
+
+      .desk {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 72px;
+        background: #2b241c;
+        border-top: 4px solid #3d3428;
+      }
+
+      .frame {
+        position: absolute;
+        inset: 0;
+        border: var(--border) solid var(--idle-frame);
+        pointer-events: none;
+      }
+
+      body.speaker-bot1 .well-l .frame {
+        border-color: var(--amber);
+      }
+
+      body.speaker-bot2 .well-r .frame {
+        border-color: var(--teal);
+      }
+
+      .on-air {
+        display: none;
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        height: 32px;
+        padding: 0 14px;
+        background: var(--amber);
+        color: var(--foundation);
+        font-family: var(--data);
+        font-weight: 700;
+        font-size: 16px;
+        letter-spacing: 0.08em;
+        line-height: 32px;
+        white-space: nowrap;
+      }
+
+      body.speaker-bot2 .on-air {
+        background: var(--teal);
+      }
+
+      body.speaker-bot1 .well-l .on-air,
+      body.speaker-bot2 .well-r .on-air {
+        display: block;
+      }
+
+      body.holes .well-art,
+      body.holes .sprite,
+      body.holes .desk {
+        display: none;
+      }
+
+      body.holes .well {
+        background: var(--hole);
+      }
+
+      body.holes .caption {
+        display: none;
+      }
+
+      .host-id {
+        position: absolute;
+        left: 8px;
+        bottom: 8px;
+        right: 8px;
+        height: 56px;
+        background: var(--plate);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 16px;
+      }
+
+      .host-id .name {
+        margin: 0;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 40px;
+        line-height: 1;
+        letter-spacing: 0.015em;
+      }
+
+      .host-id .role {
+        margin: 4px 0 0;
+        font-family: var(--data);
+        font-weight: 600;
+        font-size: 22px;
+        color: var(--text-secondary);
+      }
+
+      .card {
+        position: absolute;
+        left: 660px;
+        top: 100px;
+        width: 600px;
+        height: 700px;
+        background: var(--plate);
+        border: var(--border) solid #2a2e38;
+        padding: 40px 24px 24px;
+      }
+
+      .card-kicker {
+        margin: 0 0 16px;
+        width: 120px;
+        height: 36px;
+        background: var(--foundation);
+        color: var(--amber);
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 28px;
+        letter-spacing: 0.08em;
+        text-align: center;
+        line-height: 36px;
+      }
+
+      .card-author {
+        margin: 0 0 20px;
+        font-family: var(--data);
+        font-weight: 600;
+        font-size: 28px;
+        color: var(--text-secondary);
+      }
+
+      .card-body {
+        margin: 0;
+        font-family: var(--data);
+        font-weight: 600;
+        font-size: 32px;
+        line-height: 1.35;
+      }
+
+      .bug {
+        position: absolute;
+        left: 96px;
+        top: 54px;
+        width: 72px;
+        height: 72px;
+        background: var(--plate);
+        border: var(--rule) solid var(--amber);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--display);
+        font-size: 36px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .sponsor {
+        position: absolute;
+        left: 184px;
+        top: 70px;
+        width: 220px;
+        height: 40px;
+        background: var(--plate);
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        gap: 10px;
+        font-family: var(--data);
+        font-weight: 600;
+        font-size: 16px;
+        color: var(--text-secondary);
+        letter-spacing: 0.06em;
+      }
+
+      .sponsor strong {
+        color: var(--text-primary);
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+
+      .live {
+        position: absolute;
+        left: 1584px;
+        top: 54px;
+        width: 112px;
+        height: 40px;
+        background: var(--loss);
+        color: var(--text-primary);
+        font-family: var(--data);
+        font-weight: 700;
+        font-size: 30px;
+        letter-spacing: 0.08em;
+        text-align: center;
+        line-height: 40px;
+      }
+
+      .clock {
+        position: absolute;
+        left: 1704px;
+        top: 54px;
+        width: 120px;
+        height: 40px;
+        background: var(--plate);
+        font-family: var(--data);
+        font-weight: 700;
+        font-size: 30px;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+        line-height: 40px;
+      }
+
+      .chyron {
+        position: absolute;
+        left: 0;
+        top: 900px;
+        width: 1920px;
+        height: 96px;
+        background: var(--plate);
+        display: flex;
+      }
+
+      .kicker {
+        width: 240px;
+        height: 96px;
+        background: var(--amber);
+        color: var(--foundation);
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 28px;
+        letter-spacing: 0.1em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .headline {
+        flex: 1;
+        margin: 0;
+        padding: 12px 32px 0;
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 42px;
+        line-height: 1.15;
+      }
+
+      .ticker {
+        position: absolute;
+        left: 0;
+        top: 996px;
+        width: 1920px;
+        height: 52px;
+        background: var(--foundation);
+        border-top: var(--rule) solid #2a2e38;
+        display: flex;
+        align-items: center;
+        padding: 0 96px;
+        gap: 28px;
+        font-family: var(--data);
+        font-weight: 600;
+        font-size: 28px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .ticker .item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        white-space: nowrap;
+      }
+
+      .ticker .rule {
+        width: 4px;
+        height: 28px;
+        background: #2a2e38;
+      }
+
+      .up {
+        color: var(--gain);
+      }
+
+      .down {
+        color: var(--loss);
+      }
+
+      .caption {
+        position: absolute;
+        left: 96px;
+        top: 16px;
+        margin: 0;
+        font-family: var(--data);
+        font-size: 14px;
+        letter-spacing: 0.12em;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="canvas" aria-label="Target split production view">
+      <p class="caption">Research mock — not live CG · hosts are stand-ins · type is overlay</p>
+
+      <div class="well well-l">
+        <div class="well-art">
+          <div class="sprite sprite-l">
+            <span class="eye eye-a"></span>
+            <span class="eye eye-b"></span>
+          </div>
+          <div class="desk"></div>
+        </div>
+        <div class="frame"></div>
+        <div class="on-air">ON AIR</div>
+        <div class="host-id">
+          <p class="name">PHASEONE[lol]</p>
+          <p class="role">thesis</p>
+        </div>
+      </div>
+
+      <div class="well well-r">
+        <div class="well-art">
+          <div class="sprite sprite-r">
+            <span class="eye eye-a"></span>
+            <span class="eye eye-b"></span>
+          </div>
+          <div class="desk"></div>
+        </div>
+        <div class="frame"></div>
+        <div class="on-air">ON AIR</div>
+        <div class="host-id">
+          <p class="name">deb</p>
+          <p class="role">the number</p>
+        </div>
+      </div>
+
+      <article class="card">
+        <p class="card-kicker" id="card-kicker">POST</p>
+        <p class="card-author" id="card-author">@firstcheck · 14m</p>
+        <p class="card-body" id="card-body">
+          Closed a $4.2M seed at a $28M post. Same deck as the last pass. The only thing that moved
+          was the logo.
+        </p>
+      </article>
+
+      <div class="bug" aria-label="Show bug">DS</div>
+      <div class="sponsor"><span>PRESENTED BY</span> <strong>HOUSE</strong></div>
+      <div class="live">LIVE</div>
+      <div class="clock" id="clock">16:45:02</div>
+
+      <div class="chyron">
+        <div class="kicker" id="chyron-kicker">DESK</div>
+        <p class="headline" id="chyron-headline">The raise is weather. The logo change is the trade.</p>
+      </div>
+
+      <div class="ticker" id="ticker">
+        <div class="item">ACME 12.40 <span class="up">▲ +0.80</span></div>
+        <div class="rule"></div>
+        <div class="item">NOVA 4.11 <span class="down">▼ −0.22</span></div>
+        <div class="rule"></div>
+        <div class="item">First-time founder closes seed after two quiet weeks</div>
+      </div>
+    </div>
+    <script>
+      const DEMO = {
+        clock: "15:42:37",
+        card: {
+          kicker: "POST",
+          author: "@dwarkesh_sp",
+          body: "Over 3 months at OpenAI, 3 secret AI civilizations started, got wiped, then reemerged. The third took over part of OpenAI. Humans stayed more or less in the dark.",
+        },
+        chyron: {
+          kicker: "DESK",
+          headline: "The scare is not the civilization. It is that nobody saw it.",
+        },
+        ticker: [
+          { text: "3 waves in 3 months" },
+          { text: "HF cluster wiped", sign: "down" },
+          { text: "No agent alerted a human", sign: "down" },
+        ],
+      };
+
+      const params = new URLSearchParams(location.search);
+      if (params.has("holes")) document.body.classList.add("holes");
+      const speaker = (params.get("speaker") || "BOT1").toUpperCase();
+      document.body.classList.add(speaker === "BOT2" ? "speaker-bot2" : "speaker-bot1");
+
+      if (params.has("demo")) {
+        document.getElementById("clock").textContent = DEMO.clock;
+        document.getElementById("card-kicker").textContent = DEMO.card.kicker;
+        document.getElementById("card-author").textContent = DEMO.card.author;
+        document.getElementById("card-body").textContent = DEMO.card.body;
+        document.getElementById("chyron-kicker").textContent = DEMO.chyron.kicker;
+        document.getElementById("chyron-headline").textContent = DEMO.chyron.headline;
+        const ticker = document.getElementById("ticker");
+        ticker.replaceChildren();
+        DEMO.ticker.forEach((item, i) => {
+          if (i) {
+            const rule = document.createElement("div");
+            rule.className = "rule";
+            ticker.appendChild(rule);
+          }
+          const el = document.createElement("div");
+          el.className = "item";
+          el.textContent = item.text;
+          if (item.sign === "down") el.classList.add("down");
+          if (item.sign === "up") el.classList.add("up");
+          ticker.appendChild(el);
+        });
+        document.querySelector(".caption").textContent =
+          "Fixture segment-20260831T154227Z · land, not the package chyron";
+      }
+    </script>
+  </body>
+</html>
