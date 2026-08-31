@@ -330,25 +330,111 @@ def test_v2_character_rejects_tts_provider_credentials(pack_service):
         pack_service.create_version(pack.id, manifest)
 
 
-@pytest.mark.parametrize(
-    ("field", "value"),
-    [
-        ("broadcast_rights_confirmed", False),
-        ("soundalike_or_cloned_person", True),
-    ],
-)
-def test_enabled_tts_requires_broadcast_rights_and_rejects_soundalike(
-    pack_service, field, value
-):
+def test_manifest_rejects_nested_credentials_in_writer_rules(pack_service):
+    pack = pack_service.create_pack("character", "flight")
+    manifest = character_manifest_v2()
+    manifest["writer_rules"].append({"apiKey": "nested"})
+
+    with pytest.raises(ValidationError, match="credential|apikey|token"):
+        pack_service.create_version(pack.id, manifest)
+
+
+def test_scene_manifest_rejects_nested_credentials(pack_service):
+    pack = pack_service.create_pack("scene", "flight")
+    manifest = scene_manifest_v2()
+    manifest["frame"]["access_token"] = "secret"
+
+    with pytest.raises(ValidationError, match="credential|token"):
+        pack_service.create_version(pack.id, manifest)
+
+
+def test_v2_character_rejects_enabled_tts_even_with_license(pack_service):
     pack = pack_service.create_pack("character", "flight")
     manifest = character_manifest_v2()
     manifest["tts"]["enabled"] = True
     manifest["tts"]["provider"] = "example"
     manifest["tts"]["voice_id"] = "voice-1"
-    manifest["tts"]["license"][field] = value
+    manifest["tts"]["license"]["broadcast_rights_confirmed"] = True
 
-    with pytest.raises(ValidationError, match="tts|broadcast|soundalike|license"):
+    with pytest.raises(ValidationError, match="tts.enabled|not supported|disabled"):
         pack_service.create_version(pack.id, manifest)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("provider", "vendor"),
+        ("voice_id", "voice-1"),
+        ("speed", 1.0),
+        ("pitch", 0.0),
+        ("max_duration_s", 5),
+        ("pronunciations", [{"word": "bot", "alias": "bought"}]),
+    ],
+)
+def test_v2_character_rejects_malformed_disabled_tts_fields(
+    pack_service, field, value
+):
+    pack = pack_service.create_pack("character", "flight")
+    manifest = character_manifest_v2()
+    manifest["tts"][field] = value
+
+    with pytest.raises(ValidationError, match=f"tts\\.{field}|tts"):
+        pack_service.create_version(pack.id, manifest)
+
+
+@pytest.mark.parametrize("value", [True, 2.0, "2"])
+def test_schema_version_rejects_non_integer(pack_service, value):
+    pack = pack_service.create_pack("character", "flight")
+    manifest = character_manifest_v2()
+    manifest["schema_version"] = value
+
+    with pytest.raises(ValidationError, match="schema_version"):
+        pack_service.create_version(pack.id, manifest)
+
+
+def test_v2_character_rejects_unknown_tts_fields(pack_service):
+    pack = pack_service.create_pack("character", "flight")
+    manifest = character_manifest_v2()
+    manifest["tts"]["model"] = "future"
+
+    with pytest.raises(ValidationError, match="tts"):
+        pack_service.create_version(pack.id, manifest)
+
+
+def test_validate_flight_ready_rejects_malformed_v2_character_missing_descriptor():
+    manifest = character_manifest_v2()
+    del manifest["visual_invariants"]["silhouette"]
+
+    with pytest.raises(ValidationError, match="silhouette|visual_invariants"):
+        PackService.validate_flight_ready("character", manifest)
+
+
+def test_validate_flight_ready_rejects_malformed_v2_character_enabled_tts():
+    manifest = character_manifest_v2()
+    manifest["tts"]["enabled"] = True
+    manifest["tts"]["provider"] = "example"
+    manifest["tts"]["voice_id"] = "voice-1"
+
+    with pytest.raises(ValidationError, match="tts.enabled|not supported|disabled"):
+        PackService.validate_flight_ready("character", manifest)
+
+
+def test_validate_flight_ready_rejects_malformed_v2_scene_missing_schema():
+    manifest = scene_manifest_v2()
+    manifest["schema_version"] = 1
+
+    with pytest.raises(ValidationError, match="schema_version|flight"):
+        PackService.validate_flight_ready("scene", manifest)
+
+
+def test_validate_flight_ready_enforces_v2_character_validator_path(pack_service):
+    pack = pack_service.create_pack("character", "flight")
+    version = pack_service.create_version(pack.id, character_manifest_v2())
+    manifest = version.manifest
+    manifest["voice_direction"] = "   "
+
+    with pytest.raises(ValidationError, match="voice_direction"):
+        PackService.validate_flight_ready("character", manifest)
 
 
 def test_flight_ready_rejects_v1_character_manifest(pack_service):

@@ -359,14 +359,19 @@ def create_app(
 
     @app.get("/api/packs/{pack_id}/versions")
     def list_versions(pack_id: str):
+        pack_kind = _pack_kind(services.packs, pack_id)
         return [
-            _version_json(version)
+            _version_json(version, kind=pack_kind)
             for version in services.packs.list_versions(pack_id)
         ]
 
     @app.get("/api/packs/{pack_id}/versions/{version}")
     def get_version(pack_id: str, version: int):
-        return _version_json(services.packs.get_version(pack_id, version))
+        pack_kind = _pack_kind(services.packs, pack_id)
+        return _version_json(
+            services.packs.get_version(pack_id, version),
+            kind=pack_kind,
+        )
 
     @app.post("/api/packs/{pack_id}/versions", status_code=201)
     def create_version(
@@ -374,8 +379,10 @@ def create_app(
         body: VersionCreate,
         _runtime_manager: RuntimeManagerHeader,
     ):
+        pack_kind = _pack_kind(services.packs, pack_id)
         return _version_json(
-            services.packs.create_version(pack_id, body.manifest)
+            services.packs.create_version(pack_id, body.manifest),
+            kind=pack_kind,
         )
 
     @app.get("/api/assets")
@@ -636,12 +643,20 @@ def _pack_json(pack: Pack) -> dict:
     return asdict(pack)
 
 
-def _version_json(version: PackVersion) -> dict:
+def _pack_kind(packs: PackService, pack_id: str) -> str:
+    for pack in packs.list_packs():
+        if pack.id == pack_id:
+            return pack.kind
+    raise KeyError(pack_id)
+
+
+def _version_json(version: PackVersion, *, kind: str) -> dict:
     return {
         "pack_id": version.pack_id,
         "version": version.version,
         "manifest": version.manifest,
         "created_at": version.created_at,
+        "flight_ready": PackService.is_flight_ready(kind, version.manifest),
     }
 
 

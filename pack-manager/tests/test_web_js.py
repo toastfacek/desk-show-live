@@ -38,16 +38,56 @@ console.log(JSON.stringify(result.map((item) => ({
 
 def test_ui_default_manifest_is_flight_ready_v2():
     root = Path(__file__).parents[1] / "pack_manager" / "web"
-    html = (root / "index.html").read_text()
+    selection = root / "selection.js"
+    javascript = (root / "app.js").read_text()
 
-    manifest_text = html.split('name="manifest"', 1)[1].split("</textarea>", 1)[0]
-    manifest = json.loads(manifest_text.split(">", 1)[1])
+    script = r"""
+const selection = require("./pack_manager/web/selection.js");
+console.log(JSON.stringify({
+  character: selection.manifestTemplateForKind("character"),
+  scene: selection.manifestTemplateForKind("scene"),
+}));
+"""
+    completed = subprocess.run(
+        ["node", "-e", script],
+        cwd=Path(__file__).parents[1],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    templates = json.loads(completed.stdout)
 
-    assert manifest["schema_version"] == 2
-    assert manifest["voice_direction"].strip()
-    assert manifest["tts"]["enabled"] is False
-    for descriptor in ("silhouette", "eye_design", "proportions"):
-        assert manifest["visual_invariants"][descriptor].strip()
+    assert templates["character"]["schema_version"] == 2
+    assert templates["scene"]["schema_version"] == 2
+    assert templates["character"]["tts"]["enabled"] is False
+    assert "manifestTemplateForKind" in javascript
+    assert "flight_ready" in javascript
+    assert "syncManifestTemplateForSelectedPack" in javascript
+    assert selection.read_text()
+
+
+def test_manifest_templates_differ_by_kind():
+    script = r"""
+const selection = require("./pack_manager/web/selection.js");
+const character = selection.manifestTemplateForKind("character");
+const scene = selection.manifestTemplateForKind("scene");
+console.log(JSON.stringify({
+  characterHasTts: Object.prototype.hasOwnProperty.call(character, "tts"),
+  sceneHasFrame: Object.prototype.hasOwnProperty.call(scene, "frame"),
+}));
+"""
+    completed = subprocess.run(
+        ["node", "-e", script],
+        cwd=Path(__file__).parents[1],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert json.loads(completed.stdout) == {
+        "characterHasTts": True,
+        "sceneHasFrame": True,
+    }
 
 
 def test_ui_requires_two_hosts_and_refreshes_requested_candidates():

@@ -1,6 +1,7 @@
 const state = { packs: [], versions: [], assets: [], candidates: [], baselines: [] };
 const notice = document.querySelector("#notice");
 const {
+  manifestTemplateForKind,
   requestedCandidateLabel,
   requestedCandidatesForCanonical,
 } = PackManagerSelection;
@@ -67,6 +68,7 @@ async function refresh() {
         id: `${pack.id}@${version.version}`,
         kind: pack.kind,
         name: pack.name,
+        flight_ready: version.flight_ready,
       }));
     })).then((groups) => groups.flat()),
   ]);
@@ -76,15 +78,16 @@ async function refresh() {
 function render() {
   refill(".pack-options", state.packs, (item) => `${item.name} · ${item.kind}`);
   refill(".asset-options", state.assets, (item) => `${item.id} · ${item.mime_type}`);
+  const flightReadyVersions = state.versions.filter((item) => item.flight_ready);
   refill(
     ".character-version-options",
-    state.versions.filter((item) => item.kind === "character"),
+    flightReadyVersions.filter((item) => item.kind === "character"),
     (item) => `${item.name} · v${item.version}`,
     true,
   );
   refill(
     ".scene-version-options",
-    state.versions.filter((item) => item.kind === "scene"),
+    flightReadyVersions.filter((item) => item.kind === "scene"),
     (item) => `${item.name} · v${item.version}`,
     true,
   );
@@ -396,4 +399,18 @@ document.querySelector(".cast-options").addEventListener(
   "change",
   refreshRequestedCandidateOptions,
 );
+
+function syncManifestTemplateForSelectedPack() {
+  const packSelect = document.querySelector("#version-form [name=pack_id]");
+  const textarea = document.querySelector("#version-form [name=manifest]");
+  const selectedPack = state.packs.find((pack) => pack.id === packSelect.value);
+  if (!selectedPack) return;
+  textarea.value = JSON.stringify(manifestTemplateForKind(selectedPack.kind), null, 2);
+}
+
+document.querySelector("#version-form [name=pack_id]").addEventListener(
+  "change",
+  syncManifestTemplateForSelectedPack,
+);
+
 refresh().catch((error) => show(error.message, true));

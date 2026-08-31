@@ -1,4 +1,5 @@
 import json
+import re
 import sqlite3
 import uuid
 from dataclasses import dataclass, field
@@ -14,6 +15,31 @@ SCHEMA_VERSION_V2 = 2
 _PACK_KINDS = {"character", "scene"}
 _LOCKED_TRAITS = {"silhouette", "eye_design", "proportions"}
 _VISUAL_DESCRIPTORS = ("silhouette", "eye_design", "proportions")
+_CHARACTER_V2_KEYS = frozenset(
+    {
+        "schema_version",
+        "visual_invariants",
+        "persona",
+        "writer_rules",
+        "voice_direction",
+        "tts",
+        "asset_ids",
+    }
+)
+_VISUAL_INVARIANTS_V2_KEYS = frozenset(
+    {"locked_traits", "silhouette", "eye_design", "proportions"}
+)
+_SCENE_V2_KEYS = frozenset(
+    {
+        "schema_version",
+        "set",
+        "palette",
+        "lighting",
+        "frame",
+        "reanchor_every",
+        "asset_ids",
+    }
+)
 _TTS_RESERVED_FIELDS = (
     "enabled",
     "provider",
@@ -29,17 +55,13 @@ _TTS_LICENSE_FIELDS = (
     "soundalike_or_cloned_person",
     "notes",
 )
-_FORBIDDEN_TTS_KEYS = frozenset(
-    {
-        "api_key",
-        "api_secret",
-        "secret",
-        "token",
-        "credential",
-        "credentials",
-        "access_key",
-        "access_token",
-    }
+_CREDENTIAL_FRAGMENTS = (
+    "apikey",
+    "secret",
+    "token",
+    "password",
+    "authorization",
+    "credential",
 )
 
 
@@ -186,46 +208,44 @@ class PackService:
     @staticmethod
     def schema_version(manifest: dict) -> int:
         has_explicit = "schema_version" in manifest
-        value = manifest.get("schema_version", SCHEMA_VERSION_V1)
-        if value == SCHEMA_VERSION_V1:
-            if has_explicit:
-                return SCHEMA_VERSION_V1
+        if not has_explicit:
             if PackService._manifest_has_v2_markers(manifest):
                 raise ValidationError(
                     "schema_version is required when using flight-ready fields"
                 )
             return SCHEMA_VERSION_V1
-        if value == SCHEMA_VERSION_V2:
-            return SCHEMA_VERSION_V2
-        raise ValidationError("schema_version must be 1 or 2")
+        return PackService._parse_schema_version(manifest["schema_version"])
 
     @staticmethod
-    def _manifest_has_v2_markers(manifest: dict) -> bool:
-        if "tts" in manifest:
-            return True
-        visual_invariants = manifest.get("visual_invariants")
-        if not isinstance(visual_invariants, dict):
+    def is_flight_ready(kind: str, manifest: dict) -> bool:
+        try:
+            PackService.validate_flight_ready(kind, manifest)
+        except ValidationError:
             return False
-        return any(
-            descriptor in visual_invariants for descriptor in _VISUAL_DESCRIPTORS
-        )
+        return True
 
     @staticmethod
     def validate_flight_ready(kind: str, manifest: dict) -> None:
         if kind not in _PACK_KINDS:
             raise ValidationError("pack kind must be character or scene")
+        if not isinstance(manifest, dict):
+            raise ValidationError("manifest must be an object")
         if PackService.schema_version(manifest) != SCHEMA_VERSION_V2:
             raise ValidationError(
                 "flight-ready packs require schema_version 2"
             )
+        PackService._reject_credentials_recursive(manifest)
         if kind == "character":
-            PackService._validate_character_manifest(manifest)
+            PackService._validate_character_manifest(
+                manifest, SCHEMA_VERSION_V2
+            )
         else:
-            PackService._validate_scene_manifest(manifest)
+            PackService._validate_scene_manifest(manifest, SCHEMA_VERSION_V2)
 
     def _validate_manifest(self, kind: str, manifest: dict) -> None:
         if not isinstance(manifest, dict):
             raise ValidationError("manifest must be an object")
+        PackService._reject_credentials_recursive(manifest)
         schema_version = PackService.schema_version(manifest)
         if kind == "character":
             self._validate_character_manifest(manifest, schema_version)
@@ -238,6 +258,9 @@ class PackService:
         manifest: dict, schema_version: int = SCHEMA_VERSION_V1
     ) -> None:
         if schema_version == SCHEMA_VERSION_V2:
+            PackService._validate_closed_keys(
+                manifest, _CHARACTER_V2_KEYS, "manifest"
+            )
             PackService._require_fields(manifest, ("schema_version", "tts"))
             if manifest["schema_version"] != SCHEMA_VERSION_V2:
                 raise ValidationError("schema_version must be 2")
@@ -259,6 +282,13 @@ class PackService:
                 "silhouette, eye_design, and proportions"
             )
         if schema_version == SCHEMA_VERSION_V2:
+            if not isinstance(visual_invariants, dict):
+                raise ValidationError("visual_invariants must be an object")
+            PackService._validate_closed_keys(
+                visual_invariants,
+                _VISUAL_INVARIANTS_V2_KEYS,
+                "visual_invariants",
+            )
             for descriptor in _VISUAL_DESCRIPTORS:
                 PackService._require_non_empty_string(
                     visual_invariants.get(descriptor),
@@ -279,6 +309,9 @@ class PackService:
         manifest: dict, schema_version: int = SCHEMA_VERSION_V1
     ) -> None:
         if schema_version == SCHEMA_VERSION_V2:
+            PackService._validate_closed_keys(
+                manifest, _SCENE_V2_KEYS, "manifest"
+            )
             PackService._require_fields(manifest, ("schema_version",))
             if manifest["schema_version"] != SCHEMA_VERSION_V2:
                 raise ValidationError("schema_version must be 2")
@@ -303,52 +336,107 @@ class PackService:
     def _validate_tts_block(tts: object) -> None:
         if not isinstance(tts, dict):
             raise ValidationError("tts must be an object")
-        forbidden = _FORBIDDEN_TTS_KEYS.intersection(tts)
-        if forbidden:
-            raise ValidationError(
-                "tts must not contain provider credentials: "
-                + ", ".join(sorted(forbidden))
-            )
+        PackService._reject_credentials_recursive(tts, path="tts")
+        PackService._validate_closed_keys(tts, frozenset(_TTS_RESERVED_FIELDS), "tts")
         PackService._require_fields(tts, _TTS_RESERVED_FIELDS)
         if not isinstance(tts["enabled"], bool):
             raise ValidationError("tts.enabled must be a boolean")
-        if not isinstance(tts["pronunciations"], list):
-            raise ValidationError("tts.pronunciations must be a list")
+        if tts["enabled"]:
+            raise ValidationError(
+                "tts.enabled must be false for the current flight"
+            )
+        if tts["provider"] is not None:
+            raise ValidationError("tts.provider must be null while disabled")
+        if tts["voice_id"] is not None:
+            raise ValidationError("tts.voice_id must be null while disabled")
+        if tts["speed"] is not None:
+            raise ValidationError("tts.speed must be null while disabled")
+        if tts["pitch"] is not None:
+            raise ValidationError("tts.pitch must be null while disabled")
+        if tts["max_duration_s"] is not None:
+            raise ValidationError("tts.max_duration_s must be null while disabled")
+        if tts["pronunciations"] != []:
+            raise ValidationError("tts.pronunciations must be an empty list")
         license_block = tts.get("license")
         if not isinstance(license_block, dict):
             raise ValidationError("tts.license must be an object")
+        PackService._validate_closed_keys(
+            license_block, frozenset(_TTS_LICENSE_FIELDS), "tts.license"
+        )
         PackService._require_fields(
             license_block, _TTS_LICENSE_FIELDS, prefix="tts.license."
         )
-        if not isinstance(license_block["broadcast_rights_confirmed"], bool):
+        if license_block["broadcast_rights_confirmed"] is not False:
             raise ValidationError(
-                "tts.license.broadcast_rights_confirmed must be a boolean"
+                "tts.license.broadcast_rights_confirmed must be false while disabled"
             )
-        if not isinstance(license_block["soundalike_or_cloned_person"], bool):
+        if license_block["soundalike_or_cloned_person"] is not False:
             raise ValidationError(
-                "tts.license.soundalike_or_cloned_person must be a boolean"
+                "tts.license.soundalike_or_cloned_person must be false while disabled"
             )
-        if not isinstance(license_block["notes"], str):
-            raise ValidationError("tts.license.notes must be a string")
+        if license_block["notes"] != "":
+            raise ValidationError("tts.license.notes must be an empty string")
 
-        if not tts["enabled"]:
-            return
+    @staticmethod
+    def _parse_schema_version(value: object) -> int:
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValidationError("schema_version must be an integer")
+        if value == SCHEMA_VERSION_V1:
+            return SCHEMA_VERSION_V1
+        if value == SCHEMA_VERSION_V2:
+            return SCHEMA_VERSION_V2
+        raise ValidationError("schema_version must be 1 or 2")
 
-        PackService._require_non_empty_string(tts["provider"], "tts.provider")
-        PackService._require_non_empty_string(tts["voice_id"], "tts.voice_id")
-        if not license_block["broadcast_rights_confirmed"]:
+    @staticmethod
+    def _manifest_has_v2_markers(manifest: dict) -> bool:
+        if "tts" in manifest:
+            return True
+        visual_invariants = manifest.get("visual_invariants")
+        if not isinstance(visual_invariants, dict):
+            return False
+        return any(
+            descriptor in visual_invariants for descriptor in _VISUAL_DESCRIPTORS
+        )
+
+    @staticmethod
+    def _normalize_key(key: object) -> str:
+        if not isinstance(key, str):
+            return ""
+        return re.sub(r"[^a-z0-9]", "", key.lower())
+
+    @staticmethod
+    def _is_credential_key(key: object) -> bool:
+        normalized = PackService._normalize_key(key)
+        if not normalized:
+            return False
+        return any(fragment in normalized for fragment in _CREDENTIAL_FRAGMENTS)
+
+    @staticmethod
+    def _reject_credentials_recursive(value: object, *, path: str = "manifest") -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if PackService._is_credential_key(key):
+                    raise ValidationError(
+                        f"{path}.{key} must not contain credential metadata"
+                    )
+                PackService._reject_credentials_recursive(
+                    item, path=f"{path}.{key}"
+                )
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                PackService._reject_credentials_recursive(
+                    item, path=f"{path}[{index}]"
+                )
+
+    @staticmethod
+    def _validate_closed_keys(
+        value: dict, allowed: frozenset[str], path: str
+    ) -> None:
+        extra = set(value) - allowed
+        if extra:
             raise ValidationError(
-                "tts.license.broadcast_rights_confirmed must be true when "
-                "tts is enabled"
+                f"{path} contains unsupported fields: {', '.join(sorted(extra))}"
             )
-        if license_block["soundalike_or_cloned_person"]:
-            raise ValidationError(
-                "tts.license.soundalike_or_cloned_person must be false"
-            )
-        for field in ("speed", "pitch", "max_duration_s"):
-            value = tts[field]
-            if value is not None and not isinstance(value, (int, float)):
-                raise ValidationError(f"tts.{field} must be a number or null")
 
     def _validate_assets(self, asset_ids: object) -> None:
         if not isinstance(asset_ids, list):

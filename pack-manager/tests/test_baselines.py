@@ -588,3 +588,52 @@ def test_export_preserves_schema_version_and_visual_descriptors(
     assert stored["visual_invariants"]["silhouette"].startswith("Broad rounded")
     assert stored["voice_direction"]
     assert stored["tts"]["enabled"] is False
+
+
+def test_lock_run_leaves_no_baseline_or_export_after_v1_rejection(baseline_setup):
+    packs = baseline_setup["pack_service"]
+    candidates = baseline_setup["candidate_service"]
+    baselines = baseline_setup["baseline_service"]
+    database = baseline_setup["database"]
+    export_root = baselines.export_root
+    asset = baseline_setup["source_assets"][0]
+    hero = baseline_setup["source_assets"][3]
+
+    bot1 = packs.create_pack("character", "Legacy BOT1")
+    bot2 = packs.create_pack("character", "Legacy BOT2")
+    scene = packs.create_pack("scene", "Legacy Studio")
+    bot1_version = packs.create_version(bot1.id, character_manifest_v1([asset.id]))
+    bot2_version = packs.create_version(bot2.id, character_manifest_v1([asset.id]))
+    scene_version = packs.create_version(scene.id, scene_manifest_v2([asset.id]))
+    candidate = candidates.create(
+        character_versions={
+            "BOT1": (bot1_version.pack_id, bot1_version.version),
+            "BOT2": (bot2_version.pack_id, bot2_version.version),
+        },
+        scene_pack_id=scene_version.pack_id,
+        scene_version=scene_version.version,
+        hero_asset_id=hero.id,
+    )
+    candidate = candidates.approve(
+        candidate.id, canonical=True, review_note="legacy packs"
+    )
+
+    with database.connect() as connection:
+        baseline_count_before = connection.execute(
+            "SELECT COUNT(*) FROM baselines"
+        ).fetchone()[0]
+    export_entries_before = set(export_root.iterdir()) if export_root.exists() else set()
+
+    with pytest.raises(ValidationError, match="schema_version|flight"):
+        baselines.lock_run(candidate.cast_key)
+
+    with database.connect() as connection:
+        baseline_count_after = connection.execute(
+            "SELECT COUNT(*) FROM baselines"
+        ).fetchone()[0]
+    export_entries_after = set(export_root.iterdir()) if export_root.exists() else set()
+
+    assert baseline_count_after == baseline_count_before
+    assert export_entries_after == export_entries_before
+    assert not any(path.name.startswith(".tmp-baseline_") for path in export_entries_after)
+    assert not any(path.name.startswith("baseline_") for path in export_entries_after - export_entries_before)
