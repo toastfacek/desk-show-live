@@ -316,13 +316,28 @@ def test_cancellation_returns_no_invented_package():
     _run(run())
 
 
-def test_fenced_markdown_content_fails_without_stripping():
-    fenced = "```json\n" + json.dumps(_valid_plan_payload()) + "\n```"
+def test_fenced_markdown_json_is_accepted():
+    payload = _valid_plan_payload()
+    fenced = "```json\n" + json.dumps(payload) + "\n```"
 
     async def http_post(url, *, headers, json, timeout):
         return FakeResponse(
             200,
             {"choices": [{"message": {"content": fenced}}]},
+        )
+
+    async def run():
+        client = _client(http_post)
+        return await client.complete_json(system="sys", user={"k": "v"})
+
+    assert _run(run()) == payload
+
+
+def test_unfenced_non_json_content_still_fails():
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            {"choices": [{"message": {"content": "not json"}}]},
         )
 
     async def run():
