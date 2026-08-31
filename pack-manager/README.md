@@ -22,6 +22,12 @@ Runtime's host pictures live (PHASEONE[lol], deb, the locked hero). They are
 not in `obs-harness/assets/clips/` and they are not `assets/hero_wide.png` in
 git. See root [`ASSETS.md`](../ASSETS.md).
 
+On an empty clone, lock the checked-in 1344×768 seed:
+
+```bash
+python3 -m pack_manager.hosts --data-dir data --hero fixtures/hero_wide.png
+```
+
 Uploaded image names never
 become filesystem paths: PNG, JPEG, and WebP content is size-limited, hashed,
 checked against the claimed format's file signature, and stored by SHA-256.

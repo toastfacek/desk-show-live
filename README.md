@@ -4,10 +4,17 @@
 
 | Piece | Path |
 | :---- | :---- |
-| Hosts, scenes, locked hero | `pack-manager/` (`data/` is gitignored) |
+| Hosts, scenes, locked hero | `pack-manager/` (`data/` is gitignored; seed still is `pack-manager/fixtures/hero_wide.png`) |
 | OBS clock | `obs-harness/` |
 | Live flight | `runtime-flight/` |
 | Prompt-safe sheets (words only) | `studio.yaml` |
+| Asset map | [`ASSETS.md`](ASSETS.md) |
+
+Stage this Cloud Agent / an empty clone (no fal, no OBS):
+
+```bash
+./scripts/stage-demo.sh
+```
 
 The one-host prototype (`run_live.py`, `bake_assets.py`) is still in this repo. Do not look there for the two hosts.
 

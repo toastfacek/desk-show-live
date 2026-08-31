@@ -131,6 +131,19 @@ def test_validate_config_rejects_missing_env(
         raise AssertionError("expected ConfigError")
 
 
+def test_validate_config_segment_skips_obs_password(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    _set_complete_env(monkeypatch)
+    monkeypatch.delenv("OBS_WEBSOCKET_PASSWORD", raising=False)
+    loaded = load_config(config_path)
+    validate_config(loaded, require_obs=False)
+    with pytest.raises(ConfigError, match="OBS_WEBSOCKET_PASSWORD"):
+        validate_config(loaded)
+
+
 @pytest.mark.parametrize(
     ("mode", "cap", "message"),
     [

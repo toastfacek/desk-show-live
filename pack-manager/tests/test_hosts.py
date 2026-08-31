@@ -1,0 +1,56 @@
+from pathlib import Path
+
+import pytest
+
+from pack_manager.hosts import (
+    BOT1_NAME,
+    BOT2_NAME,
+    HERO_HEIGHT,
+    HERO_WIDTH,
+    lock_canonical_hosts,
+)
+from pack_manager.runtime import load_locked_baseline
+from pack_manager.errors import ValidationError
+
+FIXTURE_HERO = Path(__file__).resolve().parents[1] / "fixtures" / "hero_wide.png"
+
+
+def test_fixture_hero_is_flight_png():
+    assert FIXTURE_HERO.is_file()
+    content = FIXTURE_HERO.read_bytes()
+    assert content.startswith(b"\x89PNG\r\n\x1a\n")
+    import struct
+
+    width, height = struct.unpack(">II", content[16:24])
+    assert (width, height) == (HERO_WIDTH, HERO_HEIGHT)
+
+
+def test_lock_canonical_hosts_exports_phaseone_and_deb(tmp_path: Path):
+    data_dir = tmp_path / "data"
+    locked = lock_canonical_hosts(data_dir, FIXTURE_HERO)
+    loaded = load_locked_baseline(data_dir, locked.id)
+    manifest = loaded.manifest
+
+    assert manifest["display_names"] == {"BOT1": BOT1_NAME, "BOT2": BOT2_NAME}
+    assert manifest["host_map"] == {"BOT1": "host_a", "BOT2": "host_b"}
+    assert manifest["frame"] == {"w": HERO_WIDTH, "h": HERO_HEIGHT, "fps": 24}
+    assert manifest["reanchor_every"] == 5
+    assert locked.hero_path.read_bytes() == FIXTURE_HERO.read_bytes()
+    assert loaded.hero_path == locked.hero_path
+
+    again = lock_canonical_hosts(data_dir, FIXTURE_HERO)
+    assert again.id == locked.id
+
+
+def test_lock_canonical_hosts_cli(tmp_path: Path):
+    from pack_manager.hosts import main
+
+    data_dir = tmp_path / "data"
+    code = main(["--data-dir", str(data_dir), "--hero", str(FIXTURE_HERO)])
+    assert code == 0
+    assert any(data_dir.joinpath("exports").glob("baseline_*"))
+
+
+def test_lock_canonical_hosts_rejects_missing_hero(tmp_path: Path):
+    with pytest.raises(ValidationError, match="not found"):
+        lock_canonical_hosts(tmp_path / "data", tmp_path / "missing.png")

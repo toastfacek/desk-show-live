@@ -24,8 +24,15 @@ python3 -m runtime_flight verify-flight --automated --latest --out out/flights
 python3 -m runtime_flight verify-flight --final --latest --out out/flights
 ```
 
-Paid commands require `RUNTIME_ALLOW_PAID=1` and `--confirm-spend` equal to the
-configured cap. They never stop an existing OBS stream.
+No-OBS paid segment (planner + writer + two fal takes, hero then chain). Human-gated.
+Does not connect to OBS.
+
+```bash
+RUNTIME_ALLOW_PAID=1 python3 -m runtime_flight segment \
+  --config config.segment.example.yaml --confirm-spend 2.00 --max-fal-submissions 2
+```
+
+Paid `smoke` and `live` still require OBS. They never stop an existing OBS stream.
 
 ```bash
 RUNTIME_ALLOW_PAID=1 python3 -m runtime_flight smoke \

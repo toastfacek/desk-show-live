@@ -8,7 +8,12 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Literal
 
-from runtime_flight.config import RuntimeConfig, load_config, validate_config
+from runtime_flight.config import (
+    SMOKE_CAP_MAX_USD,
+    RuntimeConfig,
+    load_config,
+    validate_config,
+)
 from runtime_flight.obs_session import ObsSession
 from runtime_flight.obs_setup import setup_obs
 from runtime_flight.source import SourceError, load_source_packet
@@ -116,6 +121,28 @@ def cmd_paid_flight(
     )
 
 
+def cmd_segment(
+    config: RuntimeConfig,
+    *,
+    confirm_spend: str | None,
+    max_text_requests: int,
+    max_fal_submissions: int,
+    run_segment: FlightRunner,
+) -> int:
+    require_paid_flag()
+    require_confirm_spend(config, confirm_spend)
+    require_text_request_limit("smoke", max_text_requests)
+    require_smoke_fal_limit(max_fal_submissions)
+    if config.spend_cap_usd is None or config.spend_cap_usd > SMOKE_CAP_MAX_USD:
+        raise OperatorError("segment spend cap must be at most 2.00")
+    load_reviewed_source(config)
+    return run_segment(
+        config=config,
+        max_text_requests=max_text_requests,
+        max_fal_submissions=max_fal_submissions,
+    )
+
+
 def cmd_replay(bundle: Path, *, network_call: Callable[..., Any] | None = None) -> dict[str, Any]:
     if network_call is not None:
         raise OperatorError("replay performs no network calls")
@@ -147,7 +174,7 @@ def latest_bundle(out_dir: Path) -> Path:
     return max(children, key=lambda path: path.stat().st_mtime)
 
 
-def load_validated_config(path: Path) -> RuntimeConfig:
+def load_validated_config(path: Path, *, require_obs: bool = True) -> RuntimeConfig:
     config = load_config(path)
-    validate_config(config)
+    validate_config(config, require_obs=require_obs)
     return config

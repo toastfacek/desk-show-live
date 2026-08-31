@@ -1,9 +1,8 @@
-# Runtime flight configuration example.
+# No-OBS segment loop. Copy to config.local.yaml and export keys.
 #
-# Root config.yaml and requirements.txt are NOT flight configuration. They belong
-# to the deprecated single-host mpv research scaffold and must not be copied here.
+# Root config.yaml and requirements.txt are NOT flight configuration.
 
-mode: live
+mode: smoke
 pack_manager_data_dir: ../pack-manager/data
 baseline_id_env: RUNTIME_BASELINE_ID
 source_packet: inputs/source_packet.local.json
