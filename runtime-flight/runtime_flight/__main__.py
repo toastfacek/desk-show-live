@@ -14,6 +14,7 @@ from runtime_flight.config import (
     redacted_summary,
     validate_config,
 )
+from runtime_flight.flight import run_paid_flight, run_rehearsal
 from runtime_flight.obs_session import ObsSession
 from runtime_flight.operator import (
     OperatorError,
@@ -117,14 +118,20 @@ def main(
             print(yaml.safe_dump(created, sort_keys=False), end="")
             return 0
         if args.command == "rehearse":
-            if rehearsal_runner is None:
-                raise OperatorError("rehearse runner is not bound in this process")
-            return rehearsal_runner(args.rundown)
+            if rehearsal_runner is not None:
+                return rehearsal_runner(args.rundown)
+            config = load_validated_config(args.config)
+            return run_rehearsal(config=config, rundown=args.rundown)
         if args.command in {"smoke", "live"}:
             config = load_validated_config(args.config)
             session = _session(config, obs_session)
-            if flight_runner is None:
-                raise OperatorError("paid flight runner is not bound in this process")
+
+            def _cleanup() -> None:
+                try:
+                    session.stop_recording()
+                except Exception:
+                    pass
+
             return cmd_paid_flight(
                 config,
                 mode="smoke" if args.command == "smoke" else "live",
@@ -132,8 +139,8 @@ def main(
                 max_text_requests=args.max_text_requests,
                 max_fal_submissions=getattr(args, "max_fal_submissions", None),
                 session=session,
-                run_flight=flight_runner,
-                cleanup=cleanup or (lambda: None),
+                run_flight=flight_runner or run_paid_flight,
+                cleanup=cleanup or _cleanup,
                 panic_installer=panic_installer or install_panic_handler,
             )
         if args.command == "replay":
