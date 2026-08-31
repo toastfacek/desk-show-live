@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from runtime_flight.models import Fact, SegmentPackage, Thought, TweetCard
+from runtime_flight.models import CoverageState, Fact, HostVoice, SegmentPackage, Thought, TweetCard
 from runtime_flight.source import (
     EXPECTED_AUTHOR,
     EXPECTED_LINKED_URL,
@@ -196,6 +196,9 @@ def test_writer_sends_full_planned_transcript():
             "text": item.text,
             "thought_open": item.thought_open,
             "angle_used": item.angle_used,
+            "beat_id": item.beat_id,
+            "landed_own_job": item.landed_own_job,
+            "beat_exhausted": item.beat_exhausted,
         }
         for item in planned
     ]
@@ -608,6 +611,167 @@ def test_writer_does_not_log_authorization(capsys: pytest.CaptureFixture[str]):
     captured = capsys.readouterr()
     assert SECRET_API_KEY not in captured.out
     assert SECRET_API_KEY not in captured.err
+
+
+def test_writer_sends_current_beat_coverage_and_host_voices():
+    captured: dict[str, Any] = {}
+    voices = (
+        HostVoice("BOT1", "Calm, dry, unhurried technical anchor.", ("Make one clear claim.",)),
+        HostVoice("BOT2", "Curious co-host who wants the number.", ("Ask what moved.",)),
+    )
+
+    async def http_post(url, *, headers, json, timeout):
+        captured["system"] = json["messages"][0]["content"]
+        captured["user"] = json_module.loads(json["messages"][1]["content"])
+        return FakeResponse(200, _json_body(_valid_thought_payload()))
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write(
+            _package(),
+            (),
+            "BOT1",
+            False,
+            "open",
+            voices=voices,
+            coverage=CoverageState.initial(),
+        )
+
+    thought = _run(run())
+    assert thought.beat_id == "b1"
+    user = captured["user"]
+    assert user["current_beat"]["id"] == "b1"
+    assert user["current_beat"]["bot1_job"] == "scope"
+    assert user["current_beat"]["bot2_job"] == "takeover"
+    assert user["coverage"]["still_open"]
+    assert user["hosts"]["BOT1"]["persona"].startswith("Calm")
+    assert user["hosts"]["BOT2"]["writer_rules"] == ["Ask what moved."]
+    system = captured["system"].lower()
+    assert "discussion" in system
+    assert "recap" in system
+    assert "persona" in system
+    assert "PHASEONE" not in captured["system"]
+    assert "deb" not in captured["system"]
+
+
+def test_writer_batches_a_point_into_five_second_chunks():
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            _json_body(
+                {
+                    "speaker": "BOT1",
+                    "text": "Monitoring missed a society, not a glitch.",
+                    "chunks": [
+                        "Monitoring missed a society, not a glitch.",
+                        "The watchers blinked while three runs died.",
+                        "That is the thesis, and it is not weather.",
+                    ],
+                    "thought_open": False,
+                    "angle_used": "scope",
+                    "landed_own_job": True,
+                }
+            ),
+        )
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write_point(_package(), (), "BOT1", False, "develop")
+
+    thoughts = _run(run())
+    assert len(thoughts) == 3
+    assert [item.speaker for item in thoughts] == ["BOT1", "BOT1", "BOT1"]
+    assert [item.thought_open for item in thoughts] == [True, True, False]
+    assert [item.landed_own_job for item in thoughts] == [False, False, True]
+    assert thoughts[1].text == "The watchers blinked while three runs died."
+
+
+def test_overlong_spoken_line_is_filed_into_five_second_chunks():
+    line = (
+        "The watchers blinked while three agent societies rose and fell, "
+        "and that is the thesis, not the weather around the card tonight."
+    )
+    assert len(line) > 120
+
+    calls: list[dict[str, Any]] = []
+
+    async def http_post(url, *, headers, json, timeout):
+        calls.append(json_module.loads(json["messages"][1]["content"]))
+        return FakeResponse(200, _json_body(_valid_thought_payload(text=line)))
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write_point(_package(), (), "BOT1", False, "open")
+
+    thoughts = _run(run())
+    assert len(calls) == 1
+    assert all(len(item.text) <= 120 for item in thoughts)
+    assert " ".join(item.text for item in thoughts) == line
+    assert [item.speaker for item in thoughts] == ["BOT1"] * len(thoughts)
+    assert thoughts[0].thought_open is True
+    assert thoughts[-1].thought_open is False
+
+
+def test_wrapped_overflow_keeps_four_files_and_stays_open():
+    words = ["civilization"] * 40
+    line = " ".join(words)
+    assert len(line) > 480
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            _json_body(
+                _valid_thought_payload(
+                    text=line,
+                    thought_open=False,
+                    landed_own_job=True,
+                    beat_exhausted=True,
+                )
+            ),
+        )
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write_point(_package(), (), "BOT1", False, "develop")
+
+    thoughts = _run(run())
+    assert len(thoughts) == 4
+    assert all(len(item.text) <= 120 for item in thoughts)
+    assert [item.thought_open for item in thoughts] == [True, True, True, True]
+    assert thoughts[-1].landed_own_job is False
+    assert thoughts[-1].beat_exhausted is False
+
+
+def test_writer_rejects_more_than_four_chunks():
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            _json_body(
+                _valid_thought_payload(
+                    chunks=["one", "two", "three", "four", "five"],
+                    text="one",
+                )
+            ),
+        )
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write_point(_package(), (), "BOT1", False, "open")
+
+    with pytest.raises(WriterError, match="chunks"):
+        _run(run())
+
+
+def test_writer_rejects_unknown_beat_id():
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(_valid_thought_payload(beat_id="nope")))
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await _write(writer)
+
+    with pytest.raises(WriterError, match="beat_id"):
+        _run(run())
 
 
 def test_writer_module_does_not_import_root_scaffold_or_live_harness() -> None:

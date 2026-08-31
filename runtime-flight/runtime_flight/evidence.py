@@ -14,6 +14,7 @@ from typing import Any, Callable, Iterable, Mapping
 
 from runtime_flight.config import REDACTED, RuntimeConfig, redacted_summary
 from runtime_flight.models import SegmentPackage
+from runtime_flight.topic_map import topic_map_as_dict
 
 RATE_EFFECTIVE_DATE = "2026-08-30"
 BUNDLE_TEXT_NAMES = (
@@ -77,7 +78,7 @@ class FlightEvidence:
 
 def package_as_dict(package: SegmentPackage | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(package, SegmentPackage):
-        return {
+        payload = {
             "item_id": package.item_id,
             "question": package.question,
             "framing": package.framing,
@@ -94,6 +95,9 @@ def package_as_dict(package: SegmentPackage | Mapping[str, Any]) -> dict[str, An
                 "url": package.center.url,
             },
         }
+        if package.topic_map is not None:
+            payload["topic_map"] = topic_map_as_dict(package.topic_map)
+        return payload
     return dict(package)
 
 

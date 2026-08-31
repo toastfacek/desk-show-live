@@ -269,7 +269,11 @@ This is the safety rail. It is copied from the conductor brief and tightened. If
 
 **Sees:** new posts, recent packages, the show list, spend so far vs cap, how many holds in the last few minutes, notes from critics. Does not see last-frame image URLs. Does not see the live play time as something to write to.
 
-**Emits:** one **segment package** (and, when needed, a pace order).
+**Emits:** one **segment package** (and, when needed, a pace order). The package includes a **topic map**: ordered beats, each with a complementary job for BOT1 and BOT2. The Producer maps the topic. It does not write the lines, and it does not fill a take count.
+
+`time_budget_s` is how much show time this map may fill. It is a budget, not a script length. For a 90 second budget, prefer one beat that can be explored in depth. For a longer budget, add a beat only when the source opens a new question. An hour uses the same machinery with more beats.
+
+A beat is done when both hosts have landed their job and both have nothing grounded left to add. The segment ends when the map is exhausted, or when the harness clock / spend cap says stop. The clock does not invent extra recap takes.
 
 ```json
 {
@@ -278,9 +282,24 @@ This is the safety rail. It is copied from the conductor brief and tightened. If
   "framing": "The poster is narrating a VIX spike as weather. Treat fear as a product with no salesperson.",
   "angles": [
     "a ticker that shrugs is still a ticker",
-    "a move without a thesis is a screenshot of a feeling",
     "one host wants the number; the other wants the reason"
   ],
+  "topic_map": {
+    "throughline": "A fear ticker with no thesis.",
+    "fight": "Is the move information, or weather with a chart?",
+    "done_when": "Both the thesis and the number have been landed.",
+    "beats": [
+      {
+        "id": "b1",
+        "question": "If you have no thesis, is the move even information?",
+        "tension": "Weather versus a counted move.",
+        "bot1_job": "Land that a move without a thesis is weather.",
+        "bot2_job": "Land what moved, by how much, for whom.",
+        "fact_ids": ["f1"],
+        "done_when": "Both jobs landed and neither host has more grounded to add."
+      }
+    ]
+  },
   "chyron": "A MOVE WITHOUT A THESIS",
   "center": {"kind": "tweet_card", "post_id": "1950123999999999999"},
   "layout_plan": ["wide", "split", "split", "wide", "split"],
@@ -297,7 +316,7 @@ A pace order is a separate, rare object: `hold` | `next_segment` | `bumper` | `e
 
 ### 6.3 Writer
 
-**Sees:** both host voices, the full script so far, the current package, who speaks next, whether the last thought is still open. If a clip was rejected, it also sees `reissue: shorter, blander`. It does not see the failed video.
+**Sees:** both host personas and writer rules, the full script so far, the current package, the current beat, coverage (what has landed, what is still open), who speaks next, whether the last thought is still open. If a clip was rejected, it also sees `reissue: shorter, blander`. It does not see the failed video. It does not see the live clock or the take index.
 
 **Emits:**
 
@@ -306,11 +325,18 @@ A pace order is a separate, rare object: `hold` | `next_segment` | `bumper` | `e
   "speaker": "BOT1",
   "text": "Fear has a ticker now, and it shrugs.",
   "thought_open": false,
-  "angle_used": "a ticker that shrugs is still a ticker"
+  "angle_used": "a ticker that shrugs is still a ticker",
+  "beat_id": "b1",
+  "landed_own_job": true,
+  "beat_exhausted": false
 }
 ```
 
-A **thought** is a finished move in the conversation. It is not “fill five seconds.” If the thought needs two clips, `thought_open` stays true and the next call finishes it. The clip length must not write the script.
+A **point** is the claim this host wants to make. A **chunk** is one 5-second file. The Writer may batch a point into 1–4 chunks in one call. Earlier chunks keep `thought_open` true so the same host keeps talking. The last chunk may close the point or leave it open if the rant is not done. The clip length must not write the script.
+
+The Writer stays on the current beat until both host jobs have landed and both hosts have nothing grounded left to add. Landing a job is not the same as exhausting the beat. Do not restate the card. React to the previous line. Cover the beat from this host’s perspective, then the other host’s, in depth.
+
+This is the complementary-questions contract from `research/findings/talk-show-segment-lifecycle.md` (thesis/weather vs number/stake). The end condition is topic-complete, not “empty the well on a 90s clock.” The 90s number is the Producer’s budget when it maps the room. A 90s discussion of one beat is expected. An hour is the same map with more beats or a longer budget.
 
 The line sits in a **written-ahead** slot (target depth: 2) until the director spends it. The next writer call gets this line on the script even if the video has not performed it yet. Writer ahead, video behind.
 

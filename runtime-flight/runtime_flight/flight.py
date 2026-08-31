@@ -28,6 +28,7 @@ from runtime_flight.segment_planner import SegmentPlanner
 from runtime_flight.source import load_source_packet
 from runtime_flight.spend import SpendLedger, SpendMeter, arguments_sha256
 from runtime_flight.text_client import TextAttemptLimiter, TextClient
+from runtime_flight.topic_map import host_voices_from_baseline
 from runtime_flight.writer import Writer
 from runtime_flight.writer_pipeline import WriterPipeline
 
@@ -143,7 +144,10 @@ async def _run_rehearsal_async(config: RuntimeConfig, *, out_dir: Path | None) -
         limiter=limiter,
         http_post=_rehearse_text_post,
     )
-    package = await SegmentPlanner(client).plan(source, baseline)
+    voices = host_voices_from_baseline(baseline)
+    package = await SegmentPlanner(client).plan(
+        source, baseline, time_budget_s=int(config.target_duration_s), voices=voices
+    )
     writer = Writer(client)
     work_dir = Path("out") / "rehearse" / uuid4().hex[:8]
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -160,7 +164,7 @@ async def _run_rehearsal_async(config: RuntimeConfig, *, out_dir: Path | None) -
     harness = LiveHarness(
         clock=clock,
         player=player,
-        pipeline=WriterPipeline(writer),
+        pipeline=WriterPipeline(writer, voices=voices),
         performer=RehearsalPerformer(clock, meter, work_dir),
         meter=meter,
         baseline=baseline,
@@ -210,7 +214,10 @@ async def _run_paid_async(
         http_post=http_post,
         timeout_s=float(config.text_timeout_s),
     )
-    package = await SegmentPlanner(client).plan(source, baseline)
+    voices = host_voices_from_baseline(baseline)
+    package = await SegmentPlanner(client).plan(
+        source, baseline, time_budget_s=int(config.target_duration_s), voices=voices
+    )
     writer = Writer(client)
     flight_id = f"{mode}-{_stamp()}"
     work_dir = Path("out") / "flights" / flight_id / "work"
@@ -256,7 +263,7 @@ async def _run_paid_async(
         harness = LiveHarness(
             clock=live_clock,
             player=live_player,
-            pipeline=WriterPipeline(writer),
+            pipeline=WriterPipeline(writer, voices=voices),
             performer=performer,
             meter=meter,
             baseline=baseline,

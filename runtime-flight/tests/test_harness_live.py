@@ -126,6 +126,7 @@ class LiveWriter:
         segment_phase: Literal["open", "develop", "close"],
         target_duration_s: float = 4.3,
         reissue: Literal["shorter, blander"] | None = None,
+        **kwargs: Any,
     ) -> Thought:
         self.calls.append(
             {

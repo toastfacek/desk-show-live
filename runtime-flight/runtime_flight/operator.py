@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from runtime_flight.config import (
+    LIVE_CAP_MAX_USD,
     SMOKE_CAP_MAX_USD,
     RuntimeConfig,
     load_config,
@@ -23,6 +24,8 @@ PAID_FLAG_ENV = "RUNTIME_ALLOW_PAID"
 SMOKE_MAX_TEXT = 6
 LIVE_MAX_TEXT = 24
 SMOKE_FAL_ATTEMPTS = frozenset({1, 2})
+LIVE_SEGMENT_MAX_FAL = 18
+DISCUSS_MAX_TURNS = 12
 
 
 class OperatorError(Exception):
@@ -60,6 +63,18 @@ def require_text_request_limit(mode: Literal["smoke", "live"], count: int) -> No
 def require_smoke_fal_limit(max_fal_submissions: int) -> None:
     if max_fal_submissions not in SMOKE_FAL_ATTEMPTS:
         raise OperatorError("smoke --max-fal-submissions must be 1 or 2")
+
+
+def require_segment_fal_limit(
+    mode: Literal["smoke", "live"], max_fal_submissions: int
+) -> None:
+    if mode == "smoke":
+        require_smoke_fal_limit(max_fal_submissions)
+        return
+    if max_fal_submissions < 1 or max_fal_submissions > LIVE_SEGMENT_MAX_FAL:
+        raise OperatorError(
+            "live segment --max-fal-submissions must be 1 to 18 (90s hard cap)"
+        )
 
 
 def load_reviewed_source(config: RuntimeConfig) -> Any:
@@ -131,15 +146,52 @@ def cmd_segment(
 ) -> int:
     require_paid_flag()
     require_confirm_spend(config, confirm_spend)
-    require_text_request_limit("smoke", max_text_requests)
-    require_smoke_fal_limit(max_fal_submissions)
-    if config.spend_cap_usd is None or config.spend_cap_usd > SMOKE_CAP_MAX_USD:
-        raise OperatorError("segment spend cap must be at most 2.00")
+    require_text_request_limit(config.mode, max_text_requests)
+    require_segment_fal_limit(config.mode, max_fal_submissions)
+    cap_max = SMOKE_CAP_MAX_USD if config.mode == "smoke" else LIVE_CAP_MAX_USD
+    if config.spend_cap_usd is None or config.spend_cap_usd > cap_max:
+        raise OperatorError(f"segment spend cap must be at most {cap_max}")
     load_reviewed_source(config)
     return run_segment(
         config=config,
         max_text_requests=max_text_requests,
         max_fal_submissions=max_fal_submissions,
+    )
+
+
+def cmd_discuss(
+    config: RuntimeConfig,
+    *,
+    confirm_text_requests: int,
+    max_turns: int,
+    package_path: Path | None,
+    run_discuss,
+    load_package=None,
+) -> dict[str, Any]:
+    if package_path is None:
+        if confirm_text_requests != max_turns + 1:
+            raise OperatorError(
+                "discuss --confirm-text-requests must be --max-turns plus one planner call"
+            )
+    elif confirm_text_requests != max_turns:
+        raise OperatorError(
+            "discuss --confirm-text-requests must match --max-turns when a package is supplied"
+        )
+    if max_turns < 1 or max_turns > DISCUSS_MAX_TURNS:
+        raise OperatorError("discuss --max-turns must be 1 to 12")
+    require_text_request_limit(config.mode, confirm_text_requests)
+    load_reviewed_source(config)
+    package = None
+    if package_path is not None:
+        loader = load_package
+        if loader is None:
+            from runtime_flight.discuss import load_package as loader
+        package = loader(package_path)
+    return run_discuss(
+        config=config,
+        max_text_requests=confirm_text_requests,
+        max_turns=max_turns,
+        package=package,
     )
 
 

@@ -7,6 +7,7 @@ from pathlib import Path
 
 import yaml
 
+from runtime_flight.discuss import DiscussError, run_discuss
 from runtime_flight.config import (
     ConfigError,
     REDACTED,
@@ -20,6 +21,7 @@ from runtime_flight.obs_session import ObsSession
 from runtime_flight.obs_setup import DEFAULT_WATCHDOG_URL
 from runtime_flight.operator import (
     OperatorError,
+    cmd_discuss,
     cmd_paid_flight,
     cmd_replay,
     cmd_segment,
@@ -51,6 +53,7 @@ def main(
     cleanup=None,
     network_call=None,
     segment_runner=None,
+    discuss_runner=None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="runtime_flight")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -95,11 +98,27 @@ def main(
 
     segment_parser = subparsers.add_parser(
         "segment",
-        help="Paid no-OBS segment loop: planner, writer, fal chain. Human-gated.",
+        help=(
+            "Paid no-OBS segment: talk until the topic is exhausted, "
+            "hard-capped at 90s (18 takes). Human-gated."
+        ),
     )
     _add_paid_args(segment_parser)
     segment_parser.add_argument("--max-fal-submissions", type=int, default=2)
     segment_parser.add_argument("--max-text-requests", type=int, default=6)
+
+    discuss_parser = subparsers.add_parser(
+        "discuss",
+        help="Text-only host bounce inspect. No fal. Human-gated text budget.",
+    )
+    _add_config_arg(discuss_parser)
+    discuss_parser.add_argument("--confirm-text-requests", type=int, required=True)
+    discuss_parser.add_argument("--max-turns", type=int, default=12)
+    discuss_parser.add_argument(
+        "--package",
+        type=Path,
+        help="Reuse a planned segment package and skip the planner call.",
+    )
 
     live_parser = subparsers.add_parser("live", help="Paid 90-second live flight. Human-gated.")
     _add_paid_args(live_parser)
@@ -145,6 +164,18 @@ def main(
                 max_fal_submissions=args.max_fal_submissions,
                 run_segment=segment_runner or run_segment,
             )
+        if args.command == "discuss":
+            config = load_validated_config(args.config, require_obs=False)
+            payload = cmd_discuss(
+                config,
+                confirm_text_requests=args.confirm_text_requests,
+                max_turns=args.max_turns,
+                package_path=args.package,
+                run_discuss=discuss_runner or run_discuss,
+            )
+            work_dir = Path(payload["work_dir"])
+            print((work_dir / "transcript.txt").read_text(encoding="utf-8"), end="")
+            return 0
         if args.command in {"smoke", "live"}:
             config = load_validated_config(args.config)
             session = _session(config, obs_session)
@@ -179,7 +210,7 @@ def main(
                 verify=verify or verify_bundle,
             )
         raise AssertionError(f"unhandled command: {args.command}")
-    except (ConfigError, PreflightError, OperatorError) as error:
+    except (ConfigError, PreflightError, OperatorError, DiscussError) as error:
         config = None
         try:
             if hasattr(args, "config"):

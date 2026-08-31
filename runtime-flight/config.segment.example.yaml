@@ -1,5 +1,10 @@
 # No-OBS segment loop. Copy to config.local.yaml and export keys.
 #
+# Talk until the topic is exhausted. Hard cap is 90s (18 five-second takes).
+# Live mode: --max-fal-submissions 18 --max-text-requests 24 --confirm-spend 8.00
+# with RUNTIME_SPEND_CAP_USD=8.00 (18 * $0.40, plus a little slack).
+# Smoke mode stays 1–2 takes and $2.00.
+#
 # Root config.yaml and requirements.txt are NOT flight configuration.
 
 mode: smoke
