@@ -139,6 +139,31 @@ def test_setup_obs_refuses_streaming_and_never_stops_stream(
     assert not any(call[0] == "stop_stream" for call in session._client.calls)
 
 
+def test_setup_obs_only_requires_obs_credentials(
+    tmp_path: Path,
+    flight_setup: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _complete_env(monkeypatch, flight_setup)
+    for name in (
+        "RUNTIME_BASELINE_ID",
+        "TEXT_BASE_URL",
+        "TEXT_API_KEY",
+        "TEXT_MODEL",
+        "RUNTIME_SPEND_CAP_USD",
+        "FAL_KEY",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    config_path = _write_flight_config(tmp_path, flight_setup)
+
+    code = main(
+        ["setup-obs", "--config", str(config_path)],
+        obs_session=_session(),
+    )
+
+    assert code == 0
+
+
 def test_smoke_text_request_limit(
     tmp_path: Path,
     flight_setup: dict,

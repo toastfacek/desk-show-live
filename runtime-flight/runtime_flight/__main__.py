@@ -13,9 +13,11 @@ from runtime_flight.config import (
     load_config,
     redacted_summary,
     validate_config,
+    validate_obs_config,
 )
 from runtime_flight.flight import run_paid_flight, run_rehearsal
 from runtime_flight.obs_session import ObsSession
+from runtime_flight.obs_setup import DEFAULT_WATCHDOG_URL
 from runtime_flight.operator import (
     OperatorError,
     cmd_paid_flight,
@@ -74,7 +76,7 @@ def main(
     _add_config_arg(setup_parser)
     setup_parser.add_argument(
         "--watchdog-url",
-        default="http://127.0.0.1:8765/",
+        default=DEFAULT_WATCHDOG_URL,
         help="Loopback URL for the WATCHDOG browser source.",
     )
 
@@ -123,7 +125,8 @@ def main(
                 http_post=http_post,
             )
         if args.command == "setup-obs":
-            config = load_validated_config(args.config)
+            config = load_config(args.config)
+            validate_obs_config(config)
             session = _session(config, obs_session)
             created = cmd_setup_obs(config, session, watchdog_url=args.watchdog_url)
             print(yaml.safe_dump(created, sort_keys=False), end="")

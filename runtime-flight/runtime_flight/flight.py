@@ -20,6 +20,7 @@ from runtime_flight.evidence import FlightEvidence, write_evidence_bundle
 from runtime_flight.fal_gateway import FalGateway
 from runtime_flight.harness_live import CLIP_DURATION_S, FakeClock, LiveHarness, WallClock
 from runtime_flight.obs_session import ObsSession
+from runtime_flight.obs_setup import WATCHDOG_PORT
 from runtime_flight.operator import OperatorError
 from runtime_flight.overlay import OverlayServer
 from runtime_flight.performer_fal import FalPerformer, ReadyTake, TakeRequest
@@ -221,7 +222,11 @@ async def _run_paid_async(
         mode=mode,
         ledger=SpendLedger(work_dir / "reservations.jsonl"),
     )
-    overlay_server = overlay if overlay is not None else OverlayServer()
+    # Keep the OBS browser source and the live overlay on the same fixed port.
+    # A random port would leave WATCHDOG showing its hold state forever.
+    overlay_server = (
+        overlay if overlay is not None else OverlayServer(port=WATCHDOG_PORT)
+    )
     created_overlay = overlay is None
     if created_overlay:
         overlay_server.start()
