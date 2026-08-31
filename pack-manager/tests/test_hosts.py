@@ -3,16 +3,37 @@ from pathlib import Path
 import pytest
 
 from pack_manager.hosts import (
+    BOT1_MANIFEST,
     BOT1_NAME,
+    BOT2_MANIFEST,
     BOT2_NAME,
     HERO_HEIGHT,
     HERO_WIDTH,
+    SCENE_MANIFEST,
+    SCENE_NAME,
     lock_canonical_hosts,
 )
 from pack_manager.runtime import load_locked_baseline
 from pack_manager.errors import ValidationError
 
 FIXTURE_HERO = Path(__file__).resolve().parents[1] / "fixtures" / "hero_wide.png"
+
+
+def test_canonical_copy_is_light_broadcast_sprites():
+    assert SCENE_NAME == "Light broadcast desk"
+    assert "light-mode technology broadcast studio" in SCENE_MANIFEST["set"]
+    assert SCENE_MANIFEST["palette"] == [
+        "warm white",
+        "forest green",
+        "cobalt",
+        "signal orange",
+    ]
+    assert BOT1_MANIFEST["visual_invariants"]["silhouette"] == (
+        "Broad rounded orange software sprite."
+    )
+    assert BOT2_MANIFEST["visual_invariants"]["silhouette"] == (
+        "Tall cobalt software sprite."
+    )
 
 
 def test_fixture_hero_is_flight_png():

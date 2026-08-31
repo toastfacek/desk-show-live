@@ -39,28 +39,22 @@ studio:
 
   # ---------------------------------------------------------------------
   set: |
-    A small television studio improvised inside a converted startup office.
-    A long matte pale-grey desk runs across the lower third, parallel to
-    camera, with a broad uncluttered centre. Two chunky boom microphones enter
-    from the outer edges. Desk dressing is limited to one plain closed device
-    and one large unlabelled drink vessel near each outer edge; no stickers,
-    papers, cards, labels or readable displays.
+    A clean light-mode technology broadcast studio. A long pale desk runs
+    across the lower third, parallel to camera, with a broad uncluttered
+    centre. Two simple boom microphones enter from the outer edges. Desk
+    dressing is limited to one plain closed device and one large unlabelled
+    drink vessel near each outer edge; no stickers, papers, cards, labels
+    or readable displays.
 
     Scenic richness stays in the outer thirds. Far left and far right hold
-    small asymmetric clusters of deep-bodied tube monitors in worn cream and
-    charcoal housings, a few heavy cable loops, broad plywood returns, one
-    concrete column and dark acoustic curtains. Screens show only a single
-    dim field, soft static mass or broad horizontal glow band. Forms are
-    chunky and sparse, with no tiny controls, fine scanlines, diagrams,
-    letters, numbers, logos or dense seams. The central vertical zone is an
-    uninterrupted matte charcoal wall and neutral shadow.
+    a few large unlabelled monitor shapes and soft broadcast fixtures.
+    Screens are blank colour fields only — warm white, forest green, cobalt
+    or signal orange — never diagrams or type. Forms are chunky and sparse.
+    The central vertical zone is an uninterrupted warm-white wall.
 
-    A visible amber task lamp motivates a restrained warm key from camera-left;
-    blank blue-green monitor glass motivates a restrained cool key from
-    camera-right. These colours remain local accents rather than room-wide
-    washes. Both hosts receive a soft neutral rim from behind, distinct in
-    value from their shell, so neither local key merges a silhouette into the
-    background. The rear planes are darker and softer than the hosts.
+    Lighting is bright, soft, and even. Colour lives on the hosts and a few
+    outer fixtures, not as a room-wide wash. Both hosts receive a soft
+    neutral rim so neither silhouette merges into the wall.
 
   # ---------------------------------------------------------------------
   hosts:
@@ -68,41 +62,29 @@ studio:
       display_name: PHASEONE[lol]     # what the lower third shows
       seat: left
       faces: right                    # slight inward turn, never breaks
-      accent: warm amber
+      accent: signal orange
       sheet: |
-        An original mouthless cartoon robot anchor with a low wide rounded-box
-        head, broad sloping shoulders and a bottom-heavy torso. The dominant
-        shell is flat dark charcoal, clearly darker than the neutral rim light;
-        warm amber appears only in two large round eye lenses and one thick
-        shoulder key. A broad near-black face panel contains the eye pair and
-        two thick mechanical brow plates. Emotion uses only coarse repeatable
-        changes in brow angle, pupil direction and whole-head tilt. The shell
-        has no rivets, fine seams, antenna, waveform, equalizer, jaw or exposed
-        mechanics. A simple dark sleeveless vest forms one large torso shape.
-        Upright and squared to the desk, forearms resting as two uncluttered
-        masses, calm, dry and unhurried. Preserve the low head, broad shoulders,
-        dark shell, round eye pair and mouthless face in every frame.
+        An original mouthless software-sprite anchor: a broad rounded orange
+        mass, low and wide, width about 1.35 times height. Two solid cream
+        ovals for eyes, no pupils, no inner marks, no mouth. Emotion uses only
+        coarse repeatable changes in eye height and whole-body tilt. No
+        rivets, seams, antenna, waveform, jaw or clothing detail. Upright and
+        squared to the desk, calm, dry and unhurried. Preserve the orange
+        rounded silhouette, cream oval pair and mouthless face in every frame.
 
     BOT2:
       display_name: deb              # lowercase, always
       seat: right
       faces: left
-      accent: cool cyan
+      accent: cobalt
       sheet: |
-        An original mouthless cartoon robot co-host with a tall narrow
-        clipped-capsule head, narrow square shoulders and a slim upright torso.
-        The dominant shell is matte off-white, clearly lighter than the cool
-        local key and separated from the background by a soft neutral rim.
-        One broad near-black visor contains two oversized solid eye blocks;
-        cool cyan is limited to those eye accents and one thick shoulder key.
-        Emotion uses only coarse repeatable changes in eye height, pupil
-        direction and whole-head lean. The shell has no jaw, collar ring, fine
-        seams, tiny controls, display marks or exposed mechanics. A plain
-        charcoal hoodie creates one simple torso shape and a broad backward cap
-        reinforces the tall silhouette without surface detail. Leaning slightly
-        forward with simple block-like hand gestures, restless, skeptical and
-        needling. Preserve the tall head, narrow shoulders, light shell, dark
-        visor and mouthless face in every frame.
+        An original mouthless software-sprite co-host: a tall cobalt mass,
+        narrow and upright, height greater than width. Two solid cream rounded
+        rectangles for eyes, no pupils, no inner marks, no mouth. Emotion uses
+        only coarse repeatable changes in eye height and whole-body lean. No
+        jaw, visor chrome, hoodie, cap or exposed mechanics. Leaning slightly
+        forward, curious and restless. Preserve the tall cobalt silhouette,
+        cream rectangle pair and mouthless face in every frame.
 
   # ---------------------------------------------------------------------
   # Composition contract. Weak on purpose (architecture doc §4.1) — the card
