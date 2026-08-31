@@ -12,7 +12,13 @@ from typing import Any
 import pytest
 
 from runtime_flight.baseline import BaselineContext, CharacterPackTruth, ScenePackTruth
-from runtime_flight.models import Fact, SegmentPackage, Tweet, TweetCard
+from runtime_flight.models import (
+    MAX_FRAMING_CHARS,
+    Fact,
+    SegmentPackage,
+    Tweet,
+    TweetCard,
+)
 from runtime_flight.segment_planner import SegmentPlanner, SegmentPlannerError
 from runtime_flight.source import (
     EXPECTED_AUTHOR,
@@ -405,6 +411,62 @@ def test_planner_bounds_question_framing_chyron_angles_and_facts():
 
     with pytest.raises((SegmentPlannerError, ValueError), match="280|question"):
         _run(run())
+
+
+def _package_with_framing(framing: str) -> SegmentPackage:
+    return SegmentPackage(
+        item_id=EXPECTED_TWEET_ID,
+        question="What happened?",
+        framing=framing,
+        angles=("scope",),
+        facts=(
+            Fact(id="f1", text="A cited claim.", source_url=EXPECTED_TWEET_URL),
+        ),
+        chyron="Headline",
+        chyron_fact_ids=("f1",),
+        center=TweetCard(
+            author=EXPECTED_AUTHOR,
+            text=TWEET_TEXT,
+            url=EXPECTED_TWEET_URL,
+        ),
+    )
+
+
+def test_framing_accepts_1000_and_the_680_smoke_blurb():
+    assert MAX_FRAMING_CHARS == 1000
+    assert _package_with_framing("f" * 1000).framing == "f" * 1000
+    assert len(_package_with_framing("x" * 680).framing) == 680
+
+
+def test_framing_rejects_1001_characters():
+    with pytest.raises(ValueError, match="framing exceeds 1000 characters"):
+        _package_with_framing("f" * 1001)
+
+
+def test_planner_accepts_1000_char_framing_and_rejects_1001():
+    accepted = _valid_plan_payload(framing="f" * 1000)
+    rejected = _valid_plan_payload(framing="f" * 1001)
+
+    async def accept_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(accepted))
+
+    async def reject_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(rejected))
+
+    async def accept():
+        return await SegmentPlanner(_client(accept_post)).plan(
+            _source_packet(), _baseline()
+        )
+
+    async def reject():
+        return await SegmentPlanner(_client(reject_post)).plan(
+            _source_packet(), _baseline()
+        )
+
+    package = _run(accept())
+    assert len(package.framing) == 1000
+    with pytest.raises(SegmentPlannerError, match="framing exceeds 1000 characters"):
+        _run(reject())
 
 
 def test_facts_are_typed_and_bounded():

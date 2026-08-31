@@ -8,7 +8,7 @@ from typing import Literal
 MAX_TWEET_CHARS = 2000
 MAX_EXCERPT_BYTES = 1024 * 1024
 MAX_QUESTION_CHARS = 280
-MAX_FRAMING_CHARS = 500
+MAX_FRAMING_CHARS = 1000
 MAX_CHYRON_CHARS = 100
 MAX_FACT_CHARS = 500
 MIN_LIST_ITEMS = 1
@@ -116,7 +116,7 @@ class SegmentPackage:
         if len(self.question) > MAX_QUESTION_CHARS:
             raise ValueError("question exceeds 280 characters")
         if len(self.framing) > MAX_FRAMING_CHARS:
-            raise ValueError("framing exceeds 500 characters")
+            raise ValueError("framing exceeds 1000 characters")
         if len(self.chyron) > MAX_CHYRON_CHARS:
             raise ValueError("chyron exceeds 100 characters")
         if not isinstance(self.angles, tuple) or not (
