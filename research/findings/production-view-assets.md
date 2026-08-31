@@ -69,7 +69,7 @@ Required templates, all 1920×1080, all driven by JSON:
 | `SHOW_BUG` | 72×72 at 96,54 | Persistent. Never animates on topic change. |
 | `LIVE_BADGE` | 112×40 at 1584,54 | Inter 700, 30 px. Persistent while programme is live. |
 | `CLOCK` | 120×40 at 1704,54 | Inter 700 tabular. Show clock, not a countdown that empties the well on air. |
-| `SPONSOR_CELL` | 220×40 at 96,134 | `PRESENTED BY` + one mark. Static 8–12 s. No second moving row. |
+| `SPONSOR_CELL` | 220×40 — **do not use 96,134** | `PRESENTED BY` + one mark. Static 8–12 s. No second moving row. The spec’s `96,134` sits 34 px inside the left host aperture (`y=100`). Mock places it at `184,70`, beside the bug, until the spec is relocked. |
 | `HOST_FRAME_L/R` | 8 px on 620×700 apertures | `plate` idle; `amber` BOT1 / `teal` BOT2 when that host is intended speaker. |
 | `SPEAKER_STATE_L/R` | Tab on top-left of frame | Solid `ON AIR` lozenge. Colour alone is illegal. |
 | `HOST_ID_L/R` | Attached to aperture | Exact case: `PHASEONE[lol]`, `deb`. 5–7 s first appearance. |
@@ -187,6 +187,16 @@ The first TBPN writeup locked the *talk*: complementary questions, do not read t
 - **Speaker tabs** come from the Director, not audio. That is how BOT1/BOT2 stay complementary on a 5-second take instead of both looking “on.”
 
 Assign Segmenter angles to one host axis in copy; the overlay only needs to know who is `ON AIR`.
+
+## Lock issues the mock found
+
+The graphics spec’s rectangles are still **provisional**. Painting them together shows one collision that must be fixed before M0 lock:
+
+- `SPONSOR_CELL` at `x=96, y=134` overlaps `HOST_CROP_L` (`y=100`). The bug (`y=54`, 72 px tall) already occupies the only clean strip above the wells on the left.
+- The mock’s proposed revision: keep the bug at `96,54` and put the sponsor cell at `184,70` (same top furniture row, to the right of the bug). Clock and LIVE stay top-right. Do not drop a second sponsor strip under the ticker.
+- Inactive host frame is 8 px `plate` (`#171A20`) on a near-`foundation` well. At 1080 it almost disappears. Keep the 8 px rule; lift idle contrast (a one-step lighter plate, or a `2a2e38` rule) so BOT2 is still boxed when not `ON AIR`.
+
+Re-lock that one rectangle in the spec when the overlay is implemented. Do not invent a third top-left cluster.
 
 ## Validation
 
