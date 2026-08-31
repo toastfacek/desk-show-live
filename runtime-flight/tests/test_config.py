@@ -243,30 +243,35 @@ def test_validate_config_accepts_complete_live_config(
 def test_check_cli_prints_redacted_summary_and_exits_zero(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     config_path = _write_config(tmp_path)
     _set_complete_env(monkeypatch, cap="12.00")
 
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "runtime_flight",
-            "check",
-            "--config",
-            str(config_path),
-        ],
-        cwd=RUNTIME_FLIGHT_ROOT,
-        env={**os.environ},
-        capture_output=True,
-        text=True,
-        check=False,
+    from runtime_flight.__main__ import main
+    from runtime_flight.preflight import PreflightResult
+
+    monkeypatch.setattr(
+        "runtime_flight.__main__.run_preflight",
+        lambda config, **kwargs: PreflightResult(
+            ffmpeg_path="/usr/bin/ffmpeg",
+            ffprobe_path="/usr/bin/ffprobe",
+            streaming=False,
+            recording_configured=True,
+            fal_key_present=True,
+            spend_cap_usd=Decimal("12.00"),
+            text_probe=None,
+        ),
     )
 
-    assert result.returncode == 0, result.stderr
-    assert SECRET_API_KEY not in result.stdout
-    assert SECRET_OBS_PASSWORD not in result.stdout
-    assert "mode: live" in result.stdout
+    code = main(["check", "--config", str(config_path)], obs_session=object())
+    captured = capsys.readouterr()
+
+    assert code == 0, captured.err
+    assert SECRET_API_KEY not in captured.out
+    assert SECRET_OBS_PASSWORD not in captured.out
+    assert "mode: live" in captured.out
+    assert "12.00" in captured.out
 
 
 def test_check_cli_exits_nonzero_for_incomplete_config(
