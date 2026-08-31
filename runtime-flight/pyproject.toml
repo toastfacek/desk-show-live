@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "runtime-flight"
+version = "0.1.0"
+description = "One-tweet live runtime flight orchestration."
+requires-python = ">=3.11"
+dependencies = [
+    "pillow>=12.3.0,<13",
+    "pyyaml>=6.0.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["runtime_flight*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
