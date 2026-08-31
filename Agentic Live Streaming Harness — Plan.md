@@ -218,7 +218,7 @@ Four brains and a clock.
 | **Producer** | Agent | Slow (per segment) | Topic, pace, headline, center, layout plan, “stop spending” |
 | **Writer** | Agent | Ahead of video (always 2 thoughts ready) | The next spoken thought, for whoever is speaking. One writer for both hosts. |
 | **Director** | Function first | Short (every clip edge) | One beat: layout, what plays, whether to buy the next clip |
-| **Critics** | Agents, optional | After the cut | Did the right mouth move? Did they say the line? Did the faces drift? Tell the producer, not the clock. |
+| **Critics** | Agents, optional | After the cut | Did the intended sprite carry the voice and motion? Was the native line clear? Did the shapes or voices drift? Tell the producer, not the clock. |
 | **Harness** | Program | Always | Time, OBS, files, money brake |
 
 ### 5.2 Demote to functions (never make these agents)
@@ -238,7 +238,7 @@ Four brains and a clock.
 | Segmenter + “which post” + headline taste | **One producer package** per segment. The segmenter as its own agent was a human-sized role. Keep the *output shape*. Drop the extra title. |
 | Graphics operator + name bars + ticker clerk | **Fill a template.** An agent may draft copy on the slow loop. On the short loop it is “set headline to this string.” |
 | Human operator (kill, hold, panic, preview) | **Rules plus a critic.** Preview is free — the next file already exists. Kill and hold are the same path as a rejected video. A small panel can stay for debug. It is not a job the show needs in order to exist. |
-| Audio operator | Rules: someone is speaking → drop the music bed by a set amount. Segment change → play a short sting if we have one. |
+| Audio operator | H3's native audio stays attached to the clip; someone speaking → drop the music bed by a set amount, segment change → play a sting. |
 
 ### 5.4 Do not add
 

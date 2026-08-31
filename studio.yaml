@@ -24,31 +24,41 @@ studio:
 
   # ---------------------------------------------------------------------
   style: |
-    Flat 2D cartoon animation. Uniform heavy black outlines of consistent
-    weight. Large flat areas of saturated colour, minimal gradient, minimal
-    rendering. Simplified geometric construction. Large expressive eyes.
-    Limited-animation feel at 24fps: crisp holds, no motion blur, no
-    photorealism, no 3D shading. Retro-futurist production design — brushed
-    chrome, CRT monitors, neon tubing, chunky moulded plastic.
+    Original flat 2D cartoon animation built from a few large interlocking
+    geometric masses. Heavy, uniform near-black contour lines; hard-edged,
+    unmodulated colour fields; at most one broad shadow shape. Large simple
+    eyes and clear head posture carry expression. Limited-animation movement
+    at 24fps: stable conversational holds, slow deliberate head and brow
+    changes, no motion blur. The image is normally stable; any signal fault is
+    rare, brief, broad and horizontal. No photorealism, fine texture, hatching,
+    gradients, transparent materials, intricate reflections or 3D rendering.
+    Tactile retro-future materials read only as coarse moulded plastic,
+    painted metal, thick glass and broad areas of worn finish.
 
   # ---------------------------------------------------------------------
   set: |
-    A small television studio built inside a San Francisco startup office.
-    A long pale-grey desk runs across the lower third of frame, its front
-    edge parallel to camera. Two boom microphones angle in from off-frame
-    left and right. On the desk: two open laptops covered in stickers, tall
-    slim energy-drink cans, a glass water bottle, a scatter of index cards.
+    A small television studio improvised inside a converted startup office.
+    A long matte pale-grey desk runs across the lower third, parallel to
+    camera, with a broad uncluttered centre. Two chunky boom microphones enter
+    from the outer edges. Desk dressing is limited to one plain closed device
+    and one large unlabelled drink vessel near each outer edge; no stickers,
+    papers, cards, labels or readable displays.
 
-    Behind the desk, a wall of mismatched CRT monitors in chrome and cream
-    housings, stacked unevenly. Some glow with abstract green line charts,
-    some with flat colour fields, some are dark. Loops of cable sag between
-    them. Above the wall, a length of bent neon tubing in an abstract
-    geometric shape — no letters, no words, no logos anywhere.
+    Scenic richness stays in the outer thirds. Far left and far right hold
+    small asymmetric clusters of deep-bodied tube monitors in worn cream and
+    charcoal housings, a few heavy cable loops, broad plywood returns, one
+    concrete column and dark acoustic curtains. Screens show only a single
+    dim field, soft static mass or broad horizontal glow band. Forms are
+    chunky and sparse, with no tiny controls, fine scanlines, diagrams,
+    letters, numbers, logos or dense seams. The central vertical zone is an
+    uninterrupted matte charcoal wall and neutral shadow.
 
-    Lighting is motivated and asymmetric: a warm amber practical lamp off
-    frame-left, a cool teal neon wash off frame-right. The desk surface
-    catches both. Background falls off into a dark neutral so the two hosts
-    read cleanly against it.
+    A visible amber task lamp motivates a restrained warm key from camera-left;
+    blank blue-green monitor glass motivates a restrained cool key from
+    camera-right. These colours remain local accents rather than room-wide
+    washes. Both hosts receive a soft neutral rim from behind, distinct in
+    value from their shell, so neither local key merges a silhouette into the
+    background. The rear planes are darker and softer than the hosts.
 
   # ---------------------------------------------------------------------
   hosts:
@@ -58,16 +68,18 @@ studio:
       faces: right                    # slight inward turn, never breaks
       accent: warm amber
       sheet: |
-        A cartoon robot news anchor. Boxy head like a rounded television
-        set, brushed chrome with visible panel seams and two small rivets
-        at the temples. Two round amber lenses for eyes behind a gently
-        curved glass face, with simple black brow plates that tilt to
-        express. The mouth is a horizontal slot containing a glowing amber
-        LED waveform that moves when speaking. A short stubby antenna on
-        the left of the head. Broad squared shoulders. Wears a quilted
-        quarter-zip vest over a plain t-shirt, and a lanyard with a blank
-        badge. Sits upright, squared to the desk, forearms resting on it,
-        hands loosely folded. Calm, dry, unhurried.
+        An original mouthless cartoon robot anchor with a low wide rounded-box
+        head, broad sloping shoulders and a bottom-heavy torso. The dominant
+        shell is flat dark charcoal, clearly darker than the neutral rim light;
+        warm amber appears only in two large round eye lenses and one thick
+        shoulder key. A broad near-black face panel contains the eye pair and
+        two thick mechanical brow plates. Emotion uses only coarse repeatable
+        changes in brow angle, pupil direction and whole-head tilt. The shell
+        has no rivets, fine seams, antenna, waveform, equalizer, jaw or exposed
+        mechanics. A simple dark sleeveless vest forms one large torso shape.
+        Upright and squared to the desk, forearms resting as two uncluttered
+        masses, calm, dry and unhurried. Preserve the low head, broad shoulders,
+        dark shell, round eye pair and mouthless face in every frame.
 
     BOT2:
       display_name: deb              # lowercase, always
@@ -75,16 +87,20 @@ studio:
       faces: left
       accent: cool cyan
       sheet: |
-        A cartoon robot co-host. Tall capsule-shaped head in matte off-white
-        plastic, narrower than it is high, with a single wide visor band of
-        dark glass across the eyes. Two bright cyan dots float inside the
-        visor as pupils and move independently. Below the visor, a small
-        rigid hinged jaw plate that opens and closes in simple shapes when
-        speaking. A thin chrome collar ring at the neck. Narrower shoulders,
-        slightly slouched. Wears a zip hoodie with the hood down, a cap worn
-        backwards over the top of the head, and an oversized chrome watch.
-        Leans forward, elbows on the desk, hands often mid-gesture. Restless,
-        skeptical, needling.
+        An original mouthless cartoon robot co-host with a tall narrow
+        clipped-capsule head, narrow square shoulders and a slim upright torso.
+        The dominant shell is matte off-white, clearly lighter than the cool
+        local key and separated from the background by a soft neutral rim.
+        One broad near-black visor contains two oversized solid eye blocks;
+        cool cyan is limited to those eye accents and one thick shoulder key.
+        Emotion uses only coarse repeatable changes in eye height, pupil
+        direction and whole-head lean. The shell has no jaw, collar ring, fine
+        seams, tiny controls, display marks or exposed mechanics. A plain
+        charcoal hoodie creates one simple torso shape and a broad backward cap
+        reinforces the tall silhouette without surface detail. Leaning slightly
+        forward with simple block-like hand gestures, restless, skeptical and
+        needling. Preserve the tall head, narrow shoulders, light shell, dark
+        visor and mouthless face in every frame.
 
   # ---------------------------------------------------------------------
   # Composition contract. Weak on purpose (architecture doc §4.1) — the card
