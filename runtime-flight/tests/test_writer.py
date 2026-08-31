@@ -686,6 +686,62 @@ def test_writer_batches_a_point_into_five_second_chunks():
     assert thoughts[1].text == "The watchers blinked while three runs died."
 
 
+def test_overlong_spoken_line_is_filed_into_five_second_chunks():
+    line = (
+        "The watchers blinked while three agent societies rose and fell, "
+        "and that is the thesis, not the weather around the card tonight."
+    )
+    assert len(line) > 120
+
+    calls: list[dict[str, Any]] = []
+
+    async def http_post(url, *, headers, json, timeout):
+        calls.append(json_module.loads(json["messages"][1]["content"]))
+        return FakeResponse(200, _json_body(_valid_thought_payload(text=line)))
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write_point(_package(), (), "BOT1", False, "open")
+
+    thoughts = _run(run())
+    assert len(calls) == 1
+    assert all(len(item.text) <= 120 for item in thoughts)
+    assert " ".join(item.text for item in thoughts) == line
+    assert [item.speaker for item in thoughts] == ["BOT1"] * len(thoughts)
+    assert thoughts[0].thought_open is True
+    assert thoughts[-1].thought_open is False
+
+
+def test_wrapped_overflow_keeps_four_files_and_stays_open():
+    words = ["civilization"] * 40
+    line = " ".join(words)
+    assert len(line) > 480
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            _json_body(
+                _valid_thought_payload(
+                    text=line,
+                    thought_open=False,
+                    landed_own_job=True,
+                    beat_exhausted=True,
+                )
+            ),
+        )
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write_point(_package(), (), "BOT1", False, "develop")
+
+    thoughts = _run(run())
+    assert len(thoughts) == 4
+    assert all(len(item.text) <= 120 for item in thoughts)
+    assert [item.thought_open for item in thoughts] == [True, True, True, True]
+    assert thoughts[-1].landed_own_job is False
+    assert thoughts[-1].beat_exhausted is False
+
+
 def test_writer_rejects_more_than_four_chunks():
     async def http_post(url, *, headers, json, timeout):
         return FakeResponse(

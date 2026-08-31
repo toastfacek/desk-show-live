@@ -273,7 +273,26 @@ def _overlong_retry_text(raw: object, previous_text: str | None) -> str | None:
     return previous_text
 
 
-def _chunks_from_model(raw: dict[str, Any]) -> list[str]:
+def _split_spoken_line(text: str) -> list[str] | None:
+    """File a spoken line into 120-character takes. None if a token will not fit."""
+    words = text.split()
+    if not words or any(len(word) > MAX_THOUGHT_CHARS for word in words):
+        return None
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = word if not current else f"{current} {word}"
+        if len(candidate) <= MAX_THOUGHT_CHARS:
+            current = candidate
+            continue
+        lines.append(current)
+        current = word
+    if current:
+        lines.append(current)
+    return lines
+
+
+def _chunks_from_model(raw: dict[str, Any]) -> tuple[list[str], bool]:
     chunks_raw = raw.get("chunks")
     text = raw.get("text")
     if chunks_raw is None:
@@ -284,18 +303,28 @@ def _chunks_from_model(raw: dict[str, Any]) -> list[str]:
         1 <= len(chunks_raw) <= MAX_POINT_CHUNKS
     ):
         raise WriterError("chunks must contain 1 to 4 spoken lines")
-    chunks: list[str] = []
+    originals: list[str] = []
     for chunk in chunks_raw:
         if not isinstance(chunk, str) or not chunk.strip():
             raise WriterError("thought text is empty")
         if any(unicodedata.category(char) == "Cc" for char in chunk):
             raise WriterError("thought text contains a control character")
-        if len(chunk) > MAX_THOUGHT_CHARS:
-            raise WriterError(OVERLONG_THOUGHT)
-        chunks.append(chunk)
-    if isinstance(text, str) and text.strip() and text != chunks[0]:
+        originals.append(chunk)
+    if isinstance(text, str) and text.strip() and text != originals[0]:
         raise WriterError("text must match chunks[0]")
-    return chunks
+    chunks: list[str] = []
+    for chunk in originals:
+        if len(chunk) <= MAX_THOUGHT_CHARS:
+            chunks.append(chunk)
+            continue
+        wrapped = _split_spoken_line(chunk)
+        if wrapped is None:
+            raise WriterError(OVERLONG_THOUGHT)
+        chunks.extend(wrapped)
+    overflow = len(chunks) > MAX_POINT_CHUNKS
+    if overflow:
+        chunks = chunks[:MAX_POINT_CHUNKS]
+    return chunks, overflow
 
 
 def _thoughts_from_model(
@@ -311,11 +340,13 @@ def _thoughts_from_model(
     if speaker != next_speaker:
         raise WriterError("speaker must equal next_speaker")
 
-    chunks = _chunks_from_model(raw)
+    chunks, overflow = _chunks_from_model(raw)
 
     thought_open = raw.get("thought_open")
     if not isinstance(thought_open, bool):
         raise WriterError("thought_open must be a boolean")
+    if overflow:
+        thought_open = True
 
     angle_used = raw.get("angle_used")
     if angle_used not in package.angles:
@@ -349,8 +380,8 @@ def _thoughts_from_model(
                     thought_open=True if not last else thought_open,
                     angle_used=angle_used,
                     beat_id=beat_id,
-                    landed_own_job=landed_own_job if last else False,
-                    beat_exhausted=beat_exhausted if last else False,
+                    landed_own_job=landed_own_job if last and not overflow else False,
+                    beat_exhausted=beat_exhausted if last and not overflow else False,
                 )
             )
     except (TypeError, ValueError) as error:
