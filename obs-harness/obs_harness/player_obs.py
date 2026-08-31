@@ -7,6 +7,8 @@ import time
 
 
 LAYOUTS = ("wide", "split", "solo_l", "solo_r", "card_full", "hold")
+HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
+HIGHLIGHT_SOURCES = ("HL_A", "HL_B")
 
 
 class ObsPlayer:
@@ -24,6 +26,7 @@ class ObsPlayer:
         self._client = None
         self.t = 0.0
         self.layout = "hold"
+        self._scene_item_ids: dict[str, dict[str, int]] = {}
 
     def connect(self) -> None:
         try:
@@ -35,11 +38,36 @@ class ObsPlayer:
         self._client = ReqClient(
             host=self.host, port=self.port, password=self.password, timeout=3
         )
+        self._refresh_scene_item_cache()
 
     def _req(self):
         if self._client is None:
             raise RuntimeError("OBS is not connected")
         return self._client
+
+    def _scene_item_id(self, item: object) -> int:
+        if isinstance(item, dict):
+            return int(item["sceneItemId"])
+        return int(item.scene_item_id)
+
+    def _source_name(self, item: object) -> str:
+        if isinstance(item, dict):
+            return str(item["sourceName"])
+        return str(item.source_name)
+
+    def _refresh_scene_item_cache(self) -> None:
+        client = self._req()
+        cache: dict[str, dict[str, int]] = {}
+        for scene in LAYOUTS:
+            response = client.get_scene_item_list(name=scene)
+            items = getattr(response, "scene_items", None) or []
+            mapping: dict[str, int] = {}
+            for item in items:
+                source_name = self._source_name(item)
+                if source_name in HIGHLIGHT_SOURCES:
+                    mapping[source_name] = self._scene_item_id(item)
+            cache[scene] = mapping
+        self._scene_item_ids = cache
 
     def get_program_state(self) -> dict:
         client = self._req()
@@ -53,7 +81,7 @@ class ObsPlayer:
             )
             remaining_s = max(0.0, remaining / 1000.0) if remaining else 0.0
             on_air = {
-                "kind": "host" if scene in ("wide", "split", "solo_l", "solo_r") else "card",
+                "kind": "host" if scene in HOST_LAYOUTS else "card",
                 "path": None,
                 "take": None,
                 "duration_s": None,
@@ -92,20 +120,28 @@ class ObsPlayer:
             overlay=True,
         )
         try:
-            client.trigger_media_input_action(name="HOST_WIDE", action="OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART")
+            client.trigger_media_input_action(
+                name="HOST_WIDE",
+                action="OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART",
+            )
         except Exception:
             pass
 
     def set_speaking(self, host: str | None) -> None:
         client = self._req()
-        for slot, item in (("host_a", "HL_A"), ("host_b", "HL_B")):
-            try:
-                client.set_input_mute(name=item, muted=host != slot)
-            except Exception:
-                pass
+        visibility = {
+            "HL_A": host == "host_a",
+            "HL_B": host == "host_b",
+        }
+        for scene in HOST_LAYOUTS:
+            scene_ids = self._scene_item_ids.get(scene, {})
+            for source_name, enabled in visibility.items():
+                item_id = scene_ids.get(source_name)
+                if item_id is None:
+                    continue
+                client.set_scene_item_enabled(scene, item_id, enabled)
 
     def set_center(self, kind: str, data: dict | None) -> None:
-        # Visibility is scene-item work; v1 just records the payload on HEADLINE-adjacent CENTER.
         _ = (kind, data)
         self._req()
 
@@ -123,7 +159,6 @@ class ObsPlayer:
         )
 
     def duck_music(self, db: float) -> None:
-        # 0 dB = 1.0 mul. Rough: 10 ** (db / 20).
         mul = 10 ** (db / 20.0)
         try:
             self._req().set_input_volume(name="BED", vol_mul=mul)

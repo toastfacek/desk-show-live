@@ -1,6 +1,6 @@
 """T1–T6: director is a pure function. No OBS."""
 
-from director import decide
+from obs_harness.director import decide
 
 SEGMENT = {
     "layout_plan": ["wide", "split", "split", "wide", "split"],

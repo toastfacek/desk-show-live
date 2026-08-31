@@ -7,9 +7,9 @@ from pathlib import Path
 
 import yaml
 
-from director import decide
-from performer_stub import StubPerformer
-from player_fake import FakePlayer
+from .director import decide
+from .performer_stub import StubPerformer
+from .player_fake import FakePlayer
 
 
 class Harness:

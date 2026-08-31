@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "obs-harness"
 version = "0.1.0"
@@ -5,10 +9,15 @@ description = "Clock and OBS player for a live show. No video vendor. No text ve
 requires-python = ">=3.11"
 dependencies = [
   "pyyaml>=6",
+  "obsws-python>=1.8.0,<2",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["obs_harness*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

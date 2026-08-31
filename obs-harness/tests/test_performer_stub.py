@@ -3,7 +3,7 @@
 import random
 from pathlib import Path
 
-from performer_stub import StubPerformer
+from obs_harness.performer_stub import StubPerformer
 
 
 def _pool(tmp_path: Path) -> Path:

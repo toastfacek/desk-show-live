@@ -9,8 +9,8 @@ from pathlib import Path
 
 import yaml
 
-from loop import Harness
-from player_fake import FakePlayer
+from obs_harness.loop import Harness
+from obs_harness.player_fake import FakePlayer
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
 
     stub = config.get("stub") or {}
     if player_name == "obs":
-        from player_obs import ObsPlayer
+        from obs_harness.player_obs import ObsPlayer
 
         obs_cfg = config.get("obs") or {}
         player = ObsPlayer(
