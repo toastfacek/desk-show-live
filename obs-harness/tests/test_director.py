@@ -71,7 +71,7 @@ def test_t2_ready_clip_plays_and_submits_next():
     assert beat["submit"]["take"] == 4
     assert beat["submit"]["line"] == NEXT_LINE["text"]
     assert beat["submit"]["speaker"] == "host_a"
-    assert beat["submit"]["anchor"] == "stub"
+    assert set(beat["submit"]) == {"take", "line", "speaker"}
 
 
 def test_t3_panic_hold_no_submit():

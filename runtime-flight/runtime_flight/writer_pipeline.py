@@ -66,6 +66,11 @@ class WriterPipeline:
                 self._thought_open = thought_open
             await self._fill_unlocked(package, segment_phase, reissue)
 
+    def peek_ready(self) -> Thought | None:
+        if self._ready.empty():
+            return None
+        return self._ready._queue[0]
+
     async def pop_ready(self) -> Thought:
         return await self._ready.get()
 
