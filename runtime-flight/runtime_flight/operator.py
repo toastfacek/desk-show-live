@@ -20,7 +20,7 @@ from runtime_flight.source import SourceError, load_source_packet
 from runtime_flight.signals import install_panic_handler
 
 PAID_FLAG_ENV = "RUNTIME_ALLOW_PAID"
-SMOKE_MAX_TEXT = 4
+SMOKE_MAX_TEXT = 6
 LIVE_MAX_TEXT = 24
 SMOKE_FAL_ATTEMPTS = frozenset({1, 2})
 

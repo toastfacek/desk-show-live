@@ -310,6 +310,7 @@ def test_writer_prompt_targets_four_to_four_point_six_seconds():
     assert "4.0" in system
     assert "4.6" in system
     assert "4.3" in system
+    assert "120" in system
     assert "280" not in system
     assert captured["user"]["target_duration_s"] == 4.3
 
@@ -382,8 +383,11 @@ def test_control_character_text_is_rejected():
         _run(run())
 
 
-def test_pathological_text_over_120_characters_is_rejected():
+def test_pathological_text_over_120_characters_retries_once_then_rejects():
+    calls: list[dict[str, Any]] = []
+
     async def http_post(url, *, headers, json, timeout):
+        calls.append(json_module.loads(json["messages"][1]["content"]))
         return FakeResponse(200, _json_body(_valid_thought_payload(text="x" * 121)))
 
     async def run():
@@ -392,6 +396,50 @@ def test_pathological_text_over_120_characters_is_rejected():
 
     with pytest.raises(WriterError, match="120"):
         _run(run())
+    assert len(calls) == 2
+    assert calls[0]["reissue"] is None
+    assert calls[1]["reissue"] == "shorter"
+    assert calls[1]["previous_text"] == "x" * 121
+
+
+def test_overlong_text_is_rewritten_shorter_on_retry():
+    calls: list[dict[str, Any]] = []
+    long_line = "x" * 163
+    short_line = "Three civilizations rose and fell."
+
+    async def http_post(url, *, headers, json, timeout):
+        user = json_module.loads(json["messages"][1]["content"])
+        calls.append(user)
+        if user["reissue"] == "shorter":
+            return FakeResponse(200, _json_body(_valid_thought_payload(text=short_line)))
+        return FakeResponse(200, _json_body(_valid_thought_payload(text=long_line)))
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await _write(writer)
+
+    thought = _run(run())
+    assert thought.text == short_line
+    assert len(calls) == 2
+    assert calls[1]["previous_text"] == long_line
+    assert "shorter" in json_module.dumps(calls)
+
+
+def test_shorter_reissue_does_not_retry_a_third_time():
+    calls: list[dict[str, Any]] = []
+
+    async def http_post(url, *, headers, json, timeout):
+        calls.append(json_module.loads(json["messages"][1]["content"]))
+        return FakeResponse(200, _json_body(_valid_thought_payload(text="x" * 121)))
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await _write(writer, reissue="shorter")
+
+    with pytest.raises(WriterError, match="120"):
+        _run(run())
+    assert len(calls) == 1
+    assert calls[0]["reissue"] == "shorter"
 
 
 def test_one_hundred_twenty_character_text_is_accepted():
