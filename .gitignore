@@ -1,7 +1,9 @@
 __pycache__/
 *.pyc
+.pytest_cache/
 .venv/
 venv/
+*.egg-info/
 .env
 
 out/raw/*
@@ -18,3 +20,5 @@ assets/*
 experiments/e1_e2_e3_takes/
 experiments/e4_takes/
 experiments/e6_takes/
+
+.superpowers/
