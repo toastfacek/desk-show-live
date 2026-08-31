@@ -2,6 +2,7 @@ const state = { packs: [], versions: [], assets: [], candidates: [], baselines: 
 const notice = document.querySelector("#notice");
 const {
   manifestTemplateForKind,
+  manifestTemplateJsonForSelectedPack,
   requestedCandidateLabel,
   requestedCandidatesForCanonical,
 } = PackManagerSelection;
@@ -77,6 +78,7 @@ async function refresh() {
 
 function render() {
   refill(".pack-options", state.packs, (item) => `${item.name} · ${item.kind}`);
+  syncManifestTemplateForSelectedPack();
   refill(".asset-options", state.assets, (item) => `${item.id} · ${item.mime_type}`);
   const flightReadyVersions = state.versions.filter((item) => item.flight_ready);
   refill(
@@ -403,9 +405,12 @@ document.querySelector(".cast-options").addEventListener(
 function syncManifestTemplateForSelectedPack() {
   const packSelect = document.querySelector("#version-form [name=pack_id]");
   const textarea = document.querySelector("#version-form [name=manifest]");
-  const selectedPack = state.packs.find((pack) => pack.id === packSelect.value);
-  if (!selectedPack) return;
-  textarea.value = JSON.stringify(manifestTemplateForKind(selectedPack.kind), null, 2);
+  const textareaValue = manifestTemplateJsonForSelectedPack(
+    state.packs,
+    packSelect.value,
+  );
+  if (textareaValue === null) return;
+  textarea.value = textareaValue;
 }
 
 document.querySelector("#version-form [name=pack_id]").addEventListener(

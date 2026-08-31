@@ -401,6 +401,75 @@ def test_v2_character_rejects_unknown_tts_fields(pack_service):
         pack_service.create_version(pack.id, manifest)
 
 
+@pytest.mark.parametrize(
+    ("mutator", "message"),
+    [
+        (lambda m: m.update({"notes": "extra"}), "manifest"),
+        (lambda m: m["visual_invariants"].update({"color": "blue"}), "visual_invariants"),
+    ],
+)
+def test_v2_character_rejects_extra_closed_schema_keys(pack_service, mutator, message):
+    pack = pack_service.create_pack("character", "flight")
+    manifest = character_manifest_v2()
+    mutator(manifest)
+
+    with pytest.raises(ValidationError, match=message):
+        pack_service.create_version(pack.id, manifest)
+
+
+def test_v2_scene_rejects_extra_closed_schema_keys(pack_service):
+    pack = pack_service.create_pack("scene", "flight")
+    manifest = scene_manifest_v2()
+    manifest["weather"] = "snow"
+
+    with pytest.raises(ValidationError, match="manifest"):
+        pack_service.create_version(pack.id, manifest)
+
+
+def test_v2_scene_frame_rejects_extra_closed_schema_keys(pack_service):
+    pack = pack_service.create_pack("scene", "flight")
+    manifest = scene_manifest_v2()
+    manifest["frame"]["aspect"] = "16:9"
+
+    with pytest.raises(ValidationError, match="frame"):
+        pack_service.create_version(pack.id, manifest)
+
+
+@pytest.mark.parametrize(
+    "credential_key",
+    [
+        "access_key",
+        "accessKey",
+        "aws_access_key_id",
+        "private_key",
+        "privateKey",
+        "secret_key",
+        "client_secret",
+    ],
+)
+def test_scene_palette_rejects_nested_credential_keys(pack_service, credential_key):
+    pack = pack_service.create_pack("scene", "flight")
+    manifest = scene_manifest_v2()
+    manifest["palette"] = [{"name": "orange", credential_key: "leak"}]
+
+    with pytest.raises(ValidationError, match="credential|accesskey|privatekey|secret"):
+        pack_service.create_version(pack.id, manifest)
+
+
+@pytest.mark.parametrize(
+    "safe_key",
+    ["accent", "texture", "primary_color"],
+)
+def test_palette_nested_keys_do_not_false_positive_on_substrings(
+    pack_service, safe_key
+):
+    pack = pack_service.create_pack("scene", "flight")
+    manifest = scene_manifest_v2()
+    manifest["palette"] = [{"name": "orange", safe_key: "warm"}]
+
+    pack_service.create_version(pack.id, manifest)
+
+
 def test_validate_flight_ready_rejects_malformed_v2_character_missing_descriptor():
     manifest = character_manifest_v2()
     del manifest["visual_invariants"]["silhouette"]

@@ -90,6 +90,69 @@ console.log(JSON.stringify({
     }
 
 
+def test_initial_render_syncs_scene_template_for_only_scene_pack():
+    script = r"""
+const selection = require("./pack_manager/web/selection.js");
+const packs = [{ id: "scene_only", kind: "scene", name: "Studio" }];
+const selectedPackId = packs[0].id;
+const textareaValue = selection.manifestTemplateJsonForSelectedPack(
+  packs,
+  selectedPackId,
+);
+const manifest = JSON.parse(textareaValue);
+console.log(JSON.stringify({
+  schemaVersion: manifest.schema_version,
+  hasFrame: Object.prototype.hasOwnProperty.call(manifest, "frame"),
+  lacksTts: !Object.prototype.hasOwnProperty.call(manifest, "tts"),
+  set: manifest.set,
+}));
+"""
+    completed = subprocess.run(
+        ["node", "-e", script],
+        cwd=Path(__file__).parents[1],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert json.loads(completed.stdout) == {
+        "schemaVersion": 2,
+        "hasFrame": True,
+        "lacksTts": True,
+        "set": "Warm studio",
+    }
+
+
+def test_initial_render_syncs_character_template_for_only_character_pack():
+    script = r"""
+const selection = require("./pack_manager/web/selection.js");
+const packs = [{ id: "character_only", kind: "character", name: "BOT1" }];
+const textareaValue = selection.manifestTemplateJsonForSelectedPack(
+  packs,
+  packs[0].id,
+);
+const manifest = JSON.parse(textareaValue);
+console.log(JSON.stringify({
+  schemaVersion: manifest.schema_version,
+  hasTts: Object.prototype.hasOwnProperty.call(manifest, "tts"),
+  lacksFrame: !Object.prototype.hasOwnProperty.call(manifest, "frame"),
+}));
+"""
+    completed = subprocess.run(
+        ["node", "-e", script],
+        cwd=Path(__file__).parents[1],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert json.loads(completed.stdout) == {
+        "schemaVersion": 2,
+        "hasTts": True,
+        "lacksFrame": True,
+    }
+
+
 def test_ui_requires_two_hosts_and_refreshes_requested_candidates():
     root = Path(__file__).parents[1] / "pack_manager" / "web"
     html = (root / "index.html").read_text()

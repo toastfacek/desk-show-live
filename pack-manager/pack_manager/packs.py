@@ -40,6 +40,7 @@ _SCENE_V2_KEYS = frozenset(
         "asset_ids",
     }
 )
+_FRAME_V2_KEYS = frozenset({"w", "h", "fps"})
 _TTS_RESERVED_FIELDS = (
     "enabled",
     "provider",
@@ -57,6 +58,11 @@ _TTS_LICENSE_FIELDS = (
 )
 _CREDENTIAL_FRAGMENTS = (
     "apikey",
+    "accesskey",
+    "awsaccesskeyid",
+    "privatekey",
+    "secretkey",
+    "clientsecret",
     "secret",
     "token",
     "password",
@@ -318,6 +324,8 @@ class PackService:
         frame = manifest.get("frame")
         if not isinstance(frame, dict):
             raise ValidationError("scene manifest requires frame")
+        if schema_version == SCHEMA_VERSION_V2:
+            PackService._validate_closed_keys(frame, _FRAME_V2_KEYS, "frame")
         PackService._require_fields(frame, ("w", "h", "fps"), prefix="frame.")
         PackService._require_fields(
             manifest,

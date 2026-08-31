@@ -44,6 +44,12 @@
     return structuredClone(CHARACTER_V2_TEMPLATE);
   }
 
+  function manifestTemplateJsonForSelectedPack(packs, selectedPackId) {
+    const selectedPack = packs.find((pack) => pack.id === selectedPackId);
+    if (!selectedPack) return null;
+    return JSON.stringify(manifestTemplateForKind(selectedPack.kind), null, 2);
+  }
+
   function requestedCandidatesForCanonical(candidates, castKey) {
     const canonical = candidates.find(
       (item) => item.cast_key === castKey && item.is_current_canonical,
@@ -68,6 +74,7 @@
     CHARACTER_V2_TEMPLATE,
     SCENE_V2_TEMPLATE,
     manifestTemplateForKind,
+    manifestTemplateJsonForSelectedPack,
     requestedCandidateLabel,
     requestedCandidatesForCanonical,
   };
