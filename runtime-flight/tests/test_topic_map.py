@@ -13,9 +13,11 @@ from runtime_flight.models import (
 )
 from runtime_flight.source import EXPECTED_AUTHOR, EXPECTED_TWEET_ID, EXPECTED_TWEET_URL
 from runtime_flight.topic_map import (
+    MIN_EXCHANGES_BEFORE_COMPLETE,
     TOPIC_EXHAUSTED,
     advance_coverage,
     discussion_phase,
+    moves_for_phase,
     resolve_topic_map,
 )
 
@@ -79,6 +81,23 @@ def test_legacy_package_synthesizes_one_beat_from_question_and_angles():
     assert topic_map.beats[0].question == package.question
 
 
+def _argue(state: CoverageState, topic_map: TopicMap, beat_id: str, count: int) -> CoverageState:
+    for index in range(count):
+        speaker = "BOT1" if index % 2 == 0 else "BOT2"
+        state = advance_coverage(
+            state,
+            _thought(
+                speaker=speaker,
+                beat_id=beat_id,
+                landed_own_job=True,
+                beat_exhausted=True,
+                text=f"{speaker} keeps the {beat_id} fight going {index}.",
+            ),
+            topic_map,
+        )
+    return state
+
+
 def test_coverage_stays_open_until_both_hosts_land_and_exhaust():
     topic_map = TopicMap(
         throughline="Secret agent societies.",
@@ -102,7 +121,7 @@ def test_coverage_stays_open_until_both_hosts_land_and_exhaust():
         topic_map,
     )
     assert state.map_complete is False
-    assert discussion_phase(state, topic_map) == "close"
+    assert discussion_phase(state, topic_map) == "develop"
 
     state = advance_coverage(
         state,
@@ -110,14 +129,20 @@ def test_coverage_stays_open_until_both_hosts_land_and_exhaust():
         topic_map,
     )
     assert state.map_complete is False
+    assert "b1" not in state.bot1_exhausted
 
     state = advance_coverage(
         state,
         _thought(speaker="BOT2", beat_exhausted=True, text="Three, in ninety days."),
         topic_map,
     )
+    assert state.map_complete is False
+    assert discussion_phase(state, topic_map) == "develop"
+
+    state = _argue(state, topic_map, "b1", MIN_EXCHANGES_BEFORE_COMPLETE - 4)
     assert state.map_complete is True
     assert state.stop_reason == TOPIC_EXHAUSTED
+    assert discussion_phase(state, topic_map) == "close"
 
 
 def test_two_beat_map_advances_only_after_first_beat_is_exhausted():
@@ -131,34 +156,12 @@ def test_two_beat_map_advances_only_after_first_beat_is_exhausted():
         done_when="Both beats are done.",
     )
     state = CoverageState.initial()
-    for speaker in ("BOT1", "BOT2"):
-        state = advance_coverage(
-            state,
-            _thought(
-                speaker=speaker,
-                beat_id="b1",
-                landed_own_job=True,
-                beat_exhausted=True,
-                text=f"{speaker} finishes beat one.",
-            ),
-            topic_map,
-        )
+    state = _argue(state, topic_map, "b1", 7)
     assert state.map_complete is False
     assert state.beat_index == 1
     assert discussion_phase(state, topic_map) == "develop"
 
-    for speaker in ("BOT1", "BOT2"):
-        state = advance_coverage(
-            state,
-            _thought(
-                speaker=speaker,
-                beat_id="b2",
-                landed_own_job=True,
-                beat_exhausted=True,
-                text=f"{speaker} finishes beat two.",
-            ),
-            topic_map,
-        )
+    state = _argue(state, topic_map, "b2", MIN_EXCHANGES_BEFORE_COMPLETE)
     assert state.map_complete is True
     assert state.stop_reason == TOPIC_EXHAUSTED
 
@@ -187,3 +190,6 @@ def test_discussion_phase_starts_open():
         done_when="Both questions have been answered from the facts.",
     )
     assert discussion_phase(CoverageState.initial(), topic_map) == "open"
+    assert moves_for_phase("open") == frozenset({"frame"})
+    assert "land" not in moves_for_phase("develop")
+    assert "land" in moves_for_phase("close")

@@ -154,6 +154,12 @@ def test_host_mind_sees_last_line_not_a_script():
     assert user["last_line"]["text"].startswith("Is this a thesis")
     assert "planned_transcript" not in user
     assert user["you"]["stance"]
+    assert user["you"]["soul"]
+    assert user["you"]["opinions"]
+    assert user["phase"] == "develop"
+    assert "poke" in user["allowed_moves"]
+    assert "land" not in user["allowed_moves"]
+    assert user["other_job"]
     assert "script" in captured["system"]
     assert "PHASEONE" not in captured["system"]
     assert "deb" not in captured["system"]
@@ -297,11 +303,64 @@ def test_run_discuss_alternates_and_writes_transcript(tmp_path: Path, monkeypatc
         "BOT1",
         "BOT2",
     ]
-    assert payload["stop_reason"] == "topic exhausted"
+    assert payload["stop_reason"] == "turn cap"
     assert calls[1]["last_line"]["speaker"] == "BOT1"
     assert "planned_transcript" not in calls[1]
     text = Path(payload["work_dir"], "transcript.txt").read_text(encoding="utf-8")
     assert "BOT2 [number]" in text
+
+
+def test_run_discuss_needs_eight_exchanges_to_exhaust(tmp_path: Path, monkeypatch):
+    flight_setup = _make_flight_setup(tmp_path / "pack-root")
+    _complete_env(monkeypatch, flight_setup)
+    config_path = _write_flight_config(tmp_path, flight_setup)
+    from runtime_flight.config import load_config
+
+    config = load_config(config_path)
+    previous = "Is this weather, or did control actually move?"
+    lines = [
+        _valid_turn(
+            speaker="BOT1",
+            text=previous,
+            move="frame",
+            reply_to=None,
+        )
+    ]
+    for index in range(1, 8):
+        speaker = "BOT2" if index % 2 else "BOT1"
+        text = f"{speaker} keeps the number and the thesis in play {index}."
+        lines.append(
+            _valid_turn(
+                speaker=speaker,
+                text=text,
+                move="poke",
+                reply_to=previous,
+                angle_used="takeover" if speaker == "BOT2" else "scope",
+                landed_own_job=True,
+                beat_exhausted=True,
+            )
+        )
+        previous = text
+    calls: list[dict[str, Any]] = []
+
+    async def http_post(url, *, headers, json, timeout):
+        user = json_module.loads(json["messages"][1]["content"])
+        calls.append(user)
+        return FakeResponse(200, _json_body(lines[len(calls) - 1]))
+
+    payload = run_discuss(
+        config=config,
+        max_text_requests=8,
+        max_turns=8,
+        package=_package(),
+        out_dir=tmp_path / "discussions",
+        http_post=http_post,
+    )
+    assert len(payload["turns"]) == 8
+    assert payload["stop_reason"] == "topic exhausted"
+    assert calls[3]["phase"] == "develop"
+    assert "land" not in calls[3]["allowed_moves"]
+    assert payload["turns"][1]["beat_exhausted"] is False
 
 
 def test_discuss_cli_refuses_without_confirm(
@@ -383,6 +442,41 @@ def test_load_package_roundtrip(tmp_path: Path):
     assert package.item_id == raw["item_id"]
     assert package.topic_map is not None
     assert package.topic_map.beats[0].id == "b1"
+
+
+def test_early_land_is_coerced_to_poke():
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            _json_body(
+                _valid_turn(
+                    speaker="BOT2",
+                    text="Name the cluster before you shrug.",
+                    move="land",
+                    reply_to="Is this a thesis, or just weather around a crash?",
+                    angle_used="takeover",
+                    beat_exhausted=True,
+                )
+            ),
+        )
+
+    async def run():
+        return await HostMind(_client(http_post)).reply(
+            _package(),
+            speaker="BOT2",
+            last_line={
+                "speaker": "BOT1",
+                "text": "Is this a thesis, or just weather around a crash?",
+                "move": "frame",
+            },
+            own_lines=(),
+            coverage=CoverageState.initial(),
+            voices=_voices(),
+        )
+
+    thought, turn = _run(run())
+    assert turn["move"] == "poke"
+    assert thought.beat_exhausted is False
 
 
 def test_discuss_source_has_no_forbidden_names():

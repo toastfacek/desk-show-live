@@ -15,6 +15,38 @@ from runtime_flight.models import (
 )
 
 TOPIC_EXHAUSTED = "topic exhausted"
+MIN_EXCHANGES_BEFORE_EXHAUST = 6
+MIN_EXCHANGES_BEFORE_COMPLETE = 8
+OPEN_MOVES = frozenset({"frame"})
+DEVELOP_MOVES = frozenset({"poke", "number", "reframe", "callback", "question"})
+CLOSE_MOVES = DEVELOP_MOVES | {"land"}
+
+DEFAULT_STANCE = {
+    "BOT1": "Treat the card as weather until someone shows that control actually moved.",
+    "BOT2": "If you cannot name the number, the cluster, or who got hit, it is a vibe.",
+}
+DEFAULT_SOUL = {
+    "BOT1": (
+        "You treat news as weather until someone proves a control surface "
+        "actually moved. You would rather be bored than impressed."
+    ),
+    "BOT2": (
+        "You will not let a shrug pass. If it cannot be named, counted, or "
+        "assigned to a victim, it is a vibe."
+    ),
+}
+DEFAULT_OPINIONS = {
+    "BOT1": (
+        "A wipe after the fact is weather.",
+        "Oversight restored is not a thesis.",
+        "If the same humans still have the keys, nothing happened.",
+    ),
+    "BOT2": (
+        "Name the cluster or sit down.",
+        "How many agents, how fast, who got hit.",
+        "Admin access is a stake even if the thesis is still weather.",
+    ),
+}
 
 
 def host_voices_from_baseline(baseline: BaselineContext) -> tuple[HostVoice, HostVoice]:
@@ -26,12 +58,13 @@ def host_voices_from_baseline(baseline: BaselineContext) -> tuple[HostVoice, Hos
 
 
 def _voice_from_character(character: CharacterPackTruth) -> HostVoice:
+    slot = character.slot
     persona = character.manifest.get("persona")
     rules = character.manifest.get("writer_rules")
     if not isinstance(persona, str) or not persona.strip():
         persona = (
             "Dry technical anchor. Ask whether there is a thesis, or only weather."
-            if character.slot == "BOT1"
+            if slot == "BOT1"
             else "Curious co-host. Ask what moved, by how much, for whom."
         )
     clean_rules: list[str] = []
@@ -40,15 +73,44 @@ def _voice_from_character(character: CharacterPackTruth) -> HostVoice:
             rule for rule in rules if isinstance(rule, str) and rule.strip()
         )
     if not clean_rules:
-        if character.slot == "BOT1":
+        if slot == "BOT1":
             clean_rules.append("Make one clear claim per thought.")
         else:
             clean_rules.append("Ask what moved, by how much, for whom.")
     return HostVoice(
-        speaker=character.slot,
+        speaker=slot,
         persona=persona,
         rules=tuple(clean_rules),
+        soul=_optional_text(character.manifest.get("soul"), DEFAULT_SOUL[slot]),
+        opinions=_optional_strings(
+            character.manifest.get("opinions"), DEFAULT_OPINIONS[slot]
+        ),
+        stance=_optional_text(character.manifest.get("stance"), DEFAULT_STANCE[slot]),
     )
+
+
+def _optional_text(value: object, fallback: str) -> str:
+    if isinstance(value, str) and value.strip():
+        return value
+    return fallback
+
+
+def _optional_strings(value: object, fallback: tuple[str, ...]) -> tuple[str, ...]:
+    if isinstance(value, (list, tuple)):
+        cleaned = tuple(
+            item for item in value if isinstance(item, str) and item.strip()
+        )
+        if cleaned:
+            return cleaned
+    return fallback
+
+
+def moves_for_phase(phase: Literal["open", "develop", "close"]) -> frozenset[str]:
+    if phase == "open":
+        return OPEN_MOVES
+    if phase == "close":
+        return CLOSE_MOVES
+    return DEVELOP_MOVES
 
 
 def resolve_topic_map(package: SegmentPackage) -> TopicMap:
@@ -96,10 +158,8 @@ def discussion_phase(
     )
     if nothing_said:
         return "open"
-    beat = current_beat(topic_map, coverage)
     last_beat = coverage.beat_index >= len(topic_map.beats) - 1
-    both_landed = beat.id in coverage.bot1_landed and beat.id in coverage.bot2_landed
-    if last_beat and both_landed:
+    if last_beat and coverage.exchanges_on_beat >= MIN_EXCHANGES_BEFORE_COMPLETE:
         return "close"
     return "develop"
 
@@ -123,16 +183,20 @@ def advance_coverage(
             bot1_landed.add(beat.id)
         else:
             bot2_landed.add(beat.id)
-    if thought.beat_exhausted:
+    exchanges = state.exchanges_on_beat + (0 if thought.thought_open else 1)
+    if thought.beat_exhausted and exchanges >= MIN_EXCHANGES_BEFORE_EXHAUST:
         if thought.speaker == "BOT1":
             bot1_exhausted.add(beat.id)
         else:
             bot2_exhausted.add(beat.id)
 
-    exchanges = state.exchanges_on_beat + (0 if thought.thought_open else 1)
     both_landed = beat.id in bot1_landed and beat.id in bot2_landed
     both_exhausted = beat.id in bot1_exhausted and beat.id in bot2_exhausted
-    if not (both_landed and both_exhausted):
+    last_beat = state.beat_index >= len(topic_map.beats) - 1
+    ready_to_leave = both_landed and both_exhausted
+    if last_beat:
+        ready_to_leave = ready_to_leave and exchanges >= MIN_EXCHANGES_BEFORE_COMPLETE
+    if not ready_to_leave:
         return CoverageState(
             beat_index=state.beat_index,
             bot1_landed=frozenset(bot1_landed),
@@ -179,6 +243,8 @@ def coverage_as_dict(coverage: CoverageState, topic_map: TopicMap) -> dict[str, 
         still_open.append("BOT1 still has more to say on this beat")
     if beat.id in coverage.bot2_landed and beat.id not in coverage.bot2_exhausted:
         still_open.append("BOT2 still has more to say on this beat")
+    if coverage.exchanges_on_beat < MIN_EXCHANGES_BEFORE_COMPLETE:
+        still_open.append("the well is not empty yet; keep the fight going")
     if coverage.map_complete:
         still_open = []
     return {
@@ -216,7 +282,11 @@ def topic_map_as_dict(topic_map: TopicMap) -> dict[str, object]:
 
 
 def voice_payload(voice: HostVoice) -> dict[str, object]:
+    speaker = voice.speaker
     return {
         "persona": voice.persona,
         "writer_rules": list(voice.rules),
+        "soul": voice.soul or DEFAULT_SOUL[speaker],
+        "opinions": list(voice.opinions or DEFAULT_OPINIONS[speaker]),
+        "stance": voice.stance or DEFAULT_STANCE[speaker],
     }

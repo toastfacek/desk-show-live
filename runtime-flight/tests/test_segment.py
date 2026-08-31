@@ -279,7 +279,7 @@ def test_run_segment_stops_when_both_hosts_exhaust_the_topic(
 ) -> None:
     _complete_env(monkeypatch, flight_setup)
     monkeypatch.setenv("RUNTIME_ALLOW_PAID", "1")
-    monkeypatch.setenv("RUNTIME_SPEND_CAP_USD", "2.00")
+    monkeypatch.setenv("RUNTIME_SPEND_CAP_USD", "8.00")
     config_path = _write_flight_config(tmp_path, flight_setup)
     from runtime_flight.config import load_config, validate_config
 
@@ -295,15 +295,15 @@ def test_run_segment_stops_when_both_hosts_exhaust_the_topic(
 
     code = run_segment(
         config=config,
-        max_text_requests=8,
-        max_fal_submissions=4,
+        max_text_requests=12,
+        max_fal_submissions=8,
         out_dir=tmp_path / "out" / "flights",
         http_post=_planner_writer_http_exhausts,
         performer_factory=factory,
     )
     assert code == 0
     performer = performer_holder[0]
-    assert [req.take for req in performer.started] == [1, 2]
+    assert [req.take for req in performer.started] == [1, 2, 3, 4, 5, 6, 7, 8]
     bundles = list((tmp_path / "out" / "flights").iterdir())
     flight = json.loads((bundles[0] / "flight.json").read_text(encoding="utf-8"))
     assert flight["stop_reason"] == "topic exhausted"

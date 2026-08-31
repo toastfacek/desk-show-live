@@ -646,10 +646,13 @@ def test_writer_sends_current_beat_coverage_and_host_voices():
     assert user["coverage"]["still_open"]
     assert user["hosts"]["BOT1"]["persona"].startswith("Calm")
     assert user["hosts"]["BOT2"]["writer_rules"] == ["Ask what moved."]
+    assert user["hosts"]["BOT1"]["soul"]
+    assert user["hosts"]["BOT2"]["opinions"]
     system = captured["system"].lower()
     assert "discussion" in system
     assert "recap" in system
     assert "persona" in system
+    assert "empty the well" in system
     assert "PHASEONE" not in captured["system"]
     assert "deb" not in captured["system"]
 

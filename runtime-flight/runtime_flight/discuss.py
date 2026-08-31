@@ -25,12 +25,15 @@ from runtime_flight.segment_planner import SegmentPlanner
 from runtime_flight.source import load_source_packet
 from runtime_flight.text_client import TextAttemptLimiter, TextClient
 from runtime_flight.topic_map import (
+    MIN_EXCHANGES_BEFORE_EXHAUST,
     TOPIC_EXHAUSTED,
     advance_coverage,
     beat_as_dict,
     coverage_as_dict,
     current_beat,
+    discussion_phase,
     host_voices_from_baseline,
+    moves_for_phase,
     resolve_topic_map,
     voice_payload,
 )
@@ -41,28 +44,36 @@ SPEAKERS = frozenset({"BOT1", "BOT2"})
 MOVES = frozenset(
     {"frame", "poke", "number", "reframe", "callback", "question", "land"}
 )
-STANCE = {
-    "BOT1": "Treat the card as weather until someone shows that control actually moved.",
-    "BOT2": "If you cannot name the number, the cluster, or who got hit, it is a vibe.",
-}
-
 HOST_SYSTEM = """You are one host on a two-host desk. Speak only as speaker.
 You are not writing a script. You just heard the last line, if there is one.
-Answer that. Poke it, number it, reframe it, ask a question, or land.
-Do not start a parallel essay. Do not recap the card. Do not read the chyron.
-One spoken line. No stage directions. No quotes. No prefix.
+Answer that line. Do not start a parallel essay. Do not recap the card.
+Do not read the chyron. One spoken line. No stage directions. No quotes.
+No prefix.
 
-If last_line is null, frame the question from your job and stance.
-If last_line is set, reply_to must be that line's text exactly, and move
-must not be frame.
+You and the other host ask different questions of the same card. Keep your
+own question. Do not adopt theirs. Do not restate their last line as a
+question. They agree the card is real. The argument is what the card means.
 
-Honor your persona, rules, job, and stance. The other host asks a different
-question of the same card. They agree the card is real.
+Honor your persona, rules, job, stance, soul, and opinions. Use one unused
+opinion or one unused fact if the last line tried to close the well.
+
+phase tells you where you are. Use only allowed_moves.
+- open: frame the question from your job and stance.
+- develop: poke, number, reframe, callback, or question. Do not land.
+  Do not empty the well. Landing your job is not exhausting the beat.
+- close: you may land. Land is one sentence that could be the chyron.
+
+If last_line is null, frame. If last_line is set, reply_to must be that
+line's text exactly, and move must not be frame.
+
+beat_exhausted stays false while coverage.still_open is non-empty, while
+you still have an unused fact or opinion, or while the other host has not
+answered your last poke.
 
 Required keys:
 - speaker: must equal speaker in the request
 - text: spoken line, at most 120 characters
-- move: frame, poke, number, reframe, callback, question, or land
+- move: one of allowed_moves
 - reply_to: the last line's text, or null if this is the first line
 - angle_used: one of the package angles
 - landed_own_job: true only if this line actually lands your beat job
@@ -208,13 +219,16 @@ class HostMind:
         voice = _voice_for(voices, speaker)
         topic_map = resolve_topic_map(package)
         beat = current_beat(topic_map, coverage)
+        phase = discussion_phase(coverage, topic_map)
+        if last_line is not None and phase == "open":
+            phase = "develop"
         user = {
             "speaker": speaker,
             "you": {
                 **voice_payload(voice),
                 "job": beat.bot1_job if speaker == "BOT1" else beat.bot2_job,
-                "stance": STANCE[speaker],
             },
+            "other_job": beat.bot2_job if speaker == "BOT1" else beat.bot1_job,
             "last_line": last_line,
             "you_already_said": list(own_lines),
             "card": {
@@ -224,6 +238,10 @@ class HostMind:
                     {"id": fact.id, "text": fact.text} for fact in package.facts
                 ],
             },
+            "fight": topic_map.fight,
+            "throughline": topic_map.throughline,
+            "phase": phase,
+            "allowed_moves": sorted(moves_for_phase(phase)),
             "current_beat": beat_as_dict(beat),
             "coverage": coverage_as_dict(coverage, topic_map),
             "angles": list(package.angles),
@@ -356,6 +374,16 @@ def _turn_from_model(
             raise DiscussError("later lines must not frame")
         if reply_to != last_line.get("text"):
             raise DiscussError("reply_to must repeat the last line")
+    topic_map = resolve_topic_map(package)
+    phase = discussion_phase(coverage, topic_map)
+    if last_line is not None and phase == "open":
+        phase = "develop"
+    allowed = moves_for_phase(phase)
+    if move not in allowed:
+        if move == "land":
+            move = "poke"
+        else:
+            raise DiscussError("move is not allowed in this phase")
     angle_used = raw.get("angle_used")
     if angle_used not in package.angles:
         raise DiscussError("angle_used is not a package angle")
@@ -363,7 +391,8 @@ def _turn_from_model(
     beat_exhausted = raw.get("beat_exhausted", False)
     if not isinstance(landed_own_job, bool) or not isinstance(beat_exhausted, bool):
         raise DiscussError("landed_own_job and beat_exhausted must be booleans")
-    topic_map = resolve_topic_map(package)
+    if beat_exhausted and coverage.exchanges_on_beat < MIN_EXCHANGES_BEFORE_EXHAUST:
+        beat_exhausted = False
     beat = current_beat(topic_map, coverage)
     thought = Thought(
         speaker=speaker,

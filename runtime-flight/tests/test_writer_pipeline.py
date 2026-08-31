@@ -620,28 +620,23 @@ def test_pipeline_plays_batched_chunks_without_another_writer_call():
 
 
 def test_pipeline_stops_filling_when_the_topic_map_is_exhausted():
-    writer = RecordingWriter(
-        [
-            _thought(
-                speaker="BOT1",
-                text="Monitoring missed a civilization, not a glitch.",
-                landed_own_job=True,
-                beat_exhausted=True,
-                beat_id="b1",
-            ),
-            _thought(
-                speaker="BOT2",
-                text="Three runs died in ninety days.",
-                landed_own_job=True,
-                beat_exhausted=True,
-                beat_id="b1",
-            ),
-            _thought(
-                speaker="BOT1",
-                text="This recap line must never be requested.",
-            ),
-        ]
+    scripted = [
+        _thought(
+            speaker="BOT1" if index % 2 == 0 else "BOT2",
+            text=f"Host keeps the fight on beat one {index}.",
+            landed_own_job=True,
+            beat_exhausted=True,
+            beat_id="b1",
+        )
+        for index in range(8)
+    ]
+    scripted.append(
+        _thought(
+            speaker="BOT1",
+            text="This recap line must never be requested.",
+        )
     )
+    writer = RecordingWriter(scripted)
 
     async def run():
         pipeline = WriterPipeline(writer)
@@ -651,17 +646,20 @@ def test_pipeline_stops_filling_when_the_topic_map_is_exhausted():
             next_speaker="BOT1",
             thought_open=False,
         )
-        assert pipeline.coverage.map_complete is True
-        await pipeline.pop_ready()
-        await pipeline.fill(_package(), segment_phase="develop")
+        while not pipeline.coverage.map_complete:
+            if pipeline.ready.empty():
+                await pipeline.fill(_package(), segment_phase="develop")
+            if pipeline.ready.empty():
+                break
+            await pipeline.pop_ready()
+            await pipeline.fill(_package(), segment_phase="develop")
         return pipeline
 
     pipeline = _run(run())
     assert pipeline.coverage.map_complete is True
     assert pipeline.coverage.stop_reason == TOPIC_EXHAUSTED
-    assert len(pipeline.planned_transcript) == 2
-    assert pipeline.ready.qsize() == 1
-    assert len(writer.calls) == 2
+    assert len(pipeline.planned_transcript) == 8
+    assert len(writer.calls) == 8
     assert "recap line" not in " ".join(item.text for item in pipeline.planned_transcript)
 
 
