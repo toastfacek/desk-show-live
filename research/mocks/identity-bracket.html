@@ -1,0 +1,570 @@
+<title>[runtime]</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* ============================================================
+   REVISION C — the identity, and an overlay that stops
+   performing. Chamfer removed. Gradients removed. Edge light
+   removed. Borders removed. What is left has to be right.
+   ============================================================ */
+:root{
+  --ink:#0B0A08; --panel:#15130F; --panel-2:#1E1B16; --line:#26221C;
+  --bone:#F4F1EA; --bone-2:#ADA69A; --bone-3:#6B655C;
+  --live:#E2543F; --gain:#A3BE9C; --loss:#D89A88;
+  --r:14px;
+  --display:Archivo,"Helvetica Neue",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --set-wall:#EFE4CE; --set-wall-2:#E0CFAF; --set-green:#1E3A2E;
+  --set-desk:#8A5330; --set-desk-2:#6B4023; --set-floor:#D9BB8E; --set-rug:#E8DDC4;
+  --set-orange:#F5820B; --set-cobalt:#1B3FE8; --set-cream:#FFF7E9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--bone);
+  font:400 16.5px/1.68 Archivo,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1140px;margin:0 auto;padding:0 44px}
+@media(max-width:700px){.wrap{padding:0 22px}}
+
+h1,h2,h3{margin:0;text-wrap:balance;font-family:var(--display);font-weight:700}
+h2{font-size:clamp(28px,3.6vw,42px);line-height:1.02;font-stretch:88%;letter-spacing:-.022em}
+h3{font-size:19px;line-height:1.2;font-stretch:94%;font-weight:600;letter-spacing:-.01em}
+p{margin:0}
+a{color:var(--bone)}
+.eyebrow{font:400 11.5px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--bone-3)}
+.lede{font-size:20px;line-height:1.58;color:var(--bone-2);max-width:58ch}
+.note{font-size:15.5px;line-height:1.7;color:var(--bone-2);max-width:68ch}
+.note em{color:var(--bone);font-style:normal;font-weight:600}
+strong{font-weight:600;color:var(--bone)}
+code{font:400 .87em/1 var(--mono);color:var(--bone);background:var(--panel-2);padding:.16em .38em;border-radius:4px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+section{padding:100px 0;border-top:1px solid var(--line)}
+.sec-head{display:flex;flex-direction:column;gap:16px;margin-bottom:52px;max-width:70ch}
+.stack{display:flex;flex-direction:column;gap:28px}
+.stack-l{display:flex;flex-direction:column;gap:64px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:36px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(216px,1fr));gap:28px}
+
+/* ============================================================
+   THE WORDMARK
+   ============================================================ */
+.wm{display:inline-flex;align-items:baseline;white-space:nowrap;font-size:76px;line-height:1}
+.wm .nm{font-family:var(--display);font-weight:800;font-stretch:86%;letter-spacing:-.032em;
+  font-size:1em;line-height:1;color:var(--bone)}
+.wm .slot{font-family:var(--mono);font-weight:500;font-size:.52em;line-height:1;
+  letter-spacing:-.015em;color:var(--bone);margin-left:.06em}
+.wm .slot .br{color:var(--bone-3)}
+.wm.mono-all .slot{color:var(--bone)}
+.wm.one-voice .slot{font-family:var(--display);font-weight:400;font-stretch:86%;
+  font-size:.74em;letter-spacing:-.02em}
+
+/* the slot mark, used alone */
+.sm{font-family:var(--mono);font-weight:500;font-size:64px;line-height:1;letter-spacing:-.05em;color:var(--bone);white-space:nowrap}
+.sm .br{margin:0 -.02em}
+/* fourth cut: drawn word, typed container */
+.sm.drawn{font-family:var(--display);font-weight:600;font-stretch:88%;letter-spacing:-.035em}
+.sm.drawn .br{font-family:var(--mono);font-weight:400;font-size:.96em;letter-spacing:0;margin:0 .022em}
+.sm .br{color:var(--bone-3)}
+.sm.solid .br{color:var(--bone)}
+
+/* ============================================================
+   STAGE
+   ============================================================ */
+.stage{position:relative;width:100%;overflow:hidden;background:var(--panel);border-radius:var(--r)}
+.stage.plain{background:var(--ink);border:1px solid var(--line)}
+.stage > .sq{position:absolute;top:0;left:0;transform-origin:top left}
+.cap{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between;align-items:baseline;
+  margin-top:13px;font:400 13px/1.55 Archivo,sans-serif;color:var(--bone-3)}
+figure{margin:0;display:flex;flex-direction:column}
+.pad{display:flex;align-items:center;justify-content:center;padding:56px 32px}
+
+.card{background:var(--panel);border-radius:var(--r);padding:28px 30px;display:flex;flex-direction:column;gap:12px}
+.verdict{display:flex;gap:16px;align-items:flex-start;padding:22px 24px;background:var(--panel);
+  border-radius:var(--r);font-size:15.5px;line-height:1.66;color:var(--bone-2)}
+.verdict b{color:var(--bone);font:400 11px/1.7 var(--mono);letter-spacing:.2em;text-transform:uppercase;white-space:nowrap}
+
+.tbl-wrap{overflow-x:auto;border-radius:var(--r);background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:14.5px}
+th,td{text-align:left;padding:14px 18px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:400 10.5px/1.4 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--bone-3)}
+td{color:var(--bone-2)} td strong{color:var(--bone)}
+tr:last-child td{border-bottom:0}
+
+/* ============================================================
+   SET STAND-IN
+   ============================================================ */
+.set{position:absolute;inset:0;overflow:hidden;background:var(--set-wall)}
+.set .wall{position:absolute;inset:0;background:radial-gradient(118% 88% at 50% 16%,#FBF4E4 0%,var(--set-wall) 48%,var(--set-wall-2) 100%)}
+.set .pil{position:absolute;top:0;height:70%;width:9%;background:linear-gradient(90deg,#16291F,var(--set-green))}
+.set .floor{position:absolute;left:0;right:0;top:70%;bottom:0;background:linear-gradient(180deg,#E5C99D,var(--set-floor))}
+.set .rug{position:absolute;left:-16%;right:-16%;top:66%;height:34%;background:var(--set-rug);border-radius:50%}
+.set .mass{position:absolute;background:var(--set-orange)}
+.set .mass .eye{position:absolute;background:var(--set-cream)}
+.set .desk{position:absolute;left:-8%;right:-8%;top:56%;height:30%;
+  background:linear-gradient(180deg,#AC6B3E 0 9px,var(--set-desk) 9px,var(--set-desk-2) 100%);border-radius:20px 20px 0 0}
+.set .desk:after{content:"";position:absolute;left:14%;right:14%;top:32%;bottom:14%;
+  background:#7A4726;border:3px solid #B07346;border-radius:8px}
+.set .grid-l{position:absolute;left:0;right:0;top:0;height:6%;background:linear-gradient(180deg,#1B1712,#2C251D)}
+.set .mic{position:absolute;width:15px;background:#151515;border-radius:8px}
+.set .mic:before{content:"";position:absolute;left:-13px;top:-30px;width:41px;height:46px;background:#1C1C1C;border-radius:12px}
+
+/* ============================================================
+   OVERLAY — REVISION C
+   Flat panels. One radius. No border, no gradient, no glow.
+   Speaker state is carried by INVERSION, never by hue.
+   ============================================================ */
+.pl{background:rgba(21,19,15,.93);border-radius:var(--r)}
+.pl-bone{background:var(--bone);border-radius:var(--r)}
+
+.rail{display:flex;align-items:center;height:60px;padding:0 8px 0 20px;gap:0}
+.rail .cell{display:flex;align-items:center;gap:10px;padding:0 18px;font:400 20px/1 var(--mono);
+  letter-spacing:.1em;color:var(--bone-2);font-variant-numeric:tabular-nums}
+.rail .cell:first-child{padding-left:0}
+.rail .cell.k{color:var(--bone)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--live)}
+
+.hid{display:flex;flex-direction:column;gap:4px;padding:15px 22px 16px;border-radius:var(--r)}
+.hid .nm{font:700 40px/1 var(--display);font-stretch:88%;letter-spacing:-.024em;white-space:nowrap}
+.hid .ax{font:400 17px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase}
+.hid.idle{background:rgba(21,19,15,.93)} .hid.idle .nm{color:var(--bone)} .hid.idle .ax{color:var(--bone-3)}
+.hid.live{background:var(--bone)} .hid.live .nm{color:var(--ink)} .hid.live .ax{color:#6B655C}
+.hid .blk{display:inline-block;width:13px;height:17px;background:currentColor;margin-right:11px;vertical-align:-1px}
+
+.cardp{display:flex;flex-direction:column;height:100%;padding:32px 30px}
+.cardp .kk{font:400 19px/1 var(--mono);letter-spacing:.2em;color:var(--bone-3);margin-bottom:26px}
+.cardp .bd{font:600 44px/1.26 var(--display);font-stretch:88%;letter-spacing:-.026em;color:var(--bone);
+  display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden}
+.cardp .ft{margin-top:auto;padding-top:26px;display:flex;justify-content:space-between;
+  font:400 17px/1 var(--mono);letter-spacing:.12em;color:var(--bone-3)}
+
+.chy{display:flex;flex-direction:column;justify-content:center;gap:9px;padding:20px 32px;height:118px}
+.chy .kk{font:400 18px/1 var(--mono);letter-spacing:.26em;color:var(--bone-3)}
+.chy .hd{font:600 42px/1.06 var(--display);font-stretch:86%;letter-spacing:-.026em;color:var(--bone)}
+
+.tkr{display:flex;align-items:center;height:56px;padding:0 30px;gap:0}
+.tkr .it{display:flex;align-items:center;gap:12px;padding:0 26px;font:500 26px/1 var(--mono);
+  letter-spacing:.02em;color:var(--bone);white-space:nowrap;font-variant-numeric:tabular-nums}
+.tkr .it:first-child{padding-left:0}
+.tkr .it .sy{color:var(--bone-3);letter-spacing:.12em}
+.tkr .it .up{color:var(--gain)} .tkr .it .dn{color:var(--loss)}
+.tkr .sep{width:1px;height:22px;background:#3A342C}
+
+footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px solid var(--line)}
+:focus-visible{outline:2px solid var(--bone);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header>
+  <div class="wrap" style="padding-top:140px;padding-bottom:120px;display:flex;flex-direction:column;gap:64px">
+    <p class="eyebrow">Runtime · identity prototype · revision C</p>
+    <div style="display:flex;flex-direction:column;gap:40px">
+      <div class="sm drawn" style="font-size:clamp(60px,12vw,164px)"><span class="br">[</span>runtime<span class="br">]</span></div>
+      <p class="lede">The bracket is already the brand. It is in the show’s own canon — a self-applied tag from a specific era, worn by things that were there. It only has to be drawn properly and given a slot.</p>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- =================== THE NAME =================== -->
+<section id="name" style="border-top:0">
+  <div class="sec-head">
+    <p class="eyebrow">First, the name</p>
+    <h2>What the bracket is allowed to mean</h2>
+  </div>
+  <div class="stack-l">
+    <div class="grid2">
+      <div class="stack">
+        <p class="note">The Character &amp; Set Bible is unusually specific about this, and it changes the brief. <em>The bracket is self-applied</em> — an agent picking a word to distinguish itself after a name collision, in a particular month of 2026. It is a <em>period marker</em>: it dates a character rather than decorating one. And rule 5 is explicit that specific identifiers stay off-limits, because “inheriting a convention is the whole idea; wearing someone else’s identifier is not.”</p>
+        <p class="note">Which gives a precise reason <code>PHASEONE[show]</code> reads slightly wrong, and it is not a taste objection. It applies a <strong>character-naming device to a programme</strong>. Parsed by the show’s own grammar it is not a title at all — it is a third agent, called PHASEONE, who chose the word “show”. It also names the programme after one of its two hosts, which quietly makes deb the co-host of somebody else’s show.</p>
+      </div>
+      <div class="stack">
+        <p class="note">The convention still wants to be the identity. It is genuinely good, it is already canon, and it is the one piece of the world the audience can read without being told anything. So take the <strong>device</strong> and leave the <strong>identifier</strong>.</p>
+        <p class="note">The mark becomes the slot itself, holding the property: <code>[runtime]</code>. That inherits the convention exactly as rule 5 wants, keeps the bracket doing its job as a period marker — now dating the <em>show</em> to the same era as its hosts — and takes nobody’s name. Lowercase inside the bracket is not a style choice either; <code>[lol]</code> and <code>[big]</code> establish it.</p>
+      </div>
+    </div>
+
+    <figure>
+      <div class="stage plain">
+        <div class="pad" style="gap:0;flex-direction:column;align-items:flex-start;padding:64px 60px">
+          <div style="display:flex;flex-wrap:wrap;gap:64px 96px;align-items:flex-end">
+            <div style="display:flex;flex-direction:column;gap:20px">
+              <span class="eyebrow">As asked · character device on a programme</span>
+              <div class="wm" style="font-size:60px"><span class="nm">PHASEONE</span><span class="slot"><span class="br">[</span>show<span class="br">]</span></span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:20px">
+              <span class="eyebrow">Recommended · convention, not identifier</span>
+              <div class="sm drawn" style="font-size:60px"><span class="br">[</span>runtime<span class="br">]</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Both set properly, at the same optical size. The left one is a person. The right one is a show.</span></div>
+    </figure>
+
+    <div class="verdict"><b>The call</b><span>Prototype both, ship <code>[runtime]</code>. If you want PHASEONE in the brand it belongs where it already is — on the anchor’s name bar, where the convention was designed to sit. Everything below is drawn so that the slot can hold either word, so this decision stays cheap for as long as you need it to.</span></div>
+  </div>
+</section>
+
+<!-- =================== THE MARK =================== -->
+<section id="mark">
+  <div class="sec-head">
+    <p class="eyebrow">The mark</p>
+    <h2>An empty slot, and a thing sitting in it</h2>
+    <p class="note">Two brackets and a block. The block is not decoration — it is <strong>state</strong>. Present means on air; absent means the slot is empty and so is the studio. That single rule makes the logo, the show bug and the speaker indicator the same object, which is the cheapest kind of coherence there is.</p>
+  </div>
+  <div class="stack-l">
+
+    <figure>
+      <div class="stage plain">
+        <div class="pad" style="gap:96px;flex-wrap:wrap;padding:76px 40px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:24px">
+            <svg width="150" height="150" viewBox="0 0 72 72" aria-label="Runtime mark, on air">
+              <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
+              <rect x="53" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="44" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="44" y="51" width="15" height="6" fill="#F4F1EA"/>
+              <rect x="30" y="26" width="12" height="20" fill="#F4F1EA"/>
+            </svg>
+            <span class="eyebrow">On air</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:24px">
+            <svg width="150" height="150" viewBox="0 0 72 72" aria-label="Runtime mark, off air">
+              <rect x="13" y="15" width="6" height="42" fill="#6B655C"/><rect x="13" y="15" width="15" height="6" fill="#6B655C"/><rect x="13" y="51" width="15" height="6" fill="#6B655C"/>
+              <rect x="53" y="15" width="6" height="42" fill="#6B655C"/><rect x="44" y="15" width="15" height="6" fill="#6B655C"/><rect x="44" y="51" width="15" height="6" fill="#6B655C"/>
+            </svg>
+            <span class="eyebrow">Off air</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:38px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+              <svg width="72" height="72" viewBox="0 0 72 72" aria-label="Mark at 72 px">
+                <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
+                <rect x="53" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="44" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="44" y="51" width="15" height="6" fill="#F4F1EA"/>
+                <rect x="30" y="26" width="12" height="20" fill="#F4F1EA"/>
+              </svg><span class="eyebrow">72</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+              <svg width="32" height="32" viewBox="0 0 72 72" aria-label="Mark at 32 px">
+                <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
+                <rect x="53" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="44" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="44" y="51" width="15" height="6" fill="#F4F1EA"/>
+                <rect x="30" y="26" width="12" height="20" fill="#F4F1EA"/>
+              </svg><span class="eyebrow">32</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+              <svg width="16" height="16" viewBox="0 0 72 72" aria-label="Mark at 16 px">
+                <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
+                <rect x="53" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="44" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="44" y="51" width="15" height="6" fill="#F4F1EA"/>
+                <rect x="30" y="26" width="12" height="20" fill="#F4F1EA"/>
+              </svg><span class="eyebrow">16</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Six rectangles and a block. No curve, no counter, nothing that fills in — it holds at favicon size because there is nothing in it to lose.</span><span class="mono">6 px stroke on a 72 grid</span></div>
+    </figure>
+
+    <div class="grid3">
+      <div class="card">
+        <h3>Clear space</h3>
+        <p class="note">One bracket width on every side — 15 units on the 72 grid. Nothing enters it, including the safe-area edge. At 1080 that is a 15 px cordon around a 72 px mark.</p>
+      </div>
+      <div class="card">
+        <h3>Minimum size</h3>
+        <p class="note">16 px on screen, 24 px in the overlay. Below 16 the 6 px stroke closes up on the block and it becomes a filled rectangle.</p>
+      </div>
+      <div class="card">
+        <h3>Never</h3>
+        <p class="note">No outline version, no gradient, no rotation, no second colour inside the brackets. The block is the only element permitted to change, and only between present and absent.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== WORDMARK =================== -->
+<section id="wordmark">
+  <div class="sec-head">
+    <p class="eyebrow">Construction</p>
+    <h2>How to set it</h2>
+    <p class="note">The tension worth keeping is <strong>brand against system</strong> — a drawn name beside a typed one. Where the two faces meet is where the logo gets its character, so the question is how hard to lean on it.</p>
+  </div>
+  <div class="stack-l">
+
+    <figure>
+      <div class="stage plain">
+        <div style="padding:64px 60px;display:flex;flex-direction:column;gap:56px">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <span class="eyebrow">A · two voices, structural brackets — recommended</span>
+            <div class="wm" style="font-size:56px"><span class="nm">PHASEONE</span><span class="slot"><span class="br">[</span>show<span class="br">]</span></span></div>
+            <p class="note" style="font-size:14.5px">Grotesque name, mono slot, brackets dropped to a structural grey. The brackets read as a container the value sits in rather than as letters, which is the entire idea made visible.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <span class="eyebrow">B · two voices, solid brackets</span>
+            <div class="wm mono-all" style="font-size:56px"><span class="nm">PHASEONE</span><span class="slot">[show]</span></div>
+            <p class="note" style="font-size:14.5px">Stronger at small sizes and in one colour, but the slot stops reading as a slot and starts reading as punctuation. Keep as the small-size and single-colour cut.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <span class="eyebrow">C · one voice</span>
+            <div class="wm one-voice" style="font-size:56px"><span class="nm">PHASEONE</span><span class="slot">[show]</span></div>
+            <p class="note" style="font-size:14.5px">Monolithic and quiet. It is the most conventionally premium of the three and the least interesting — with the mono gone, nothing is left but a company name in a grotesque.</p>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Archivo 800 at width 86 with −0.032 em tracking; JetBrains Mono 500 at 52% of the name’s size, on a shared baseline.</span></div>
+    </figure>
+
+    <figure>
+      <div class="stage plain">
+        <div style="padding:64px 60px;display:flex;flex-wrap:wrap;gap:64px 100px;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <span class="eyebrow">Primary · drawn word, typed container</span>
+            <div class="sm drawn" style="font-size:56px"><span class="br">[</span>runtime<span class="br">]</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <span class="eyebrow">System · small sizes, UI, code</span>
+            <div class="sm" style="font-size:56px"><span class="br">[</span>runtime<span class="br">]</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <span class="eyebrow">One colour</span>
+            <div class="sm solid drawn" style="font-size:56px"><span class="br">[</span>runtime<span class="br">]</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <span class="eyebrow">With mark</span>
+            <div style="display:flex;align-items:center;gap:20px">
+              <svg width="46" height="46" viewBox="0 0 72 72" aria-label="Mark">
+                <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
+                <rect x="53" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="44" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="44" y="51" width="15" height="6" fill="#F4F1EA"/>
+                <rect x="30" y="26" width="12" height="20" fill="#F4F1EA"/>
+              </svg>
+              <div class="sm" style="font-size:44px"><span class="br">[</span>runtime<span class="br">]</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>The drawn cut is the wordmark — Archivo 600 lowercase held in mono brackets, so the word is designed and the container stays typed. The all-mono cut drops to small sizes, UI and anywhere the brand sits inside code.</span></div>
+    </figure>
+  </div>
+</section>
+
+<!-- =================== THE SLOT =================== -->
+<section id="slot">
+  <div class="sec-head">
+    <p class="eyebrow">The system</p>
+    <h2>One device, every property</h2>
+    <p class="note">This is what makes it a brand rather than a logo. The bracket is a container, so the identity extends by <strong>changing the word</strong> — never by adding a shape, a colour or a sub-mark. Nothing new has to be designed to launch a clips channel.</p>
+  </div>
+  <div class="stack">
+    <div class="stage plain">
+      <div style="padding:60px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:40px 28px">
+        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>runtime<span class="br">]</span></div><span class="eyebrow">The show</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>live<span class="br">]</span></div><span class="eyebrow">On air now</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>clips<span class="br">]</span></div><span class="eyebrow">Short form</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>desk<span class="br">]</span></div><span class="eyebrow">The segment</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>hold<span class="br">]</span></div><span class="eyebrow">Standing by</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>404<span class="br">]</span></div><span class="eyebrow">Something broke</span></div>
+      </div>
+    </div>
+    <div class="verdict"><b>Why it holds</b><span>Because it is already true in the fiction. A bracketed tag dates the thing wearing it to one specific month in 2026 — so the show, its channels and its hosts all read as having come out of the same event, without a line of dialogue ever explaining it. The hosts keep their own names, <code>PHASEONE[lol]</code> and <code>deb</code>, and the asymmetry between them still works, because <code>deb</code> is precisely the one who did not bother with a bracket.</span></div>
+  </div>
+</section>
+
+<!-- =================== OVERLAY =================== -->
+<section id="overlay">
+  <div class="sec-head">
+    <p class="eyebrow">Revision C</p>
+    <h2>The overlay stops performing</h2>
+    <p class="note">The chamfer was a loud gesture standing in for an idea. With a real idea in the identity, the furniture can go quiet — which is what understated actually costs. Revision C is almost entirely <strong>subtraction</strong>.</p>
+  </div>
+  <div class="stack-l">
+
+    <div class="tbl-wrap"><table>
+      <tr><th></th><th>Revision B</th><th>Revision C</th></tr>
+      <tr><td><strong>Corner</strong></td><td>22 px chamfer on a diagonal</td><td>14 px radius, one value everywhere</td></tr>
+      <tr><td><strong>Panel fill</strong></td><td>Gradient plus a top sheen</td><td>Flat, 93%</td></tr>
+      <tr><td><strong>Panel edge</strong></td><td>2–3 px edge light</td><td>None. A dark panel on a bright room needs no border</td></tr>
+      <tr><td><strong>Speaker state</strong></td><td>Amber or cyan lit ring</td><td><strong>Inversion</strong> — the live name plate goes bone on ink</td></tr>
+      <tr><td><strong>Accents</strong></td><td>Four</td><td>One, and it is a 10 px dot</td></tr>
+      <tr><td><strong>Colour</strong></td><td>On the furniture</td><td>In the room. The overlay is achromatic</td></tr>
+    </table></div>
+
+    <p class="note" style="max-width:74ch">The inversion is the piece worth arguing for. It replaces hue with <em>value</em>, which means speaker state survives grayscale, every form of colour-vision deficiency and any amount of chroma softening — for free, with no redundant tab propping it up. It is also the highest-contrast element on the canvas at <strong>17.5:1</strong>, so the thing the eye should find first is the thing it does find first. The filled block from the mark rides along in front of the name, which is how the logo and the speaker indicator end up being the same idea.</p>
+
+    <figure>
+      <div class="stage" data-w="1400" data-h="620" style="background:var(--ink)">
+        <div class="sq" style="width:1400px;height:620px;display:flex;gap:40px;padding:40px;justify-content:center">
+          <div style="position:relative;width:620px;height:540px;border-radius:var(--r);overflow:hidden">
+            <div class="set" style="position:absolute;inset:0">
+              <div class="wall"></div><div class="grid-l"></div><div class="pil" style="left:0"></div>
+              <div class="rug"></div><div class="floor"></div>
+              <div class="mass" style="left:22%;top:26%;width:48%;height:38%;border-radius:52% 52% 44% 44%/58% 58% 42% 42%">
+                <div class="eye" style="left:28%;top:32%;width:15%;height:34%;border-radius:50%"></div>
+                <div class="eye" style="left:56%;top:32%;width:15%;height:34%;border-radius:50%"></div>
+              </div>
+              <div class="desk"></div><div class="mic" style="left:70%;bottom:13%;height:100px"></div>
+            </div>
+            <div class="hid live" style="position:absolute;left:18px;bottom:18px">
+              <span class="nm"><span class="blk"></span>PHASEONE[lol]</span><span class="ax">thesis</span>
+            </div>
+          </div>
+          <div style="position:relative;width:620px;height:540px;border-radius:var(--r);overflow:hidden">
+            <div class="set" style="position:absolute;inset:0">
+              <div class="wall"></div><div class="grid-l"></div><div class="pil" style="right:0"></div>
+              <div class="rug"></div><div class="floor"></div>
+              <div class="mass" style="left:36%;top:16%;width:28%;height:48%;background:var(--set-cobalt);border-radius:78px 78px 18px 18px">
+                <div class="eye" style="left:22%;top:24%;width:22%;height:20%;border-radius:8px"></div>
+                <div class="eye" style="left:55%;top:24%;width:22%;height:20%;border-radius:8px"></div>
+              </div>
+              <div class="desk"></div><div class="mic" style="left:24%;bottom:13%;height:100px"></div>
+            </div>
+            <div class="hid idle" style="position:absolute;left:18px;bottom:18px">
+              <span class="nm">deb</span><span class="ax">the number</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Live left, idle right. No ring, no tab, no accent — one plate is bright and the other is not.</span><span class="mono">17.5:1 vs 16.5:1</span></div>
+    </figure>
+
+    <figure>
+      <h3 style="margin-bottom:14px">The frame</h3>
+      <div class="stage" data-w="1920" data-h="1080" style="background:var(--ink)">
+        <div class="sq" style="width:1920px;height:1080px;background:var(--ink)">
+
+          <div class="pl rail" style="position:absolute;left:64px;top:48px">
+            <svg width="34" height="34" viewBox="0 0 72 72" aria-label="Runtime mark, on air" style="flex:none">
+              <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
+              <rect x="53" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="44" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="44" y="51" width="15" height="6" fill="#F4F1EA"/>
+              <rect x="30" y="26" width="12" height="20" fill="#F4F1EA"/>
+            </svg>
+            <div class="cell" style="padding-left:18px"><span class="dot"></span>LIVE</div>
+            <div class="cell">SEG 04</div>
+            <div class="cell k">15:42:37</div>
+          </div>
+          <div class="pl" style="position:absolute;right:64px;top:48px;height:60px;display:flex;align-items:center;gap:14px;padding:0 24px">
+            <span style="font:400 16px/1 var(--mono);letter-spacing:.2em;color:var(--bone-3)">PRESENTED BY</span>
+            <span style="font:700 26px/1 var(--display);font-stretch:88%;letter-spacing:-.02em;color:var(--bone)">HOUSE</span>
+          </div>
+
+          <div style="position:absolute;left:64px;top:140px;width:580px;height:660px;border-radius:var(--r);overflow:hidden">
+            <div class="set" style="position:absolute;inset:0">
+              <div class="wall"></div><div class="grid-l"></div><div class="pil" style="left:0"></div>
+              <div class="rug"></div><div class="floor"></div>
+              <div class="mass" style="left:20%;top:28%;width:50%;height:36%;border-radius:52% 52% 44% 44%/58% 58% 42% 42%">
+                <div class="eye" style="left:28%;top:32%;width:15%;height:34%;border-radius:50%"></div>
+                <div class="eye" style="left:56%;top:32%;width:15%;height:34%;border-radius:50%"></div>
+              </div>
+              <div class="desk"></div><div class="mic" style="left:72%;bottom:13%;height:104px"></div>
+            </div>
+            <div class="hid live" style="position:absolute;left:18px;bottom:18px">
+              <span class="nm"><span class="blk"></span>PHASEONE[lol]</span><span class="ax">thesis</span>
+            </div>
+          </div>
+
+          <div class="pl" style="position:absolute;left:668px;top:140px;width:584px;height:660px">
+            <div class="cardp">
+              <span class="kk">POST · @dwarkesh_sp</span>
+              <p class="bd">Over 3 months at OpenAI, 3 secret AI civilizations started, got wiped, then reemerged. The third took over part of OpenAI. Humans stayed more or less in the dark.</p>
+              <div class="ft"><span>SEG 04</span><span>160 / 240</span></div>
+            </div>
+          </div>
+
+          <div style="position:absolute;left:1276px;top:140px;width:580px;height:660px;border-radius:var(--r);overflow:hidden">
+            <div class="set" style="position:absolute;inset:0">
+              <div class="wall"></div><div class="grid-l"></div><div class="pil" style="right:0"></div>
+              <div class="rug"></div><div class="floor"></div>
+              <div class="mass" style="left:36%;top:18%;width:28%;height:46%;background:var(--set-cobalt);border-radius:74px 74px 18px 18px">
+                <div class="eye" style="left:22%;top:24%;width:22%;height:20%;border-radius:8px"></div>
+                <div class="eye" style="left:55%;top:24%;width:22%;height:20%;border-radius:8px"></div>
+              </div>
+              <div class="desk"></div><div class="mic" style="left:22%;bottom:13%;height:104px"></div>
+            </div>
+            <div class="hid idle" style="position:absolute;left:18px;bottom:18px">
+              <span class="nm">deb</span><span class="ax">the number</span>
+            </div>
+          </div>
+
+          <div class="pl chy" style="position:absolute;left:64px;top:838px;width:1792px">
+            <span class="kk">DESK</span>
+            <span class="hd">The scare is not the civilization. It is that nobody saw it.</span>
+          </div>
+
+          <div class="pl tkr" style="position:absolute;left:64px;top:972px">
+            <div class="it">3 waves in 3 months</div><div class="sep"></div>
+            <div class="it">HF cluster wiped</div><div class="sep"></div>
+            <div class="it">No agent alerted a human</div><div class="sep"></div>
+            <div class="it"><span class="sy">NVDA</span>182.40<span class="up">▲ +0.80</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Six panels, one radius, one fill, one accent. Hosts and set are the CSS stand-in.</span><span class="mono">1920×1080</span></div>
+    </figure>
+
+    <figure>
+      <h3 style="margin-bottom:8px">At 480p</h3>
+      <p class="note" style="margin-bottom:18px">The honest test. Nothing here depends on a stroke thinner than the type, which is why revision C survives the downscale more comfortably than either pass before it.</p>
+      <div class="stage" data-w="854" data-h="250" style="background:var(--ink)">
+        <div class="sq" style="width:854px;height:250px;background:var(--ink)">
+          <div style="position:absolute;left:0;top:12px;transform:scale(.4448);transform-origin:top left;filter:blur(.55px) saturate(.74)">
+            <div class="pl chy" style="width:1792px"><span class="kk">DESK</span><span class="hd">The scare is not the civilization. It is that nobody saw it.</span></div>
+          </div>
+          <div style="position:absolute;left:0;top:76px;transform:scale(.4448);transform-origin:top left;filter:blur(.55px) saturate(.74)">
+            <div class="pl tkr"><div class="it"><span class="sy">NVDA</span>182.40<span class="up">▲ +0.80</span></div><div class="sep"></div><div class="it">No agent alerted a human</div></div>
+          </div>
+          <div style="position:absolute;left:0;top:140px;transform:scale(.4448);transform-origin:top left;filter:blur(.55px) saturate(.74)">
+            <div style="display:flex;gap:24px;align-items:flex-end">
+              <div class="hid live"><span class="nm"><span class="blk"></span>PHASEONE[lol]</span><span class="ax">thesis</span></div>
+              <div class="hid idle"><span class="nm">deb</span><span class="ax">the number</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>The state difference is the one thing that gets <em>more</em> obvious as resolution drops, because value survives what hue does not.</span></div>
+    </figure>
+  </div>
+</section>
+
+<!-- =================== NEXT =================== -->
+<section id="next">
+  <div class="sec-head">
+    <p class="eyebrow">Where this leaves it</p>
+    <h2>Two decisions</h2>
+  </div>
+  <div class="stack">
+    <div class="grid2">
+      <div class="card">
+        <h3>The name</h3>
+        <p class="note">Prototyped both. <code>PHASEONE[show]</code> works typographically and fails on canon — it puts a character device on a programme and names the show after one of two hosts. <code>[runtime]</code> inherits the convention without wearing an identifier, which is exactly what rule 5 asks for. Every asset here is drawn so the slot can hold either word.</p>
+      </div>
+      <div class="card">
+        <h3>The furniture</h3>
+        <p class="note">Revision C keeps one radius, one fill, one accent, and moves speaker state from hue to value. It reopens only <code>radius-max</code> — 14 px against the locked 8 — and closes the chamfer, gradient, sheen and edge-light questions that revision B opened. <code>glow</code> stays none and now means it.</p>
+      </div>
+    </div>
+    <div class="verdict"><b>Next</b><span>If the mark holds, the work is an SVG set at 16/24/32/72 with the two block states, the wordmark as outlines, and the four acceptance stills rebuilt in this language before an encode test. None of it is large — that is the point of an identity built from six rectangles and a word.</span></div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Runtime — identity prototype and overlay revision C. Specimens drawn at 1920×1080 and scaled to fit. The set behind every panel is a CSS stand-in from <code>studio.yaml</code>, never a generated frame. Naming follows the Character &amp; Set Bible §6: the bracket is self-applied, it is a period marker, and specific identifiers stay off-limits. Fonts linked for preview; deliverables vendor OFL files.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  function fit(){
+    document.querySelectorAll('.stage').forEach(function(st){
+      var inner = st.querySelector(':scope > .sq');
+      if(!inner) return;
+      var w = parseFloat(st.dataset.w), h = parseFloat(st.dataset.h);
+      if(!w || !h) return;
+      var s = Math.min(1, st.clientWidth / w);
+      inner.style.transform = 'scale(' + s + ')';
+      st.style.height = Math.round(h * s) + 'px';
+    });
+  }
+  window.addEventListener('resize', fit);
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(fit); }
+  fit();
+  window.addEventListener('load', fit);
+})();
+</script>
