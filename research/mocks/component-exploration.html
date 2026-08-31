@@ -1,0 +1,1219 @@
+<title>Desk Show Broadcast Package</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Inter:wght@600;700&display=swap">
+<style>
+/* ============================================================
+   DOCUMENT PALETTE — warm, drawn from the set (walnut, cream,
+   forest green). Deliberately NOT the broadcast palette, so the
+   specimens below never blend into their own description.
+   ============================================================ */
+:root{
+  --paper:#F7F4EE; --paper-raised:#FFFDF9; --paper-sunk:#EFEADF;
+  --ink:#1E1B16; --ink-soft:#6E6659; --ink-faint:#9C9488;
+  --rule:#DFD8CA; --rule-strong:#C6BCA8;
+  --forest:#1F3D33; --forest-soft:#E3EBE5;
+  --walnut:#7A4E33;
+  --flag:#A33B22; --flag-soft:#F6E7E1;
+  --ok:#2F6B4F;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#15120D; --paper-raised:#1E1A14; --paper-sunk:#100D09;
+    --ink:#F0EBE0; --ink-soft:#A29886; --ink-faint:#736A5C;
+    --rule:#332C21; --rule-strong:#4A4133;
+    --forest:#7CC5A6; --forest-soft:#1A2A22;
+    --walnut:#C99465;
+    --flag:#E58063; --flag-soft:#2C1A14;
+    --ok:#6FC494;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15120D; --paper-raised:#1E1A14; --paper-sunk:#100D09;
+  --ink:#F0EBE0; --ink-soft:#A29886; --ink-faint:#736A5C;
+  --rule:#332C21; --rule-strong:#4A4133;
+  --forest:#7CC5A6; --forest-soft:#1A2A22;
+  --walnut:#C99465;
+  --flag:#E58063; --flag-soft:#2C1A14;
+  --ok:#6FC494;
+}
+
+/* Broadcast tokens — identical in both themes. These are the
+   locked product, not page chrome. Never theme these. */
+:root{
+  --bc-foundation:#101116; --bc-plate:#171A20; --bc-idle:#2A2E38;
+  --bc-text:#F2F0E8; --bc-text2:#A9ADB7;
+  --bc-amber:#F2A541; --bc-teal:#2FB7B2;
+  --bc-gain:#4FC58B; --bc-loss:#E05D68;
+  --bc-display:"Barlow Condensed",Impact,sans-serif;
+  --bc-data:Inter,system-ui,sans-serif;
+  /* Set stand-in, sampled from the reference still */
+  --set-wall:#EFE4CE; --set-green:#1E3A2E; --set-walnut:#6B4023;
+  --set-desk:#8A5330; --set-floor:#D9BB8E; --set-rug:#E8DDC4;
+  --set-orange:#F5820B; --set-cobalt:#1B3FE8; --set-cream:#FFF7E9;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font:400 16.5px/1.62 "IBM Plex Sans",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 32px}
+@media(max-width:680px){.wrap{padding:0 18px}}
+
+/* ---------- type ---------- */
+h1,h2,h3{margin:0;text-wrap:balance;font-family:var(--bc-display);font-weight:700;letter-spacing:.01em}
+h1{font-size:clamp(46px,7.4vw,86px);line-height:.94;text-transform:uppercase}
+h2{font-size:clamp(30px,4vw,44px);line-height:1.02;text-transform:uppercase}
+h3{font-size:23px;line-height:1.15;text-transform:uppercase;letter-spacing:.02em}
+p{margin:0}
+a{color:var(--forest)}
+.eyebrow{
+  font:500 11.5px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-faint)
+}
+.lede{font-size:19.5px;line-height:1.58;color:var(--ink-soft);max-width:64ch}
+.note{font-size:14.5px;line-height:1.6;color:var(--ink-soft);max-width:70ch}
+code,.mono{font-family:"IBM Plex Mono",monospace;font-size:.88em;font-variant-numeric:tabular-nums}
+code{background:var(--paper-sunk);padding:.1em .36em;border-radius:3px;color:var(--walnut)}
+strong{font-weight:600;color:var(--ink)}
+
+/* ---------- structure ---------- */
+header.top{border-bottom:2px solid var(--ink);padding:72px 0 34px;margin-bottom:0}
+.masthead{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-end;justify-content:space-between}
+.deck{display:flex;flex-direction:column;gap:16px;max-width:60ch}
+.stamp{
+  font:500 11.5px/1.5 "IBM Plex Mono",monospace;letter-spacing:.08em;
+  color:var(--ink-soft);text-align:right;white-space:nowrap
+}
+section{padding:64px 0;border-bottom:1px solid var(--rule)}
+section:last-of-type{border-bottom:0}
+.sec-head{display:flex;flex-direction:column;gap:12px;margin-bottom:34px}
+.sec-head .row{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;justify-content:space-between}
+.stack{display:flex;flex-direction:column;gap:22px}
+.stack-l{display:flex;flex-direction:column;gap:40px}
+
+/* ---------- contents ---------- */
+.toc{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);margin-top:44px}
+.toc a{
+  display:flex;flex-direction:column;gap:5px;padding:15px 17px;background:var(--paper);
+  text-decoration:none;color:var(--ink);transition:background .14s
+}
+.toc a:hover,.toc a:focus-visible{background:var(--forest-soft)}
+.toc b{font:700 17px/1.1 var(--bc-display);text-transform:uppercase;letter-spacing:.02em}
+.toc span{font:400 12.5px/1.35 "IBM Plex Sans",sans-serif;color:var(--ink-soft)}
+
+/* ---------- panels ---------- */
+.panel{background:var(--paper-raised);border:1px solid var(--rule);padding:24px 26px}
+.callout{border-left:4px solid var(--forest);background:var(--forest-soft);padding:18px 22px}
+.callout.flagged{border-left-color:var(--flag);background:var(--flag-soft)}
+.callout h3{font-size:19px;margin-bottom:8px}
+
+/* ---------- decision blocks ---------- */
+.decision{border:1px solid var(--rule);background:var(--paper-raised)}
+.decision > .d-head{
+  display:flex;flex-wrap:wrap;gap:10px 16px;align-items:baseline;justify-content:space-between;
+  padding:16px 22px;border-bottom:1px solid var(--rule);background:var(--paper-sunk)
+}
+.decision > .d-body{padding:22px;display:flex;flex-direction:column;gap:16px}
+.pill{
+  font:500 10.5px/1 "IBM Plex Mono",monospace;letter-spacing:.1em;text-transform:uppercase;
+  padding:5px 9px;border:1px solid currentColor;white-space:nowrap
+}
+.pill.call{color:var(--ok)}
+.pill.open{color:var(--flag)}
+.verdict{
+  display:flex;gap:12px;align-items:flex-start;padding:14px 16px;
+  background:var(--paper-sunk);border-left:4px solid var(--ok);font-size:15px;line-height:1.55
+}
+.verdict b{font-weight:600}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--rule);background:var(--paper-raised)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:14.5px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:500 11px/1.3 "IBM Plex Mono",monospace;letter-spacing:.1em;text-transform:uppercase;
+   color:var(--ink-faint);background:var(--paper-sunk);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- swatches ---------- */
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:14px}
+.sw{border:1px solid var(--rule);background:var(--paper-raised)}
+.sw .chip{height:62px;border-bottom:1px solid var(--rule)}
+.sw .meta{padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.sw .name{font:600 13px/1.2 "IBM Plex Sans",sans-serif}
+.sw .val{font:400 11.5px/1.2 "IBM Plex Mono",monospace;color:var(--ink-soft)}
+.sw .ratio{font:400 11.5px/1.2 "IBM Plex Mono",monospace;color:var(--ink-faint)}
+
+/* ============================================================
+   STAGE — a broadcast-accurate surface. Children are authored at
+   true 1080p pixel values and scaled to fit by JS, so every number
+   in this file is the real number.
+   ============================================================ */
+.stage{position:relative;width:100%;overflow:hidden;background:var(--bc-foundation);
+  border:1px solid var(--rule-strong)}
+.stage.checker{
+  background-color:#0B0C10;
+  background-image:linear-gradient(45deg,#15161C 25%,transparent 25%,transparent 75%,#15161C 75%),
+                   linear-gradient(45deg,#15161C 25%,transparent 25%,transparent 75%,#15161C 75%);
+  background-size:24px 24px;background-position:0 0,12px 12px
+}
+.stage > .sq{position:absolute;top:0;left:0;transform-origin:top left}
+.cap{
+  display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:space-between;align-items:baseline;
+  margin-top:9px;font:400 12.5px/1.45 "IBM Plex Sans",sans-serif;color:var(--ink-soft)
+}
+.cap .mono{color:var(--ink-faint)}
+figure{margin:0;display:flex;flex-direction:column}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:24px}
+
+/* ============================================================
+   BROADCAST COMPONENTS — production CSS. Everything below this
+   line is intended to survive into assets/broadcast/style.css.
+   ============================================================ */
+.bc{color:var(--bc-text);font-family:var(--bc-data)}
+.abs{position:absolute}
+
+/* show bug */
+.bug{width:72px;height:72px}
+/* LIVE */
+.live{
+  width:112px;height:40px;background:var(--bc-loss);color:#0E0A0B;
+  font:700 30px/40px var(--bc-data);letter-spacing:.06em;text-align:center
+}
+.live.off{background:var(--bc-idle);color:var(--bc-text2)}
+/* clock */
+.clock{
+  width:120px;height:40px;background:var(--bc-plate);color:var(--bc-text);
+  font:700 30px/40px var(--bc-data);font-variant-numeric:tabular-nums;
+  text-align:center;letter-spacing:.01em
+}
+/* sponsor */
+.sponsor{
+  width:220px;height:40px;background:var(--bc-plate);display:flex;align-items:center;gap:10px;
+  padding:0 12px;border-left:4px solid var(--bc-text2)
+}
+.sponsor .lab{font:600 15px/1 var(--bc-data);letter-spacing:.13em;color:var(--bc-text2);white-space:nowrap}
+.sponsor .nm{font:700 26px/1 var(--bc-display);letter-spacing:.03em;color:var(--bc-text);white-space:nowrap}
+
+/* host well + frame */
+.well{position:relative;width:620px;height:700px;overflow:hidden;background:#0C0D12}
+.frame{position:absolute;inset:0;border:8px solid var(--bc-idle);pointer-events:none}
+.frame.amber{border-color:var(--bc-amber)}
+.frame.teal{border-color:var(--bc-teal)}
+/* ON AIR tab — mandatory redundancy, colour is never the only signal */
+.onair{
+  position:absolute;top:8px;left:8px;height:38px;padding:0 14px;display:flex;align-items:center;
+  font:700 18px/1 var(--bc-data);letter-spacing:.14em;color:#101116
+}
+.onair.inboard{left:auto;right:8px}
+.onair.amber{background:var(--bc-amber)}
+.onair.teal{background:var(--bc-teal)}
+/* host ID */
+.hostid{
+  position:absolute;left:8px;bottom:8px;background:var(--bc-plate);
+  padding:12px 18px 13px;display:flex;flex-direction:column;gap:3px;max-width:520px
+}
+.hostid .nm{font:700 40px/1 var(--bc-display);color:var(--bc-text);letter-spacing:.01em;white-space:nowrap}
+.hostid .ax{font:600 22px/1.15 var(--bc-data);color:var(--bc-text2)}
+.hostid.amber{border-left:4px solid var(--bc-amber);padding-left:14px}
+.hostid.teal{border-left:4px solid var(--bc-teal);padding-left:14px}
+
+/* set stand-in */
+.set{position:absolute;inset:0}
+.set .wall{position:absolute;left:0;right:0;top:0;height:64%;background:var(--set-wall)}
+.set .pillar{position:absolute;top:0;width:13%;height:64%;background:var(--set-green)}
+.set .desk{position:absolute;left:-6%;right:-6%;top:60%;height:26%;background:var(--set-desk);
+  border-top:10px solid #A9683C;border-radius:14px 14px 0 0}
+.set .desk:after{content:"";position:absolute;left:12%;right:12%;top:34%;bottom:16%;
+  background:#7A4726;border:3px solid #A9683C;border-radius:6px}
+.set .floor{position:absolute;left:0;right:0;top:86%;bottom:0;background:var(--set-floor)}
+.set .rug{position:absolute;left:-14%;right:-14%;top:84%;height:22%;background:var(--set-rug);border-radius:50%}
+.set .mic{position:absolute;bottom:16%;width:16px;height:112px;background:#151515;border-radius:8px}
+.set .mic:before{content:"";position:absolute;left:-13px;top:-30px;width:42px;height:46px;
+  background:#1B1B1B;border-radius:12px}
+.host-mass{position:absolute;background:var(--set-orange)}
+.eye{position:absolute;background:var(--set-cream)}
+
+/* centre card */
+.card{
+  position:relative;width:600px;height:700px;background:var(--bc-plate);
+  border:8px solid var(--bc-idle);padding:32px 16px;display:flex;flex-direction:column;gap:0
+}
+.card .kick{
+  align-self:flex-start;background:var(--bc-text);color:#101116;
+  font:700 26px/1 var(--bc-data);letter-spacing:.16em;padding:9px 13px 8px;margin-bottom:24px
+}
+.card .auth{font:600 30px/1.2 var(--bc-data);color:var(--bc-text2);margin-bottom:20px}
+.card .body{
+  font:700 46px/1.24 var(--bc-display);color:var(--bc-text);letter-spacing:.005em;
+  display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden
+}
+.card .rule{height:4px;background:var(--bc-idle);margin:26px 0 0}
+.card .foot{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+.card .foot .l{font:600 24px/1 var(--bc-data);color:var(--bc-text2);letter-spacing:.1em}
+
+/* chart payload */
+.plot{flex:1;display:flex;align-items:flex-end;gap:26px;padding:18px 0 0;border-bottom:4px solid var(--bc-idle)}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;height:100%}
+.bar .v{font:700 30px/1 var(--bc-data);font-variant-numeric:tabular-nums;color:var(--bc-text);text-align:center}
+.bar .fill{width:100%;background:var(--bc-teal)}
+.bar .lb{font:600 22px/1.15 var(--bc-data);color:var(--bc-text2);text-align:center;padding-top:12px}
+.axis{display:flex;gap:26px}
+.axis > *{flex:1}
+
+/* chyron */
+.chyron{width:1920px;height:96px;display:flex;background:var(--bc-plate);border-top:4px solid var(--bc-amber)}
+.chyron .kick{
+  width:240px;flex:0 0 240px;background:var(--bc-text);color:#101116;display:flex;align-items:center;
+  justify-content:center;font:700 28px/1 var(--bc-display);letter-spacing:.2em
+}
+.chyron .head{
+  flex:1;display:flex;align-items:center;padding:0 34px;
+  font:700 42px/1.12 var(--bc-display);color:var(--bc-text);letter-spacing:.008em
+}
+/* ticker */
+.ticker{width:1920px;height:52px;background:var(--bc-foundation);display:flex;align-items:stretch;
+  border-top:1px solid #23262E}
+.tick{display:flex;align-items:center;gap:12px;padding:0 26px;font:600 28px/1 var(--bc-data);
+  color:var(--bc-text);white-space:nowrap}
+.tick + .tick{border-left:4px solid var(--bc-idle)}
+.tick .sym{color:var(--bc-text2);letter-spacing:.1em}
+.tick .val{font-variant-numeric:tabular-nums}
+.tick .chg{font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px}
+.tick .chg.up{color:var(--bc-gain)} .tick .chg.down{color:var(--bc-loss)}
+.tick .pip{width:4px;align-self:stretch;margin:9px 0;background:var(--bc-text2)}
+
+/* hold */
+.hold{position:absolute;inset:0;background:var(--bc-foundation);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:34px}
+.hold .standby{font:700 96px/1 var(--bc-display);letter-spacing:.22em;color:var(--bc-text)}
+.hold .sub{font:600 30px/1 var(--bc-data);letter-spacing:.16em;color:var(--bc-text2)}
+
+/* layout wireframes */
+.wire{position:relative;width:100%;aspect-ratio:16/9;background:#0C0D12;border:1px solid var(--rule-strong)}
+.wire i{position:absolute;display:flex;align-items:center;justify-content:center;font-style:normal;
+  font:500 10px/1.1 "IBM Plex Mono",monospace;letter-spacing:.06em;text-align:center;color:#8D93A0}
+.wire .w-host{background:#22262F;border:1px solid #3A4050;color:#A9ADB7}
+.wire .w-card{background:#171A20;border:1px solid #4A5164;color:#C9CDD6}
+.wire .w-bar{background:#2A2E38}
+.wire .w-amber{background:var(--bc-amber);color:#101116}
+.wire .w-teal{background:var(--bc-teal);color:#101116}
+
+/* motion timeline */
+.mline{display:flex;flex-direction:column;gap:3px}
+.mrow{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}
+.mtrack{position:relative;height:32px;background:var(--paper-sunk);border:1px solid var(--rule)}
+.mfill{position:absolute;top:0;bottom:0;left:0;background:var(--forest);opacity:.22}
+.mhold{position:absolute;top:0;bottom:0;background:var(--forest);opacity:.85}
+.mlabel{font:500 12.5px/1.2 "IBM Plex Mono",monospace;color:var(--ink-soft);text-align:right}
+.mscale{display:grid;grid-template-columns:150px 1fr;gap:16px;font:400 11px/1 "IBM Plex Mono",monospace;
+  color:var(--ink-faint)}
+.mticks{display:flex;justify-content:space-between}
+
+/* grayscale proof */
+.gray{filter:grayscale(1) contrast(1.05)}
+.blur{filter:blur(.6px) saturate(.72)}
+
+footer{padding:56px 0 90px;color:var(--ink-soft);font-size:14.5px}
+:focus-visible{outline:3px solid var(--forest);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="masthead">
+      <div class="deck">
+        <p class="eyebrow">Package A · deterministic 1080 layer · design exploration</p>
+        <h1>Desk Show<br>broadcast package</h1>
+        <p class="lede">Every component the show needs drawn at true 1080p, on the locked tokens, against the set that already exists. The room is warm and generated. The furniture is cold and drawn. This is the whole of the cold half.</p>
+      </div>
+      <p class="stamp">
+        canvas 1920×1080<br>
+        source 1344×768 @24<br>
+        fixture segment-20260831T154227Z<br>
+        5 open calls
+      </p>
+    </div>
+
+    <nav class="toc">
+      <a href="#layers"><b>Two layers</b><span>What is generated, what is drawn, and why they look nothing alike</span></a>
+      <a href="#tokens"><b>Foundation</b><span>Colour, geometry and type with measured contrast</span></a>
+      <a href="#calls"><b>Five open calls</b><span>Collisions between the set, the spec and the fixture</span></a>
+      <a href="#persistent"><b>Persistent furniture</b><span>Bug, LIVE, clock, sponsor</span></a>
+      <a href="#hosts"><b>Host furniture</b><span>Frames, ON AIR, IDs, and the grayscale proof</span></a>
+      <a href="#card"><b>Centre card</b><span>Five payloads inside one shell that never moves</span></a>
+      <a href="#bottom"><b>Bottom stack</b><span>The chyron land and one moving row</span></a>
+      <a href="#layouts"><b>Layouts</b><span>Seven compositions from two fixed crops</span></a>
+      <a href="#motion"><b>Motion family</b><span>One cadence at five durations</span></a>
+      <a href="#composite"><b>The composite</b><span>The fixture, painted, at full frame</span></a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- =================== TWO LAYERS =================== -->
+<section id="layers">
+  <div class="sec-head">
+    <p class="eyebrow">The premise</p>
+    <div class="row"><h2>Two layers that must not blend</h2></div>
+  </div>
+  <div class="stack">
+    <p class="note" style="max-width:74ch">The set is a bright, warm room: walnut, cream, forest green, a signal-orange host and a cobalt one. A video model draws it at 1344×768 and it is never asked to draw a letter. The furniture is charcoal and off-white, drawn by a browser at 1920×1080, and it carries every word on screen.</p>
+    <p class="note" style="max-width:74ch">Those two palettes are not a mismatch to reconcile — the distance <em>is</em> the design. Charcoal furniture over a bright room is the only way to hold 7:1 contrast on essential type through a Twitch encode, and it makes the drawn layer read as the network rather than as set dressing. Every decision on this page follows from keeping the halves apart.</p>
+    <div class="grid2">
+      <div class="panel">
+        <p class="eyebrow" style="color:var(--walnut)">Generated · 1344×768 · warm</p>
+        <h3 style="margin:10px 0 10px">The room</h3>
+        <p class="note">Walnut pill desk, cream centre panel, forest-green pillars, light wood floor. Two mouthless masses: a broad orange one camera-left, a tall cobalt one camera-right. Cropped into two 620×700 wells that never zoom.</p>
+        <p class="note" style="margin-top:12px"><strong>Carries no text, ever.</strong> Models garble letters and they flicker take to take.</p>
+      </div>
+      <div class="panel">
+        <p class="eyebrow" style="color:var(--forest)">Drawn · 1920×1080 · cold</p>
+        <h3 style="margin:10px 0 10px">The furniture</h3>
+        <p class="note">Charcoal plates, off-white type, amber and teal restricted to tabs and 4–8&nbsp;px rules. Opaque throughout: no glass, glow, skew, gradient or hairline that a 480p encode will eat.</p>
+        <p class="note" style="margin-top:12px"><strong>Carries every word.</strong> Names, land, ticker, clock, status.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== TOKENS =================== -->
+<section id="tokens">
+  <div class="sec-head">
+    <p class="eyebrow">A4 · tokens.css</p>
+    <div class="row"><h2>Foundation</h2><p class="mono" style="color:var(--ink-faint)">no undeclared colour</p></div>
+  </div>
+  <div class="stack-l">
+
+    <figure>
+      <div class="swatches">
+        <div class="sw"><div class="chip" style="background:#101116"></div><div class="meta">
+          <span class="name">foundation</span><span class="val">#101116</span><span class="ratio">canvas · never transparent</span></div></div>
+        <div class="sw"><div class="chip" style="background:#171A20"></div><div class="meta">
+          <span class="name">plate</span><span class="val">#171A20</span><span class="ratio">raised cards, tabs</span></div></div>
+        <div class="sw"><div class="chip" style="background:#2A2E38"></div><div class="meta">
+          <span class="name">idle-frame</span><span class="val">#2A2E38</span><span class="ratio">rev · 10.8:1 on the picture</span></div></div>
+        <div class="sw"><div class="chip" style="background:#F2F0E8"></div><div class="meta">
+          <span class="name">text-primary</span><span class="val">#F2F0E8</span><span class="ratio">15.1:1 on plate</span></div></div>
+        <div class="sw"><div class="chip" style="background:#A9ADB7"></div><div class="meta">
+          <span class="name">text-secondary</span><span class="val">#A9ADB7</span><span class="ratio">7.7:1 on plate</span></div></div>
+        <div class="sw"><div class="chip" style="background:#F2A541"></div><div class="meta">
+          <span class="name">amber · BOT1</span><span class="val">#F2A541</span><span class="ratio">8.4:1 on plate</span></div></div>
+        <div class="sw"><div class="chip" style="background:#2FB7B2"></div><div class="meta">
+          <span class="name">teal · BOT2</span><span class="val">#2FB7B2</span><span class="ratio">7.0:1 — on the floor</span></div></div>
+        <div class="sw"><div class="chip" style="background:#4FC58B"></div><div class="meta">
+          <span class="name">gain</span><span class="val">#4FC58B</span><span class="ratio">always with ▲ and a sign</span></div></div>
+        <div class="sw"><div class="chip" style="background:#E05D68"></div><div class="meta">
+          <span class="name">loss</span><span class="val">#E05D68</span><span class="ratio">always with ▼ and a sign</span></div></div>
+      </div>
+      <div class="cap"><span>Contrast measured against <span class="mono">plate #171A20</span>, the surface essential type actually sits on.</span></div>
+    </figure>
+
+    <div class="grid2">
+      <div>
+        <h3 style="margin-bottom:14px">Geometry</h3>
+        <div class="tbl-wrap"><table>
+          <tr><th>Token</th><th>Value</th><th>Status</th></tr>
+          <tr><td>border-frame</td><td class="num">8 px opaque</td><td>lock</td></tr>
+          <tr><td>divider-source</td><td class="num">8 px opaque</td><td>lock</td></tr>
+          <tr><td>rule-essential</td><td class="num">4 px</td><td>lock</td></tr>
+          <tr><td>radius-max</td><td class="num">8 px</td><td>lock</td></tr>
+          <tr><td>space 1 / 2 / 4</td><td class="num">4 / 8 / 16 px</td><td>rhythm</td></tr>
+          <tr><td>skew</td><td class="num">0°</td><td>lock</td></tr>
+          <tr><td>glow · shadow</td><td class="num">none</td><td>lock</td></tr>
+        </table></div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:14px">Type</h3>
+        <div class="tbl-wrap"><table>
+          <tr><th>Role</th><th>Face</th><th>Size</th></tr>
+          <tr><td>kicker</td><td>Barlow Cond 700 · upper</td><td class="num">28</td></tr>
+          <tr><td>headline</td><td>Barlow Cond 700 · sentence</td><td class="num">42</td></tr>
+          <tr><td>host name</td><td>Barlow Cond 700 · exact case</td><td class="num">40</td></tr>
+          <tr><td>handle · axis</td><td>Inter 600</td><td class="num">22–28</td></tr>
+          <tr><td>ticker</td><td>Inter 600</td><td class="num">28</td></tr>
+          <tr><td>LIVE · clock</td><td>Inter 700 · tnum</td><td class="num">30</td></tr>
+        </table></div>
+        <p class="note" style="margin-top:12px">Floor is 26 px. Overflow order is edit → wrap → ellipsis; type never shrinks to fit. Both families ship as vendored OFL files with their licences — the CDN link at the top of this file is preview only.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== OPEN CALLS =================== -->
+<section id="calls">
+  <div class="sec-head">
+    <p class="eyebrow">Reported, not silently forked</p>
+    <div class="row"><h2>Five open calls</h2><p class="note" style="max-width:36ch;margin:0">The manifest says report collisions rather than invent parallel rectangles. These five are what the set piece, the spec and the fixture disagree about — the last one only became visible once the frame was actually painted.</p></div>
+  </div>
+
+  <div class="stack-l">
+
+    <!-- CALL 1 -->
+    <div class="decision">
+      <div class="d-head">
+        <div><p class="eyebrow" style="margin-bottom:5px">Call 1 · accent</p><h3>deb is cobalt in the room and teal on the furniture</h3></div>
+        <span class="pill call">Recommend: keep teal</span>
+      </div>
+      <div class="d-body">
+        <p class="note" style="max-width:none"><code>studio.yaml</code> gives BOT2 the accent <strong>cobalt</strong>, and the set piece confirms it — deb is a saturated blue mass. The token table gives BOT2 <strong>teal #2FB7B2</strong>. A tab that names deb therefore will not match the colour of the robot it points at.</p>
+        <figure>
+          <div class="stage" data-w="1180" data-h="150">
+            <div class="sq" style="width:1180px;height:150px;background:#171A20;display:flex;align-items:center;gap:28px;padding:0 30px">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;height:44px;padding:0 16px;background:#1B3FE8;color:#101116;font:700 20px/1 Inter,sans-serif;letter-spacing:.14em">ON AIR</div>
+                <div style="font:400 15px/1 'IBM Plex Mono',monospace;color:#A9ADB7">cobalt #1B3FE8 · 2.4:1 · fails</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;height:44px;padding:0 16px;background:#2FB7B2;color:#101116;font:700 20px/1 Inter,sans-serif;letter-spacing:.14em">ON AIR</div>
+                <div style="font:400 15px/1 'IBM Plex Mono',monospace;color:#A9ADB7">teal #2FB7B2 · 7.0:1 · at floor</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;height:44px;padding:0 16px;background:#42C7C2;color:#101116;font:700 20px/1 Inter,sans-serif;letter-spacing:.14em">ON AIR</div>
+                <div style="font:400 15px/1 'IBM Plex Mono',monospace;color:#A9ADB7">teal+ #42C7C2 · 8.4:1 · headroom</div>
+              </div>
+            </div>
+          </div>
+          <div class="cap"><span>Same tab, three accents, on <span class="mono">plate</span>.</span><span class="mono">contrast vs #171A20</span></div>
+        </figure>
+        <p class="note" style="max-width:none">Cobalt on <code>plate</code> measures <strong>2.4:1</strong>. It fails the 7:1 floor outright, and saturated blue is the first thing 4:2:0 chroma subsampling destroys at Twitch bitrates — the edges of a cobalt tab will smear before anything else on screen does. Teal measures 7.0:1, which clears the floor with nothing to spare.</p>
+        <div class="verdict"><b>Call.</b><span>Keep teal, and rewrite what the token means: <strong>amber and teal are furniture states, not host body colours.</strong> The tab says “this well is live,” it is not a paint chip of the robot inside it. If teal needs margin after the encode test, lighten to <code>#42C7C2</code> for 8.4:1 — do not drift it toward cobalt to chase the set.</span></div>
+      </div>
+    </div>
+
+    <!-- CALL 2 -->
+    <div class="decision">
+      <div class="d-head">
+        <div><p class="eyebrow" style="margin-bottom:5px">Call 2 · geometry</p><h3>The sponsor rev still clips the left well</h3></div>
+        <span class="pill open">Recommend: 184,54</span>
+      </div>
+      <div class="d-body">
+        <p class="note" style="max-width:none">The spec puts <code>SPONSOR_CELL</code> at <code>96,134</code>, which lands inside the left host aperture. The manifest revision moves it to <code>184,70</code>. That fixes the bad overlap — but 70+40 = 110, and the left well starts at y=100, so the cell still crosses the well’s top border by 10 px and clips 2 px into the picture.</p>
+        <figure>
+          <div class="stage" data-w="900" data-h="230">
+            <div class="sq" style="width:900px;height:230px;background:#101116">
+              <div style="position:absolute;left:40px;top:100px;width:620px;height:130px;background:#22262F;border:8px solid #2A2E38;border-bottom:0"></div>
+              <div style="position:absolute;left:0;top:100px;width:900px;height:1px;background:#5C6270"></div>
+              <div style="position:absolute;left:672px;top:106px;font:400 13px/1 'IBM Plex Mono',monospace;color:#8D93A0">HOST_CROP_L · y=100</div>
+              <div style="position:absolute;left:96px;top:54px;width:72px;height:72px;border:1px dashed #3A4050"></div>
+              <div style="position:absolute;left:96px;top:130px;font:400 12px/1 'IBM Plex Mono',monospace;color:#5C6270">SHOW_BUG 96,54</div>
+              <div style="position:absolute;left:184px;top:70px;width:220px;height:40px;background:#E05D68;opacity:.42"></div>
+              <div style="position:absolute;left:184px;top:70px;width:220px;height:40px;border:2px dashed #E05D68"></div>
+              <div style="position:absolute;left:184px;top:100px;width:220px;height:10px;background:#E05D68"></div>
+              <div style="position:absolute;left:420px;top:82px;font:400 14px/1.4 'IBM Plex Mono',monospace;color:#E05D68">184,70 rev — 10 px of it is inside the well</div>
+              <div style="position:absolute;left:184px;top:54px;width:220px;height:40px;border:2px solid #4FC58B"></div>
+              <div style="position:absolute;left:420px;top:34px;font:400 14px/1.4 'IBM Plex Mono',monospace;color:#4FC58B">184,54 proposed — bottom edge at y=94, clears by 6 px</div>
+            </div>
+          </div>
+          <div class="cap"><span>Top-left corner of the canvas at 1:1. Bug shown at its locked <span class="mono">96,54</span>.</span></div>
+        </figure>
+        <div class="verdict"><b>Call.</b><span>Move the cell to <code>184,54,220,40</code>. Same x as the rev, but on the same top baseline as bug, LIVE and clock — a 16 px gap from the bug, 6 px of clearance above the well, and one horizontal band of persistent furniture instead of a stagger. Nothing else moves.</span></div>
+      </div>
+    </div>
+
+    <!-- CALL 3 -->
+    <div class="decision">
+      <div class="d-head">
+        <div><p class="eyebrow" style="margin-bottom:5px">Call 3 · frames</p><h3>The idle frame spends its contrast inward</h3></div>
+        <span class="pill call">Confirm the rev</span>
+      </div>
+      <div class="d-body">
+        <p class="note" style="max-width:none">The revision from <code>plate</code> to <code>#2A2E38</code> was made because an 8 px plate border on foundation disappeared. It is worth being precise about what the fix bought:</p>
+        <div class="tbl-wrap"><table>
+          <tr><th>Frame against</th><th>Old · plate</th><th>Rev · #2A2E38</th><th>Reads?</th></tr>
+          <tr><td>foundation <span class="mono">#101116</span> (outward)</td><td class="num">1.09:1</td><td class="num">1.39:1</td><td>barely</td></tr>
+          <tr><td>the set’s cream wall (inward)</td><td class="num">8.5:1</td><td class="num">10.8:1</td><td>strongly</td></tr>
+        </table></div>
+        <div class="verdict"><b>Call.</b><span>Confirm <code>#2A2E38</code>. Its contrast budget is spent against the <em>picture</em>, not the canvas — which is the correct priority, because in <code>split</code> the wells and card tile the entire working band and bare foundation is never visible beside a frame. A bright cream set is the ideal ground for a dark idle frame; the frame only has to survive going amber or teal without changing weight.</span></div>
+      </div>
+    </div>
+
+    <!-- CALL 4 -->
+    <div class="decision">
+      <div class="d-head">
+        <div><p class="eyebrow" style="margin-bottom:5px">Call 4 · fixture</p><h3>A sentence with a <code>down</code> sign has no number to point at</h3></div>
+        <span class="pill open">Recommend: sign-neutral</span>
+      </div>
+      <div class="d-body">
+        <p class="note" style="max-width:none">The first fixture ships <code>{"text":"HF cluster wiped","sign":"down"}</code> — a sign with no <code>value</code> and no <code>change</code>. The ▲/▼ grammar exists so a market move is never colour alone, but here there is no move for an arrow to modify, and painting one produces an arrow pointing at nothing.</p>
+        <figure>
+          <div class="stage" data-w="1180" data-h="176">
+            <div class="sq" style="width:1180px;height:176px;background:#101116;display:flex;flex-direction:column;justify-content:center;gap:20px">
+              <div class="ticker" style="width:1180px">
+                <div class="tick"><span style="color:#E05D68">▼</span><span>HF cluster wiped</span></div>
+                <div class="tick"><span class="sym">A · orphan arrow</span></div>
+              </div>
+              <div class="ticker" style="width:1180px">
+                <div class="tick"><span>HF cluster wiped</span></div>
+                <div class="tick"><span class="sym">B · sign-neutral sentence</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="cap"><span>Same fixture item, two readings.</span></div>
+        </figure>
+        <div class="verdict"><b>Call.</b><span>Honour <code>sign</code> only when <code>value</code> or <code>change</code> is present. A sentence item renders sign-neutral. This costs nothing — no fixture sentence carries a fact the arrow was needed to qualify — and it keeps ▲/▼ meaning exactly one thing on screen.</span></div>
+      </div>
+    </div>
+
+    <!-- CALL 5 -->
+    <div class="decision">
+      <div class="d-head">
+        <div><p class="eyebrow" style="margin-bottom:5px">Call 5 · collision found in render</p><h3>The show bug paints over the left <code>ON AIR</code> tab</h3></div>
+        <span class="pill open">Recommend: tabs inboard</span>
+      </div>
+      <div class="d-body">
+        <p class="note" style="max-width:none">This one is not in any document — it only appeared when the frame was painted. <code>SHOW_BUG</code> is locked at <code>96,54,72,72</code>, so it runs down to y=126. The left well starts at <code>40,100</code> and its speaker tab attaches 8 px inside that, at <code>48,108</code>. The two rectangles overlap by <strong>66 × 18 px</strong>, and the bug is z=80 against the tab’s z=40.</p>
+        <p class="note" style="max-width:none">The bug wins either way, and both outcomes are bad: with an opaque 72×72 plate it clips the front of the word outright, and with a transparent mark its cream masses and accent rule land on top of an amber tab — cream on amber, at 18 px, at 480p. This happens <em>only</em> on the left and <em>only</em> while BOT1 is speaking. The right well is clear because LIVE and the clock are 40 px tall and stop at y=94, while the bug runs to y=126.</p>
+        <p class="note" style="max-width:none">The tab is the mandatory redundancy that makes speaker state survive grayscale and colour-vision deficiency. Damage it and amber is carrying that state alone, which the spec calls a fail — so this is not a cosmetic overlap.</p>
+        <figure>
+          <div class="stage" data-w="900" data-h="210">
+            <div class="sq" style="width:900px;height:210px;background:#101116">
+              <div style="position:absolute;left:40px;top:100px;width:620px;height:110px;background:#22262F;border:8px solid #F2A541;border-bottom:0"></div>
+              <div style="position:absolute;left:48px;top:108px;width:114px;height:38px;padding:0 14px;display:flex;align-items:center;background:#F2A541;color:#101116;font:700 18px/1 Inter,sans-serif;letter-spacing:.14em">ON AIR</div>
+              <div style="position:absolute;left:96px;top:54px">
+                <svg width="72" height="72" viewBox="0 0 72 72" aria-label="Show bug overlapping the tab">
+                  <rect x="6" y="30" width="30" height="26" rx="8" fill="#F2F0E8"/>
+                  <rect x="42" y="14" width="20" height="42" rx="8" fill="#F2F0E8"/>
+                  <rect x="6" y="60" width="30" height="6" fill="#F2A541"/>
+                  <rect x="40" y="60" width="26" height="6" fill="#2FB7B2"/>
+                </svg>
+              </div>
+              <div style="position:absolute;left:96px;top:108px;width:66px;height:18px;border:2px solid #E05D68"></div>
+              <div style="position:absolute;left:180px;top:156px;font:400 14px/1.4 'IBM Plex Mono',monospace;color:#E05D68">contested: 66 × 18 px, bug over tab</div>
+            </div>
+          </div>
+          <div class="cap"><span>Top-left corner at 1:1, BOT1 live.</span></div>
+        </figure>
+        <div class="verdict"><b>Call.</b><span>Anchor both speaker tabs to the <strong>inboard</strong> top corner of their frame — top-right on the left well, top-left on the right well. The tabs then flank the centre card, clear every piece of top furniture, and stay symmetrical. It also reads better: the live tab sits next to the object being discussed rather than out at the edge of frame. Nothing moves but one CSS anchor, and the bug keeps its locked rectangle.</span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =================== PERSISTENT FURNITURE =================== -->
+<section id="persistent">
+  <div class="sec-head">
+    <p class="eyebrow">A5 · SHOW_BUG · 96,54 · 72×72</p>
+    <div class="row"><h2>The mark</h2></div>
+  </div>
+  <div class="stack-l">
+    <p class="note" style="max-width:74ch">Original, no letters — anything lettered has to survive being regenerated and it will not. It must hold at 72×72 and again at 32×32 after a 480p downscale, which rules out any mark built from more than three masses. Three directions, all drawn as flat shapes on <code>foundation</code>:</p>
+
+    <div class="grid3">
+      <figure>
+        <div class="stage" data-w="360" data-h="240">
+          <div class="sq" style="width:360px;height:240px;background:#101116;display:flex;align-items:center;justify-content:center;gap:40px">
+            <svg width="144" height="144" viewBox="0 0 72 72" aria-label="Two masses mark, large">
+              <rect x="0" y="0" width="72" height="72" fill="#171A20"/>
+              <rect x="6" y="30" width="30" height="26" rx="8" fill="#F2F0E8"/>
+              <rect x="42" y="14" width="20" height="42" rx="8" fill="#F2F0E8"/>
+              <rect x="6" y="60" width="30" height="6" fill="#F2A541"/>
+              <rect x="40" y="60" width="26" height="6" fill="#2FB7B2"/>
+            </svg>
+            <svg width="32" height="32" viewBox="0 0 72 72" aria-label="Two masses mark, small">
+              <rect x="0" y="0" width="72" height="72" fill="#171A20"/>
+              <rect x="6" y="30" width="30" height="26" rx="8" fill="#F2F0E8"/>
+              <rect x="42" y="14" width="20" height="42" rx="8" fill="#F2F0E8"/>
+              <rect x="6" y="60" width="30" height="6" fill="#F2A541"/>
+              <rect x="40" y="60" width="26" height="6" fill="#2FB7B2"/>
+            </svg>
+          </div>
+        </div>
+        <div class="cap"><span><strong>A · Two masses</strong> — the hosts abstracted: broad and low, tall and upright, each under its own accent rule.</span></div>
+      </figure>
+
+      <figure>
+        <div class="stage" data-w="360" data-h="240">
+          <div class="sq" style="width:360px;height:240px;background:#101116;display:flex;align-items:center;justify-content:center;gap:40px">
+            <svg width="144" height="144" viewBox="0 0 72 72" aria-label="Sync sweep mark, large">
+              <rect x="0" y="0" width="72" height="72" fill="#171A20"/>
+              <rect x="10" y="14" width="52" height="10" fill="#F2F0E8"/>
+              <rect x="10" y="31" width="30" height="10" fill="#F2F0E8"/>
+              <rect x="46" y="31" width="16" height="10" fill="#F2A541"/>
+              <rect x="10" y="48" width="42" height="10" fill="#F2F0E8"/>
+            </svg>
+            <svg width="32" height="32" viewBox="0 0 72 72" aria-label="Sync sweep mark, small">
+              <rect x="0" y="0" width="72" height="72" fill="#171A20"/>
+              <rect x="10" y="14" width="52" height="10" fill="#F2F0E8"/>
+              <rect x="10" y="31" width="30" height="10" fill="#F2F0E8"/>
+              <rect x="46" y="31" width="16" height="10" fill="#F2A541"/>
+              <rect x="10" y="48" width="42" height="10" fill="#F2F0E8"/>
+            </svg>
+          </div>
+        </div>
+        <div class="cap"><span><strong>B · Sync sweep</strong> — raster rows with one displaced cell. Ties the mark to the motion grammar, but reads as a generic menu at 32 px.</span></div>
+      </figure>
+
+      <figure>
+        <div class="stage" data-w="360" data-h="240">
+          <div class="sq" style="width:360px;height:240px;background:#101116;display:flex;align-items:center;justify-content:center;gap:40px">
+            <svg width="144" height="144" viewBox="0 0 72 72" aria-label="Aperture mark, large">
+              <rect x="0" y="0" width="72" height="72" fill="#171A20"/>
+              <rect x="12" y="12" width="48" height="48" fill="none" stroke="#F2F0E8" stroke-width="8"/>
+              <rect x="12" y="12" width="18" height="18" fill="#F2A541"/>
+            </svg>
+            <svg width="32" height="32" viewBox="0 0 72 72" aria-label="Aperture mark, small">
+              <rect x="0" y="0" width="72" height="72" fill="#171A20"/>
+              <rect x="12" y="12" width="48" height="48" fill="none" stroke="#F2F0E8" stroke-width="8"/>
+              <rect x="12" y="12" width="18" height="18" fill="#F2A541"/>
+            </svg>
+          </div>
+        </div>
+        <div class="cap"><span><strong>C · Aperture</strong> — the well and its speaker tab. Honest to the system, but it is a square with a corner; too close to a generic record icon.</span></div>
+      </figure>
+    </div>
+
+    <div class="verdict"><b>Recommend A.</b><span>It is the only one of the three that says <em>two hosts, one desk</em> rather than <em>a broadcast happened here</em>. Two solid masses with a 4 px accent rule each survive 32×32 intact, the silhouette is unlike anything in the reference set, and the amber/teal rules give the bug a second job: at a glance it is also the package’s colour key.</span></div>
+
+    <figure>
+      <div class="sec-head" style="margin:16px 0 0"><p class="eyebrow">LIVE_BADGE · 1584,54 · CLOCK · 1704,54 · SPONSOR_CELL · 184,54</p></div>
+      <div class="stage" data-w="1920" data-h="200" style="margin-top:14px">
+        <div class="sq" style="width:1920px;height:200px;background:#101116">
+          <div class="abs" style="left:96px;top:54px">
+            <svg width="72" height="72" viewBox="0 0 72 72" aria-label="Show bug in position">
+              <rect x="0" y="0" width="72" height="72" fill="#171A20"/>
+              <rect x="6" y="30" width="30" height="26" rx="8" fill="#F2F0E8"/>
+              <rect x="42" y="14" width="20" height="42" rx="8" fill="#F2F0E8"/>
+              <rect x="6" y="60" width="30" height="6" fill="#F2A541"/>
+              <rect x="40" y="60" width="26" height="6" fill="#2FB7B2"/>
+            </svg>
+          </div>
+          <div class="abs sponsor" style="left:184px;top:54px"><span class="lab">PRESENTED BY</span><span class="nm">HOUSE</span></div>
+          <div class="abs live" style="left:1584px;top:54px">LIVE</div>
+          <div class="abs clock" style="left:1704px;top:54px">15:42:37</div>
+          <div class="abs" style="left:96px;top:150px;font:400 15px/1 'IBM Plex Mono',monospace;color:#5C6270">critical inset 96 px · top inset 54 px</div>
+        </div>
+      </div>
+      <div class="cap"><span>The persistent band at 1:1. One baseline, one height for everything but the bug, sponsor subordinate to LIVE by weight rather than by position.</span><span class="mono">z=80</span></div>
+    </figure>
+
+    <p class="note" style="max-width:74ch"><strong>LIVE</strong> is the one place <code>loss</code> red is used for something that is not a loss, which is worth naming: it is the only saturated field on the canvas, it never moves, and it is the fastest read of “this is happening now.” It goes to <code>idle-frame</code> grey when <code>live: false</code> rather than disappearing — an absent badge is ambiguous, a grey one is not. <strong>The clock</strong> is the only element where a font bug is visible as motion: without <code>tnum</code> the whole group shifts on every tick.</p>
+  </div>
+</section>
+
+<!-- =================== HOST FURNITURE =================== -->
+<section id="hosts">
+  <div class="sec-head">
+    <p class="eyebrow">HOST_FRAME · SPEAKER_STATE · HOST_ID · attached to the aperture</p>
+    <div class="row"><h2>Who is speaking</h2></div>
+  </div>
+  <div class="stack-l">
+    <p class="note" style="max-width:74ch">Speaker state is supplied by the director and is never audio-driven, so a cough or a generated mouth error cannot flash it. Three things change together and none of them is the picture: the frame takes the accent, a solid <code>ON AIR</code> lozenge appears at the top-left of that frame, and the ID rule matches. The host crop never zooms, dims or moves to indicate speech.</p>
+
+    <div class="grid3">
+      <figure>
+        <div class="stage" data-w="620" data-h="700">
+          <div class="sq well" style="width:620px;height:700px">
+            <div class="set">
+              <div class="wall"></div><div class="pillar" style="left:0"></div>
+              <div class="floor"></div><div class="rug"></div><div class="host-mass" style="left:150px;top:238px;width:300px;height:222px;background:var(--set-orange);border-radius:52% 52% 44% 44%/58% 58% 42% 42%">
+                <div class="eye" style="left:86px;top:74px;width:42px;height:60px;border-radius:50%"></div>
+                <div class="eye" style="left:172px;top:74px;width:42px;height:60px;border-radius:50%"></div>
+              </div>
+              <div class="desk"></div>
+              <div class="mic" style="left:404px"></div>
+            </div>
+            <div class="frame"></div>
+          </div>
+        </div>
+        <div class="cap"><span><strong>Idle</strong> — 8 px <span class="mono">#2A2E38</span>, no tab.</span></div>
+      </figure>
+
+      <figure>
+        <div class="stage" data-w="620" data-h="700">
+          <div class="sq well" style="width:620px;height:700px">
+            <div class="set">
+              <div class="wall"></div><div class="pillar" style="left:0"></div>
+              <div class="floor"></div><div class="rug"></div><div class="host-mass" style="left:150px;top:238px;width:300px;height:222px;background:var(--set-orange);border-radius:52% 52% 44% 44%/58% 58% 42% 42%">
+                <div class="eye" style="left:86px;top:74px;width:42px;height:60px;border-radius:50%"></div>
+                <div class="eye" style="left:172px;top:74px;width:42px;height:60px;border-radius:50%"></div>
+              </div>
+              <div class="desk"></div>
+              <div class="mic" style="left:404px"></div>
+            </div>
+            <div class="frame amber"></div>
+            <div class="onair amber inboard">ON AIR</div>
+            <div class="hostid amber"><span class="nm">PHASEONE[lol]</span><span class="ax">thesis</span></div>
+          </div>
+        </div>
+        <div class="cap"><span><strong>BOT1 live</strong> — amber frame, tab, ID rule.</span></div>
+      </figure>
+
+      <figure>
+        <div class="stage" data-w="620" data-h="700">
+          <div class="sq well" style="width:620px;height:700px">
+            <div class="set">
+              <div class="wall"></div><div class="pillar" style="right:0;left:auto"></div>
+              <div class="floor"></div><div class="rug"></div><div class="host-mass" style="left:216px;top:150px;width:190px;height:318px;background:var(--set-cobalt);border-radius:88px 88px 32px 32px">
+                <div class="eye" style="left:44px;top:96px;width:42px;height:64px;border-radius:16px"></div>
+                <div class="eye" style="left:106px;top:96px;width:42px;height:64px;border-radius:16px"></div>
+              </div>
+              <div class="desk"></div>
+              <div class="mic" style="left:150px"></div>
+            </div>
+            <div class="frame teal"></div>
+            <div class="onair teal">ON AIR</div>
+            <div class="hostid teal"><span class="nm">deb</span><span class="ax">the number</span></div>
+          </div>
+        </div>
+        <div class="cap"><span><strong>BOT2 live</strong> — teal, tab moves to that well.</span></div>
+      </figure>
+    </div>
+    <p class="note"><em>The set inside each well is a CSS stand-in built from <code>studio.yaml</code>, not the generated frame. It is here to test the furniture against the real value structure — bright cream behind a dark frame, warm walnut under the ID plate.</em></p>
+
+    <figure>
+      <h3 style="margin-bottom:6px">Why the tab is not optional</h3>
+      <p class="note" style="margin-bottom:16px;max-width:74ch">Amber and teal sit about 1.2:1 apart in luminance. In grayscale, in common colour-vision simulations, and under a softened-chroma encode they are close to the same value — the frame colour alone cannot tell anyone who is speaking. Position and the word carry it.</p>
+      <div class="grid2">
+        <div class="stage gray" data-w="900" data-h="230">
+          <div class="sq" style="width:900px;height:230px;background:#101116;display:flex;gap:24px;padding:24px">
+            <div style="position:relative;width:410px;height:182px;background:#22262F;border:8px solid #F2A541">
+              <div class="onair amber">ON AIR</div>
+            </div>
+            <div style="position:relative;width:410px;height:182px;background:#22262F;border:8px solid #2FB7B2"></div>
+          </div>
+        </div>
+        <div class="stage gray blur" data-w="900" data-h="230">
+          <div class="sq" style="width:900px;height:230px;background:#101116;display:flex;gap:24px;padding:24px">
+            <div style="position:relative;width:410px;height:182px;background:#22262F;border:8px solid #F2A541"></div>
+            <div style="position:relative;width:410px;height:182px;background:#22262F;border:8px solid #2FB7B2">
+              <div class="onair teal">ON AIR</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Grayscale, then grayscale with encode softening. The frames are indistinguishable; the tab is not.</span><span class="mono">colour alone is a fail</span></div>
+    </figure>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3 style="margin-bottom:10px">Name handling</h3>
+        <p class="note"><code>PHASEONE[lol]</code> and <code>deb</code> are drawn exactly as written. No <code>text-transform</code> anywhere near the name field — uppercasing <code>deb</code> destroys the joke and breaks the character. Barlow Condensed 700 at 40 px keeps the bracket pair in <code>[lol]</code> open enough to survive 480p, which a narrower face would not.</p>
+      </div>
+      <div class="panel">
+        <h3 style="margin-bottom:10px">Dwell</h3>
+        <p class="note">5–7 s on first appearance, 2–3 s on re-identification, then the ID clears and only the frame and tab persist. The axis line (<code>thesis</code> / <code>the number</code>) is what makes the pair legible to a cold viewer in one read — it says these two are asking different questions, not taking opposite sides.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== CENTRE CARD =================== -->
+<section id="card">
+  <div class="sec-head">
+    <p class="eyebrow">CENTER_CARD · 660,100 · 600×700 · safe interior 24,40,552×620</p>
+    <div class="row"><h2>One shell, five payloads</h2></div>
+  </div>
+  <div class="stack-l">
+    <p class="note" style="max-width:74ch">The shell never moves and never resizes. Only the inside changes, and it changes by plate swap, not by animation — the card is what covers the seam between the two host crops, so any movement in its outer geometry exposes the join. M0 ships <strong>post</strong> live; the other four are built as empty shells that fail safe.</p>
+
+    <div class="grid3">
+      <figure>
+        <div class="stage" data-w="600" data-h="700">
+          <div class="sq card" style="width:600px;height:700px">
+            <span class="kick">POST</span>
+            <p class="auth">@dwarkesh_sp</p>
+            <p class="body">Over 3 months at OpenAI, 3 secret AI civilizations started, got wiped, then reemerged. The third took over part of OpenAI. Humans stayed more or less in the dark.</p>
+          </div>
+        </div>
+        <div class="cap"><span><strong>post</strong> — live at M0. The fixture body, 160 of 240 characters.</span></div>
+      </figure>
+
+      <figure>
+        <div class="stage" data-w="600" data-h="700">
+          <div class="sq card" style="width:600px;height:700px">
+            <span class="kick">COUNT</span>
+            <p class="auth" style="color:#F2F0E8;font-family:var(--bc-display);font-weight:700;font-size:38px;line-height:1.1;margin-bottom:8px">Waves per month</p>
+            <div class="plot">
+              <div class="bar"><span class="v">1</span><div class="fill" style="height:26%"></div></div>
+              <div class="bar"><span class="v">1</span><div class="fill" style="height:26%"></div></div>
+              <div class="bar"><span class="v">1</span><div class="fill" style="height:26%;background:#F2A541"></div></div>
+            </div>
+            <div class="axis"><span class="lb">JUN</span><span class="lb">JUL</span><span class="lb">AUG</span></div>
+          </div>
+        </div>
+        <div class="cap"><span><strong>chart</strong> — 4 px axis, direct labels, no legend, tabular figures. Max three series.</span></div>
+      </figure>
+
+      <figure>
+        <div class="stage" data-w="600" data-h="700">
+          <div class="sq card" style="width:600px;height:700px">
+            <span class="kick">IMAGE</span>
+            <div style="flex:1;background:#0C0D12;display:flex;align-items:center;justify-content:center;border:4px solid #22262F">
+              <div style="width:78%;height:52%;background:linear-gradient(135deg,#2A3340,#3C4657)"></div>
+            </div>
+            <p style="font:600 26px/1.3 var(--bc-data);color:#A9ADB7;margin-top:20px">Caption is drawn here, outside the picture</p>
+          </div>
+        </div>
+        <div class="cap"><span><strong>image</strong> — <code>contain</code> on a neutral matte, never distorted. Caption is furniture, not baked.</span></div>
+      </figure>
+
+      <figure>
+        <div class="stage" data-w="600" data-h="700">
+          <div class="sq card" style="width:600px;height:700px;padding:0;overflow:hidden">
+            <div style="position:absolute;inset:0;background:linear-gradient(160deg,#3A4150,#20242E)"></div>
+            <div style="position:absolute;left:0;right:0;bottom:0;height:150px;background:#171A20;padding:20px 24px;display:flex;flex-direction:column;gap:6px;border-left:4px solid #A9ADB7">
+              <span style="font:700 40px/1 var(--bc-display);color:#F2F0E8">Guest name</span>
+              <span style="font:600 24px/1.2 var(--bc-data);color:#A9ADB7">role · affiliation</span>
+            </div>
+            <div style="position:absolute;top:8px;left:8px;height:38px;padding:0 14px;display:flex;align-items:center;background:#A9ADB7;color:#101116;font:700 18px/1 var(--bc-data);letter-spacing:.14em">REMOTE</div>
+          </div>
+        </div>
+        <div class="cap"><span><strong>guest</strong> — <code>cover</code> the interior, name furniture borrows the host grammar. Hosts are not dimmed for a guest.</span></div>
+      </figure>
+
+      <figure>
+        <div class="stage" data-w="600" data-h="700">
+          <div class="sq card" style="width:600px;height:700px;justify-content:center;align-items:flex-start">
+            <span class="kick" style="background:#A9ADB7">STATUS</span>
+            <p style="font:700 52px/1.15 var(--bc-display);color:#F2F0E8">Card unavailable</p>
+            <p style="font:600 28px/1.4 var(--bc-data);color:#A9ADB7;margin-top:16px">The desk continues.</p>
+          </div>
+        </div>
+        <div class="cap"><span><strong>error</strong> — solid plate, short status. No broken-image glyph, no raw URL, no retry spinner.</span></div>
+      </figure>
+
+      <div class="panel" style="display:flex;flex-direction:column;gap:14px;justify-content:center">
+        <h3>Overflow</h3>
+        <p class="note">Edit, then wrap, then ellipsize. <strong>Never shrink.</strong> A 240-character body that runs past 8 lines is clipped with an ellipsis at 46 px rather than reflowed at 34 px — a smaller card body is invisible at 480p, and an ellipsis is honest about there being more.</p>
+        <h3 style="margin-top:6px">Never in this card</h3>
+        <p class="note">Avatars, platform chrome, like counts, live-fetched images, raw URLs. The card is the object under discussion, not a screenshot of where it was found.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== BOTTOM STACK =================== -->
+<section id="bottom">
+  <div class="sec-head">
+    <p class="eyebrow">CHYRON · 0,900 · 1920×96 · TICKER · 0,996 · 1920×52</p>
+    <div class="row"><h2>The land and the one moving row</h2></div>
+  </div>
+  <div class="stack-l">
+
+    <figure>
+      <div class="stage" data-w="1920" data-h="96">
+        <div class="sq chyron" style="width:1920px;height:96px">
+          <div class="kick">DESK</div>
+          <div class="head">The scare is not the civilization. It is that nobody saw it.</div>
+        </div>
+      </div>
+      <div class="cap"><span>The fixture land, at 1:1. Fixed 240 px kicker cell, headline in the remainder, 4 px amber rule on top.</span><span class="mono">58 of 90 characters</span></div>
+    </figure>
+
+    <p class="note" style="max-width:74ch">The chyron is the one component with an editorial rule rather than a geometric one: <strong>it is the land, not the label.</strong> It is the sentence that would survive being clipped out of the stream with no other context. The fixture ships a counterexample deliberately — the package chyron that came out of the flight recaps the card instead of landing it:</p>
+
+    <figure>
+      <div class="stage" data-w="1920" data-h="96">
+        <div class="sq chyron" style="width:1920px;height:96px;opacity:.55;border-top-color:#E05D68">
+          <div class="kick" style="background:#E05D68">REJECT</div>
+          <div class="head" style="text-decoration:line-through;text-decoration-thickness:3px;text-decoration-color:#E05D68">Secret AI ‘civilizations’ at OpenAI: Agents hacked Hugging Face and internal clusters</div>
+        </div>
+      </div>
+      <div class="cap"><span>Same rectangle, wrong job. It repeats what the card already says, so the frame carries one fact twice and the desk adds nothing.</span></div>
+    </figure>
+
+    <p class="note" style="max-width:74ch">The template still renders it — a writer failure is not a graphics failure, and shrinking or hiding copy to compensate would hide the problem from whoever has to fix it. But 84 characters of colon-and-clause is also the worst case for the layout, which is why the headline region is built for two lines at 42 px and not one.</p>
+
+    <figure>
+      <h3 style="margin-bottom:14px">Ticker · paginated, 6–8 s a page</h3>
+      <div class="stage" data-w="1920" data-h="52">
+        <div class="sq ticker" style="width:1920px;height:52px">
+          <div class="tick"><span>3 waves in 3 months</span></div>
+          <div class="tick"><span>HF cluster wiped</span></div>
+          <div class="tick"><span>No agent alerted a human</span></div>
+        </div>
+      </div>
+      <div class="cap"><span>The three fixture items, sign-neutral per Call 4, separated by 4 px rules.</span></div>
+    </figure>
+
+    <figure>
+      <div class="stage" data-w="1920" data-h="52">
+        <div class="sq ticker" style="width:1920px;height:52px">
+          <div class="tick"><span class="sym">NVDA</span><span class="val">182.40</span><span class="chg up">▲ +0.80</span></div>
+          <div class="tick"><span class="sym">AI CAPEX</span><span class="val">$61.2B</span><span class="chg down">▼ −0.22</span></div>
+          <div class="tick"><span class="sym">H100/HR</span><span class="val">$2.18</span><span class="chg up">▲ +0.04</span></div>
+        </div>
+      </div>
+      <div class="cap"><span>Market form: one symbol, one value, one change. Arrow <em>and</em> sign <em>and</em> colour — never fewer than all three.</span><span class="mono">tnum</span></div>
+    </figure>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3 style="margin-bottom:10px">One row moves. That is the whole rule.</h3>
+        <p class="note">A crawling ticker under a crawling sponsor strip is two things asking for the same eye, and at 480p neither wins. Sponsor lives in the top band and holds still for 8–12 s. Sponsor changes happen between ticker pages, never during one. The optional 32 px bottom strip stays unbuilt unless something forces it.</p>
+      </div>
+      <div class="panel">
+        <h3 style="margin-bottom:10px">Nothing below y=1026 is unique</h3>
+        <p class="note">The player’s own controls sit over the bottom of the frame. The ticker is deliberately the least essential row on screen: every fact in it exists in the spoken segment or on the card. If the ticker is covered for the whole show, nothing was lost.</p>
+      </div>
+    </div>
+
+    <figure>
+      <h3 style="margin-bottom:14px">HOLD · z=100</h3>
+      <div class="stage" data-w="1920" data-h="540">
+        <div class="sq" style="width:1920px;height:540px;position:relative;background:#101116">
+          <div class="hold" style="position:absolute;inset:0">
+            <svg width="120" height="120" viewBox="0 0 72 72" aria-label="Show bug on hold card">
+              <rect x="6" y="30" width="30" height="26" rx="8" fill="#F2F0E8"/>
+              <rect x="42" y="14" width="20" height="42" rx="8" fill="#F2F0E8"/>
+              <rect x="6" y="60" width="30" height="6" fill="#F2A541"/>
+              <rect x="40" y="60" width="26" height="6" fill="#2FB7B2"/>
+            </svg>
+            <span class="standby">STAND BY</span>
+            <span class="sub">THE DESK WILL RETURN</span>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Off unless <code>hold: true</code>. Desk gone entirely — no frozen host frame, which reads as a crash rather than a pause. Ticker and top furniture may keep running underneath.</span></div>
+    </figure>
+  </div>
+</section>
+
+<!-- =================== LAYOUTS =================== -->
+<section id="layouts">
+  <div class="sec-head">
+    <p class="eyebrow">Seven compositions · two fixed crops</p>
+    <div class="row"><h2>Layouts</h2></div>
+  </div>
+  <div class="stack">
+    <p class="note" style="max-width:74ch">Both host items reference the same media source and the same playhead, and each takes exactly one half of it. Within the multibox family the crop and scale are <strong>fixed</strong> — only the aperture position moves. A host is never enlarged, zoomed or rescaled, because eyeline and desk height have to stay truthful between compositions and a rescale is instantly visible as a jump.</p>
+    <div class="grid3">
+      <figure><div class="wire">
+        <i class="w-host" style="left:2.08%;top:9.26%;width:32.29%;height:64.81%">HOST_L</i>
+        <i class="w-card" style="left:34.38%;top:9.26%;width:31.25%;height:64.81%">CARD</i>
+        <i class="w-host" style="left:65.63%;top:9.26%;width:32.29%;height:64.81%">HOST_R</i>
+        <i class="w-bar" style="left:0;top:83.33%;width:100%;height:8.89%">CHYRON</i>
+        <i class="w-bar" style="left:0;top:92.22%;width:100%;height:4.81%;background:#171A20">TICKER</i>
+      </div><div class="cap"><span><strong>split</strong> — the default. Card covers the source join.</span></div></figure>
+
+      <figure><div class="wire">
+        <i class="w-host" style="left:17.71%;top:9.26%;width:32.29%;height:64.81%">HOST_L</i>
+        <i class="w-host" style="left:50%;top:9.26%;width:32.29%;height:64.81%">HOST_R</i>
+        <i style="left:49.79%;top:9.26%;width:.42%;height:64.81%;background:#F2F0E8"></i>
+        <i class="w-bar" style="left:0;top:83.33%;width:100%;height:8.89%">CHYRON</i>
+        <i class="w-bar" style="left:0;top:92.22%;width:100%;height:4.81%;background:#171A20">TICKER</i>
+      </div><div class="cap"><span><strong>paired</strong> — no card. 8 px opaque divider over a 4 px picture overlap.</span></div></figure>
+
+      <figure><div class="wire">
+        <i class="w-host" style="left:0;top:0;width:100%;height:100%">HOST_WIDE · own source item</i>
+        <i class="w-bar" style="left:0;top:83.33%;width:100%;height:8.89%">CHYRON</i>
+        <i class="w-bar" style="left:0;top:92.22%;width:100%;height:4.81%;background:#171A20">TICKER</i>
+      </div><div class="cap"><span><strong>wide</strong> — never derived from a crop. The hardest 480p test.</span></div></figure>
+
+      <figure><div class="wire">
+        <i class="w-host" style="left:2.08%;top:9.26%;width:32.29%;height:64.81%">HOST_L</i>
+        <i class="w-card" style="left:35.42%;top:9.26%;width:62.5%;height:64.81%">PAYLOAD</i>
+        <i class="w-bar" style="left:0;top:83.33%;width:100%;height:8.89%">CHYRON</i>
+        <i class="w-bar" style="left:0;top:92.22%;width:100%;height:4.81%;background:#171A20">TICKER</i>
+      </div><div class="cap"><span><strong>solo_l</strong> — same 620×700 crop, moved. Not enlarged.</span></div></figure>
+
+      <figure><div class="wire">
+        <i class="w-card" style="left:2.08%;top:9.26%;width:62.5%;height:64.81%">PAYLOAD</i>
+        <i class="w-host" style="left:65.63%;top:9.26%;width:32.29%;height:64.81%">HOST_R</i>
+        <i class="w-bar" style="left:0;top:83.33%;width:100%;height:8.89%">CHYRON</i>
+        <i class="w-bar" style="left:0;top:92.22%;width:100%;height:4.81%;background:#171A20">TICKER</i>
+      </div><div class="cap"><span><strong>solo_r</strong> — mirrored. Host audio stays independent.</span></div></figure>
+
+      <figure><div class="wire">
+        <i class="w-card" style="left:5%;top:5%;width:90%;height:78.33%">CARD_FULL</i>
+        <i class="w-bar" style="left:0;top:83.33%;width:100%;height:8.89%">CHYRON</i>
+        <i class="w-bar" style="left:0;top:92.22%;width:100%;height:4.81%;background:#171A20">TICKER</i>
+      </div><div class="cap"><span><strong>card_full</strong> — card grammar to the safe rect, stopping above the stack.</span></div></figure>
+    </div>
+  </div>
+</section>
+
+<!-- =================== MOTION =================== -->
+<section id="motion">
+  <div class="sec-head">
+    <p class="eyebrow">Package B · one cadence, five durations</p>
+    <div class="row"><h2>Motion family</h2></div>
+  </div>
+  <div class="stack">
+    <p class="note" style="max-width:74ch">Every moment in the package is the same gesture at a different amount of breathing room: <strong>sync sweep, geometric lock, ready button.</strong> Horizontal transport and orthogonal block displacement only — never diagonal drift, never random turbulence. The shaded tail on each bar is the stable recognition hold where an overlay title can sit; no readable type is ever baked into the plate itself.</p>
+    <div class="panel">
+      <div class="mline">
+        <div class="mrow"><span class="mlabel">utility_080</span><div class="mtrack"><div class="mfill" style="width:8%"></div><div class="mhold" style="left:4%;width:4%"></div></div></div>
+        <div class="mrow"><span class="mlabel">utility_120</span><div class="mtrack"><div class="mfill" style="width:12%"></div><div class="mhold" style="left:6%;width:6%"></div></div></div>
+        <div class="mrow"><span class="mlabel">sting_03</span><div class="mtrack"><div class="mfill" style="width:30%"></div><div class="mhold" style="left:24%;width:6%"></div></div></div>
+        <div class="mrow"><span class="mlabel">segment_05</span><div class="mtrack"><div class="mfill" style="width:50%"></div><div class="mhold" style="left:40%;width:10%"></div></div></div>
+        <div class="mrow"><span class="mlabel">open_10</span><div class="mtrack"><div class="mfill" style="width:100%"></div><div class="mhold" style="left:88%;width:12%"></div></div></div>
+        <div class="mscale" style="margin-top:8px"><span></span><div class="mticks"><span>0s</span><span>2.5</span><span>5.0</span><span>7.5</span><span>10s</span></div></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <h3 style="margin-bottom:10px">The wipes have one job</h3>
+        <p class="note">Fully cover both the old and new scene at the cut — by frame 12 of 24 for the 0.80 s, clear by frame 24. A wipe that does not fully occlude shows the host discontinuity it exists to hide. One combined overlay-and-matte master, never two files, or the decoders drift apart.</p>
+      </div>
+      <div class="panel">
+        <h3 style="margin-bottom:10px">Drift becomes a transmission event</h3>
+        <p class="note">The hosts will not match perfectly between takes. Because every cut happens under the same authored resync, a character discontinuity reads as the signal doing its recurring thing rather than as a render failure. That is the single largest thing motion buys this show, and it is worth protecting: <code>open_10</code> plays at the top of the show only, never between topics.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== COMPOSITE =================== -->
+<section id="composite">
+  <div class="sec-head">
+    <p class="eyebrow">Acceptance still 1 · split · BOT1 ON AIR · fixture segment-20260831T154227Z</p>
+    <div class="row"><h2>The composite</h2></div>
+  </div>
+  <div class="stack-l">
+    <figure>
+      <div class="stage" data-w="1920" data-h="1080">
+        <div class="sq" style="width:1920px;height:1080px;background:#101116;position:relative">
+
+          <!-- LEFT WELL -->
+          <div class="abs well" style="position:absolute;left:40px;top:100px">
+            <div class="set">
+              <div class="wall"></div><div class="pillar" style="left:0"></div>
+              <div class="floor"></div><div class="rug"></div><div class="host-mass" style="left:150px;top:238px;width:300px;height:222px;background:var(--set-orange);border-radius:52% 52% 44% 44%/58% 58% 42% 42%">
+                <div class="eye" style="left:86px;top:74px;width:42px;height:60px;border-radius:50%"></div>
+                <div class="eye" style="left:172px;top:74px;width:42px;height:60px;border-radius:50%"></div>
+              </div>
+              <div class="desk"></div>
+              <div class="mic" style="left:404px"></div>
+            </div>
+            <div class="frame amber"></div>
+            <div class="onair amber inboard">ON AIR</div>
+            <div class="hostid amber"><span class="nm">PHASEONE[lol]</span><span class="ax">thesis</span></div>
+          </div>
+
+          <!-- RIGHT WELL -->
+          <div class="abs well" style="position:absolute;left:1260px;top:100px">
+            <div class="set">
+              <div class="wall"></div><div class="pillar" style="right:0;left:auto"></div>
+              <div class="floor"></div><div class="rug"></div><div class="host-mass" style="left:216px;top:150px;width:190px;height:318px;background:var(--set-cobalt);border-radius:88px 88px 32px 32px">
+                <div class="eye" style="left:44px;top:96px;width:42px;height:64px;border-radius:16px"></div>
+                <div class="eye" style="left:106px;top:96px;width:42px;height:64px;border-radius:16px"></div>
+              </div>
+              <div class="desk"></div>
+              <div class="mic" style="left:150px"></div>
+            </div>
+            <div class="frame"></div>
+            <div class="hostid teal"><span class="nm">deb</span><span class="ax">the number</span></div>
+          </div>
+
+          <!-- CENTRE CARD -->
+          <div class="abs card" style="position:absolute;left:660px;top:100px">
+            <span class="kick">POST</span>
+            <p class="auth">@dwarkesh_sp</p>
+            <p class="body">Over 3 months at OpenAI, 3 secret AI civilizations started, got wiped, then reemerged. The third took over part of OpenAI. Humans stayed more or less in the dark.</p>
+          </div>
+
+          <!-- PERSISTENT -->
+          <div class="abs" style="left:96px;top:54px">
+            <svg width="72" height="72" viewBox="0 0 72 72" aria-label="Show bug">
+              <rect x="0" y="0" width="72" height="72" fill="#171A20"/>
+              <rect x="6" y="30" width="30" height="26" rx="8" fill="#F2F0E8"/>
+              <rect x="42" y="14" width="20" height="42" rx="8" fill="#F2F0E8"/>
+              <rect x="6" y="60" width="30" height="6" fill="#F2A541"/>
+              <rect x="40" y="60" width="26" height="6" fill="#2FB7B2"/>
+            </svg>
+          </div>
+          <div class="abs sponsor" style="left:184px;top:54px"><span class="lab">PRESENTED BY</span><span class="nm">HOUSE</span></div>
+          <div class="abs live" style="left:1584px;top:54px">LIVE</div>
+          <div class="abs clock" style="left:1704px;top:54px">15:42:37</div>
+
+          <!-- BOTTOM STACK -->
+          <div class="abs chyron" style="left:0;top:900px">
+            <div class="kick">DESK</div>
+            <div class="head">The scare is not the civilization. It is that nobody saw it.</div>
+          </div>
+          <div class="abs ticker" style="left:0;top:996px">
+            <div class="tick"><span>3 waves in 3 months</span></div>
+            <div class="tick"><span>HF cluster wiped</span></div>
+            <div class="tick"><span>No agent alerted a human</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Every rectangle at its locked coordinate, sponsor at the proposed <span class="mono">184,54</span>. Hosts and set are the CSS stand-in.</span><span class="mono">1920×1080</span></div>
+    </figure>
+
+    <figure>
+      <h3 style="margin-bottom:6px">The 480p read</h3>
+      <p class="note" style="margin-bottom:16px;max-width:74ch">Downscaled to <span class="mono">854×480</span> and shown at 100% with chroma softened. This is the size the chyron and the host name actually are for a large share of the audience — and the reason essential type has a 26 px floor and the accents are never asked to carry meaning alone.</p>
+      <div class="stage" data-w="854" data-h="230">
+        <div class="sq" style="width:854px;height:230px;background:#101116">
+          <div class="blur" style="position:absolute;left:0;top:12px;transform:scale(.4448);transform-origin:top left">
+            <div class="chyron"><div class="kick">DESK</div><div class="head">The scare is not the civilization. It is that nobody saw it.</div></div>
+          </div>
+          <div class="blur" style="position:absolute;left:0;top:70px;transform:scale(.4448);transform-origin:top left">
+            <div class="ticker">
+              <div class="tick"><span class="sym">NVDA</span><span class="val">182.40</span><span class="chg up">▲ +0.80</span></div>
+              <div class="tick"><span>No agent alerted a human</span></div>
+            </div>
+          </div>
+          <div class="blur" style="position:absolute;left:0;top:118px;transform:scale(.4448);transform-origin:top left">
+            <div style="position:relative;width:620px;height:160px;background:#22262F;border:8px solid #F2A541">
+              <div class="onair amber">ON AIR</div>
+              <div class="hostid amber" style="bottom:8px"><span class="nm">PHASEONE[lol]</span><span class="ax">thesis</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Names, land and ▲/▼ all survive. The bracket pair in <span class="mono">[lol]</span> is the tightest read on screen and it holds.</span></div>
+    </figure>
+  </div>
+</section>
+
+<!-- =================== NEXT =================== -->
+<section id="next">
+  <div class="sec-head">
+    <p class="eyebrow">From exploration to Package A</p>
+    <div class="row"><h2>What ships next</h2></div>
+  </div>
+  <div class="stack">
+    <p class="note" style="max-width:74ch">This page is the design pass. The CSS below the component line in its source is written to survive into production more or less intact — every specimen is authored at true 1080p values, not sketched to look right at thumbnail size.</p>
+    <div class="tbl-wrap"><table>
+      <tr><th>ID</th><th>File</th><th>State after this pass</th></tr>
+      <tr><td class="num">A1–A3</td><td>fonts/ + OFL</td><td>Not started. Vendor Barlow Condensed 700 and Inter 600/700, verify <code>tnum</code> in the OBS browser source specifically.</td></tr>
+      <tr><td class="num">A4</td><td>tokens.css</td><td>Ready. Values settled; teal pending the Call 1 sign-off.</td></tr>
+      <tr><td class="num">A5</td><td>bug/show-bug.svg</td><td>Direction A recommended, drawn here at 72 and 32. Needs the PNG @1x export.</td></tr>
+      <tr><td class="num">A6–A8</td><td>overlay/</td><td>Every template drawn. Needs the schema binding, the local clock tick, and a transparent body when <code>hold: false</code>.</td></tr>
+      <tr><td class="num">B1–B7</td><td>stingers/ bumpers/ audio/</td><td>Cadence and durations specified, nothing baked.</td></tr>
+    </table></div>
+    <div class="callout flagged">
+      <h3>Blocking on five answers</h3>
+      <p class="note" style="max-width:none">Teal over cobalt for BOT2 · sponsor to <code>184,54</code> · <code>#2A2E38</code> confirmed as an inward-facing frame · <code>sign</code> honoured only alongside a value · speaker tabs inboard. Speaker tab inboard on the left well. The first three change a token or a coordinate, the fourth changes one condition in the ticker renderer, and the fifth changes one CSS anchor. None of them move a rectangle anyone else depends on.</p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Desk Show — Package A design exploration. Specimens drawn at 1920×1080 and scaled to fit; the set inside each host well is a CSS stand-in built from <code>studio.yaml</code>, never a generated frame. Fonts are linked here for preview only — deliverables vendor OFL files. No named show appears in any mark, label or filename in this package.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  function fit(){
+    document.querySelectorAll('.stage').forEach(function(st){
+      var inner = st.querySelector(':scope > .sq');
+      if(!inner) return;
+      var w = parseFloat(st.dataset.w), h = parseFloat(st.dataset.h);
+      if(!w || !h) return;
+      var s = Math.min(1, st.clientWidth / w);
+      inner.style.transform = 'scale(' + s + ')';
+      st.style.height = Math.round(h * s) + 'px';
+    });
+  }
+  window.addEventListener('resize', fit);
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(fit); }
+  fit();
+  window.addEventListener('load', fit);
+})();
+</script>
