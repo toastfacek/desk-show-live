@@ -1,0 +1,12 @@
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+secrets.env
+config.local.yaml
+inputs/*.local.json
+inputs/*.lock.json
+inputs/dwarkesh-agent-civilizations.txt
+out/
