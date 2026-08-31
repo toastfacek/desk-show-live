@@ -12,6 +12,7 @@ from obs_harness.director import decide
 from runtime_flight.baseline import BaselineContext
 from runtime_flight.models import SegmentPackage, Thought
 from runtime_flight.performer_fal import ReadyTake, TakeRequest
+from runtime_flight.topic_map import discussion_phase, resolve_topic_map
 from runtime_flight.prompt import assemble_prompt
 from runtime_flight.spend import SpendMeter
 from runtime_flight.writer_pipeline import WriterPipeline, WriterPipelineStopped
@@ -149,7 +150,16 @@ class LiveHarness:
         return remaining_submit_slots(self.target_duration_s, self.elapsed_s)
 
     def current_writer_phase(self) -> Literal["open", "develop", "close"]:
-        return writer_phase(self.remaining_slots(), self._opener_done)
+        topic_map = resolve_topic_map(self.package)
+        discussion = discussion_phase(self.pipeline.coverage, topic_map)
+        clock = writer_phase(self.remaining_slots(), self._opener_done)
+        if discussion == "close" or clock == "close":
+            return "close"
+        if discussion == "open" and not self._opener_done:
+            return "open"
+        if not self._opener_done and clock == "open":
+            return "open"
+        return "develop"
 
     def snapshot(self) -> dict:
         thought = self.pipeline.peek_ready()
@@ -402,6 +412,8 @@ class LiveHarness:
         if self.pipeline.ready.qsize() >= 2:
             return
         if self.remaining_slots() == 0:
+            return
+        if self.pipeline.coverage.map_complete:
             return
         try:
             await self.pipeline.fill(

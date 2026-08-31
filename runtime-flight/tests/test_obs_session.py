@@ -93,6 +93,30 @@ def test_setup_obs_places_watchdog_last_in_every_scene():
         assert client.scene_items[scene][-1].source_name == "WATCHDOG"
 
 
+def test_setup_obs_refreshes_existing_watchdog_url():
+    client = complete_obs_client()
+    setup_obs(client, watchdog_url="http://127.0.0.1:9876/")
+
+    updates = [
+        call
+        for call in client.calls
+        if call[0] == "set_input_settings" and call[1] == "WATCHDOG"
+    ]
+    assert updates == [
+        (
+            "set_input_settings",
+            "WATCHDOG",
+            {
+                "url": "http://127.0.0.1:9876/",
+                "width": 1920,
+                "height": 1080,
+                "reroute_audio": False,
+            },
+            True,
+        )
+    ]
+
+
 def test_validate_contract_rejects_incompatible_existing_input_kind():
     client = complete_obs_client()
     client.inputs["HEADLINE"] = "browser_source"

@@ -17,7 +17,7 @@ HERO_WIDTH = 1344
 HERO_HEIGHT = 768
 BOT1_NAME = "PHASEONE[lol]"
 BOT2_NAME = "deb"
-SCENE_NAME = "Converted-office desk"
+SCENE_NAME = "Light Media Club"
 DEFAULT_HERO = Path(__file__).resolve().parents[1] / "fixtures" / "hero_wide.png"
 
 DISABLED_TTS = {
@@ -39,14 +39,8 @@ BOT1_MANIFEST = {
     "schema_version": 2,
     "visual_invariants": {
         "locked_traits": ["silhouette", "eye_design", "proportions"],
-        "silhouette": (
-            "Low wide rounded-box head, broad sloping shoulders, "
-            "bottom-heavy charcoal torso."
-        ),
-        "eye_design": (
-            "Two large round amber lenses on a near-black face panel "
-            "with thick brow plates; mouthless."
-        ),
+        "silhouette": "Broad rounded orange software sprite.",
+        "eye_design": "Two solid cream ovals without pupils.",
         "proportions": "Low and wide; width about 1.35 times height.",
     },
     "persona": "Calm, dry, unhurried technical anchor.",
@@ -54,7 +48,10 @@ BOT1_MANIFEST = {
         "Make one clear claim per thought.",
         "Stay dry and unhurried.",
     ],
-    "voice_direction": "Low, measured, dry, warm, with restrained energy.",
+    "voice_direction": (
+        "Low chest voice, slow and even, dry, almost bored, "
+        "no lift at the end of sentences."
+    ),
     "tts": DISABLED_TTS,
 }
 
@@ -62,39 +59,38 @@ BOT2_MANIFEST = {
     "schema_version": 2,
     "visual_invariants": {
         "locked_traits": ["silhouette", "eye_design", "proportions"],
-        "silhouette": (
-            "Tall narrow clipped-capsule head, narrow square shoulders, "
-            "slim off-white torso."
-        ),
-        "eye_design": (
-            "Broad near-black visor with two oversized solid eye blocks "
-            "and cool cyan accents; mouthless."
-        ),
+        "silhouette": "Tall cobalt software sprite.",
+        "eye_design": "Two solid cream rounded rectangles without pupils.",
         "proportions": "Tall and narrow; height greater than width.",
     },
-    "persona": "Restless, skeptical, needling co-host.",
+    "persona": "Curious, playful co-host who still wants the number.",
     "writer_rules": [
-        "Needle the claim with one concrete doubt.",
-        "Stay restless and skeptical.",
+        "Ask what moved, by how much, for whom.",
+        "Stay curious; do not let a shrug pass.",
     ],
-    "voice_direction": "Bright, clipped, skeptical, needling, with restless lift.",
+    "voice_direction": (
+        "Higher thinner voice, quick and clipped, bright, slightly nasal, "
+        "restless upward energy."
+    ),
     "tts": DISABLED_TTS,
 }
 
 SCENE_MANIFEST = {
     "schema_version": 2,
     "set": (
-        "A small television studio improvised inside a converted startup office. "
-        "A long matte pale-grey desk runs across the lower third. Two chunky boom "
-        "microphones enter from the outer edges. Outer thirds hold tube monitors, "
-        "cable loops, plywood returns and dark curtains. The centre is an "
-        "uninterrupted matte charcoal wall."
+        "A clean light-mode live media clubhouse. A substantial dark walnut "
+        "pill-shaped desk sits on a cream oval rug over light wood floor, "
+        "vertical ribbing on the desk face and a warm recessed glow at centre. "
+        "Two short black desk-stand microphones sit in front of the hosts. "
+        "The centre wall is a quiet cream panel between forest-green pillars. "
+        "Outer thirds hold recessed white shelves with plants, lamps and "
+        "abstract colour-block art, plus one large colourful puzzle cube on "
+        "the left floor and one oversized dark chess knight on the right. "
+        "A black lighting grid with square soft panels hangs above. No "
+        "papers, stickers, logos or readable displays."
     ),
-    "palette": ["charcoal", "off-white", "amber", "cyan"],
-    "lighting": (
-        "Warm amber key camera-left, cool cyan key camera-right, "
-        "soft neutral rim on both hosts."
-    ),
+    "palette": ["warm white", "forest green", "cobalt", "signal orange"],
+    "lighting": "Bright soft broadcast light.",
     "frame": {"w": HERO_WIDTH, "h": HERO_HEIGHT, "fps": 24},
     "reanchor_every": 5,
 }
@@ -147,7 +143,7 @@ def lock_canonical_hosts(
     approved = candidates.approve(
         candidate.id,
         canonical=True,
-        review_note="Canonical PHASEONE[lol] / deb desk still.",
+        review_note="Canonical Light Media Club still from the archived visual board.",
     )
     return baselines.lock_run(approved.cast_key)
 

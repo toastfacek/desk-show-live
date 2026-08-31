@@ -51,9 +51,42 @@ def test_resolve_role_kinds_uses_exact_unversioned_candidates():
     }
 
 
-def test_setup_obs_queries_unversioned_input_kind_list():
+def test_resolve_role_kinds_prefers_versioned_create_kind():
+    kinds = resolve_role_kinds(
+        {
+            "ffmpeg_source",
+            "text_ft2_source",
+            "text_ft2_source_v2",
+            "color_source",
+            "color_source_v3",
+            "image_source",
+            "browser_source",
+        }
+    )
+    assert kinds["text"] == "text_ft2_source_v2"
+    assert kinds["color"] == "color_source_v3"
+    assert kinds["media"] == "ffmpeg_source"
+
+
+def test_resolve_role_kinds_prefers_newest_versioned_create_kind():
+    kinds = resolve_role_kinds(
+        {
+            "ffmpeg_source",
+            "text_ft2_source_v2",
+            "text_ft2_source_v3",
+            "color_source_v2",
+            "image_source",
+            "browser_source",
+        }
+    )
+    assert kinds["text"] == "text_ft2_source_v3"
+    assert kinds["color"] == "color_source_v2"
+
+
+def test_setup_obs_queries_versioned_and_unversioned_input_kind_lists():
     client = FakeObsClient()
     setup_obs(client)
+    assert ("get_input_kind_list", False) in client.calls
     assert ("get_input_kind_list", True) in client.calls
 
 

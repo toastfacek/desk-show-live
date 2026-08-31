@@ -15,6 +15,7 @@ from runtime_flight.config import (
     load_config,
     redacted_summary,
     validate_config,
+    validate_obs_config,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -142,6 +143,24 @@ def test_validate_config_segment_skips_obs_password(
     validate_config(loaded, require_obs=False)
     with pytest.raises(ConfigError, match="OBS_WEBSOCKET_PASSWORD"):
         validate_config(loaded)
+
+
+def test_validate_obs_config_does_not_require_flight_credentials(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_config(tmp_path)
+    for name in (
+        "RUNTIME_BASELINE_ID",
+        "TEXT_BASE_URL",
+        "TEXT_API_KEY",
+        "TEXT_MODEL",
+        "RUNTIME_SPEND_CAP_USD",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("OBS_WEBSOCKET_PASSWORD", SECRET_OBS_PASSWORD)
+
+    validate_obs_config(load_config(config_path))
 
 
 @pytest.mark.parametrize(

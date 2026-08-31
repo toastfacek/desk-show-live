@@ -131,6 +131,23 @@ def load_config(path: Path) -> RuntimeConfig:
     )
 
 
+def validate_obs_config(config: RuntimeConfig) -> None:
+    """Validate only the settings needed to connect to and prepare OBS."""
+    errors: list[str] = []
+
+    if not config.obs_password:
+        errors.append(f"missing required environment variable: {config.obs_password_env}")
+    if not 1 <= config.obs_port <= 65_535:
+        errors.append("obs.port must be between 1 and 65535")
+    if config.stream_enabled:
+        errors.append("stream.enabled must be false")
+    if not config.obs_record:
+        errors.append("obs.record must be true")
+
+    if errors:
+        raise ConfigError(_redact_known_secrets("; ".join(errors), config._secret_values()))
+
+
 def validate_config(config: RuntimeConfig, *, require_obs: bool = True) -> None:
     errors: list[str] = []
 

@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 from typing import Literal
 
-from runtime_flight.models import SegmentPackage, Thought
+from runtime_flight.models import CoverageState, HostVoice, SegmentPackage, Thought
+from runtime_flight.topic_map import advance_coverage, resolve_topic_map
 from runtime_flight.writer import Writer, WriterError
 
 SEGMENT_PHASES = frozenset({"open", "develop", "close"})
@@ -17,8 +18,13 @@ class WriterPipelineStopped(Exception):
 
 
 class WriterPipeline:
-    def __init__(self, writer: Writer) -> None:
+    def __init__(
+        self,
+        writer: Writer,
+        voices: tuple[HostVoice, ...] | None = None,
+    ) -> None:
         self._writer = writer
+        self._voices = voices
         self._ready: asyncio.Queue[Thought] = asyncio.Queue(maxsize=2)
         self._planned: list[Thought] = []
         self._aired: list[Thought] = []
@@ -28,6 +34,8 @@ class WriterPipeline:
         self._next_speaker: Literal["BOT1", "BOT2"] = "BOT1"
         self._thought_open = False
         self._opener_speaker: Literal["BOT1", "BOT2"] = "BOT1"
+        self._coverage = CoverageState.initial()
+        self._pending: list[Thought] = []
 
     @property
     def ready(self) -> asyncio.Queue[Thought]:
@@ -44,6 +52,10 @@ class WriterPipeline:
     @property
     def stopped(self) -> bool:
         return self._stopped
+
+    @property
+    def coverage(self) -> CoverageState:
+        return self._coverage
 
     async def fill(
         self,
@@ -92,6 +104,7 @@ class WriterPipeline:
         async with self._lock:
             self._aired = [item for item in self._aired if item != thought]
             self._planned = list(self._aired)
+            self._pending = []
             self._drain_ready()
             self._restore_speaker_from_aired()
             await self._fill_unlocked(package, segment_phase, REISSUE_SHORTER_BLANDER)
@@ -102,29 +115,52 @@ class WriterPipeline:
         segment_phase: Literal["open", "develop", "close"],
         reissue: Literal["shorter, blander"] | None,
     ) -> None:
+        self._sync_coverage(package)
         while self._ready.qsize() < 2:
             if self._stopped:
                 raise WriterPipelineStopped("three consecutive write failures")
-            thought = await self._write_one(package, segment_phase, reissue)
+            if self._coverage.map_complete:
+                break
+            thought = await self._next_thought(package, segment_phase, reissue)
             self._planned.append(thought)
             self._advance_speaker(thought)
+            self._sync_coverage(package)
             self._ready.put_nowait(thought)
 
-    async def _write_one(
+    async def _next_thought(
         self,
         package: SegmentPackage,
         segment_phase: Literal["open", "develop", "close"],
         reissue: Literal["shorter, blander"] | None,
     ) -> Thought:
+        if self._pending:
+            return self._pending.pop(0)
         try:
-            thought = await self._writer.write(
-                package,
-                tuple(self._planned),
-                self._next_speaker,
-                self._thought_open,
-                segment_phase,
-                reissue=reissue,
-            )
+            write_point = getattr(self._writer, "write_point", None)
+            if write_point is not None:
+                thoughts = await write_point(
+                    package,
+                    tuple(self._planned),
+                    self._next_speaker,
+                    self._thought_open,
+                    segment_phase,
+                    reissue=reissue,
+                    voices=self._voices,
+                    coverage=self._coverage,
+                )
+            else:
+                thoughts = (
+                    await self._writer.write(
+                        package,
+                        tuple(self._planned),
+                        self._next_speaker,
+                        self._thought_open,
+                        segment_phase,
+                        reissue=reissue,
+                        voices=self._voices,
+                        coverage=self._coverage,
+                    ),
+                )
         except asyncio.CancelledError:
             raise
         except Exception as error:
@@ -133,8 +169,12 @@ class WriterPipeline:
                 self._stopped = True
                 raise WriterPipelineStopped("three consecutive write failures") from error
             raise
+        if not thoughts:
+            raise WriterError("writer returned no chunks")
         self._consecutive_failures = 0
-        return thought
+        first, *rest = thoughts
+        self._pending.extend(rest)
+        return first
 
     def _advance_speaker(self, thought: Thought) -> None:
         if thought.thought_open:
@@ -163,3 +203,10 @@ class WriterPipeline:
                 self._ready.get_nowait()
             except asyncio.QueueEmpty:
                 break
+
+    def _sync_coverage(self, package: SegmentPackage) -> None:
+        topic_map = resolve_topic_map(package)
+        state = CoverageState.initial()
+        for thought in self._planned:
+            state = advance_coverage(state, thought, topic_map)
+        self._coverage = state

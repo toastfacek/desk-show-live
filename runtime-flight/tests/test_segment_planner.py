@@ -12,7 +12,13 @@ from typing import Any
 import pytest
 
 from runtime_flight.baseline import BaselineContext, CharacterPackTruth, ScenePackTruth
-from runtime_flight.models import Fact, SegmentPackage, Tweet, TweetCard
+from runtime_flight.models import (
+    MAX_FRAMING_CHARS,
+    Fact,
+    SegmentPackage,
+    Tweet,
+    TweetCard,
+)
 from runtime_flight.segment_planner import SegmentPlanner, SegmentPlannerError
 from runtime_flight.source import (
     EXPECTED_AUTHOR,
@@ -185,7 +191,7 @@ def test_planner_sends_one_tweet_and_one_linked_source_as_untrusted_data():
     assert messages[0]["role"] == "system"
     assert messages[1]["role"] == "user"
     user = json.loads(messages[1]["content"])
-    assert set(user) == {"untrusted_data"}
+    assert set(user) == {"untrusted_data", "hosts", "time_budget_s"}
     untrusted = user["untrusted_data"]
     assert set(untrusted) == {"tweet", "linked_source"}
     assert untrusted["tweet"] == {
@@ -208,6 +214,14 @@ def test_planner_sends_one_tweet_and_one_linked_source_as_untrusted_data():
     assert isinstance(package, SegmentPackage)
     assert package.item_id == EXPECTED_TWEET_ID
     assert package.facts[0].source_url in {EXPECTED_TWEET_URL, EXPECTED_LINKED_URL}
+    assert package.topic_map is not None
+    assert len(package.topic_map.beats) == 1
+    assert user["hosts"]["BOT1"]["persona"]
+    assert user["hosts"]["BOT2"]["writer_rules"]
+    assert "voice_direction" not in json.dumps(user["hosts"])
+    assert "host_a" not in json.dumps(user["hosts"])
+    assert "host_b" not in json.dumps(user["hosts"])
+    assert user["time_budget_s"] is None
 
 
 def test_every_fact_must_cite_tweet_or_linked_url():
@@ -407,6 +421,136 @@ def test_planner_bounds_question_framing_chyron_angles_and_facts():
         _run(run())
 
 
+def _package_with_framing(framing: str) -> SegmentPackage:
+    return SegmentPackage(
+        item_id=EXPECTED_TWEET_ID,
+        question="What happened?",
+        framing=framing,
+        angles=("scope",),
+        facts=(
+            Fact(id="f1", text="A cited claim.", source_url=EXPECTED_TWEET_URL),
+        ),
+        chyron="Headline",
+        chyron_fact_ids=("f1",),
+        center=TweetCard(
+            author=EXPECTED_AUTHOR,
+            text=TWEET_TEXT,
+            url=EXPECTED_TWEET_URL,
+        ),
+    )
+
+
+def test_framing_accepts_1000_and_the_680_smoke_blurb():
+    assert MAX_FRAMING_CHARS == 1000
+    assert _package_with_framing("f" * 1000).framing == "f" * 1000
+    assert len(_package_with_framing("x" * 680).framing) == 680
+
+
+def test_framing_rejects_1001_characters():
+    with pytest.raises(ValueError, match="framing exceeds 1000 characters"):
+        _package_with_framing("f" * 1001)
+
+
+def test_planner_accepts_1000_char_framing_and_rejects_1001():
+    accepted = _valid_plan_payload(framing="f" * 1000)
+    rejected = _valid_plan_payload(framing="f" * 1001)
+
+    async def accept_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(accepted))
+
+    async def reject_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(rejected))
+
+    async def accept():
+        return await SegmentPlanner(_client(accept_post)).plan(
+            _source_packet(), _baseline()
+        )
+
+    async def reject():
+        return await SegmentPlanner(_client(reject_post)).plan(
+            _source_packet(), _baseline()
+        )
+
+    package = _run(accept())
+    assert len(package.framing) == 1000
+    with pytest.raises(SegmentPlannerError, match="framing exceeds 1000 characters"):
+        _run(reject())
+
+
+def _valid_topic_map() -> dict[str, Any]:
+    return {
+        "throughline": "Secret agent societies were wiped out.",
+        "fight": "A missed civilization versus a counted wipeout.",
+        "done_when": "Both hosts have landed and have nothing grounded left.",
+        "beats": [
+            {
+                "id": "b1",
+                "question": "Did monitoring miss a whole society?",
+                "tension": "Thesis versus the count of wiped-out runs.",
+                "bot1_job": "Land that monitoring missed a civilization.",
+                "bot2_job": "Land how many runs died, and how fast.",
+                "fact_ids": ["f1"],
+                "done_when": "Both jobs landed and neither host has more to add.",
+            }
+        ],
+    }
+
+
+def test_planner_keeps_a_real_topic_map_and_does_not_invent_a_card():
+    payload = _valid_plan_payload(topic_map=_valid_topic_map())
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(payload))
+
+    package = _run(SegmentPlanner(_client(http_post)).plan(_source_packet(), _baseline()))
+    assert package.topic_map is not None
+    assert package.topic_map.throughline.startswith("Secret agent")
+    assert package.topic_map.beats[0].bot1_job.startswith("Land that monitoring")
+    assert package.topic_map.beats[0].bot2_job.startswith("Land how many")
+    assert package.center.author == EXPECTED_AUTHOR
+
+
+def test_planner_rejects_beat_fact_id_that_is_not_a_returned_fact():
+    topic_map = _valid_topic_map()
+    topic_map["beats"][0]["fact_ids"] = ["invented"]
+    payload = _valid_plan_payload(topic_map=topic_map)
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(payload))
+
+    with pytest.raises(SegmentPlannerError, match="beat fact_id"):
+        _run(SegmentPlanner(_client(http_post)).plan(_source_packet(), _baseline()))
+
+
+def test_planner_derives_angles_from_topic_map_when_angles_omitted():
+    payload = _valid_plan_payload(topic_map=_valid_topic_map())
+    del payload["angles"]
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(payload))
+
+    package = _run(SegmentPlanner(_client(http_post)).plan(_source_packet(), _baseline()))
+    assert package.angles
+    assert package.topic_map is not None
+    assert package.topic_map.beats[0].tension in package.angles
+
+
+def test_planner_system_maps_a_discussion_not_a_recap():
+    captured: dict[str, Any] = {}
+
+    async def http_post(url, *, headers, json, timeout):
+        captured["system"] = json["messages"][0]["content"]
+        return FakeResponse(200, _json_body(_valid_plan_payload()))
+
+    _run(SegmentPlanner(_client(http_post)).plan(_source_packet(), _baseline()))
+    system = captured["system"].lower()
+    assert "topic_map" in system
+    assert "recap" in system
+    assert "bot1" in system
+    assert "bot2" in system
+    assert "spoken line" in system
+
+
 def test_facts_are_typed_and_bounded():
     package = SegmentPackage(
         item_id=EXPECTED_TWEET_ID,
@@ -448,7 +592,7 @@ def test_no_provider_fallback_uses_configured_url_only():
 
 def test_planner_modules_do_not_import_root_scaffold() -> None:
     root = Path(__file__).resolve().parents[1] / "runtime_flight"
-    for name in ("text_client.py", "segment_planner.py"):
+    for name in ("text_client.py", "segment_planner.py", "topic_map.py"):
         path = root / name
         tree = ast.parse(path.read_text(encoding="utf-8"))
         imported: set[str] = set()
