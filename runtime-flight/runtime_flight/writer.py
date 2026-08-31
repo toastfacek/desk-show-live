@@ -44,6 +44,20 @@ bounce. Do not restate the card, the chyron, or the previous line. React to
 it: poke, number, reframe, callback, or land. Do not invent a new topic.
 Do not read the card aloud. Honor that host's soul and opinions when present.
 
+Talk. Do not draft. Each chunk is one sentence a person would say after
+hearing the last line. Use a concrete noun from the card. No throat-clearing.
+
+Never use these shapes:
+- start with But, Sure, Fine, or So
+- "not X, it's Y" or "that's not X, that's Y"
+- "that's the point", "that's the actual", "the real question is"
+- "just a vibe"
+- an em-dash that flips their claim into yours
+
+Do the job without announcing the contrast. If that host already said the
+thesis, add an unused fact or a smaller claim. Do not remix the last
+sentence.
+
 Each chunk is 4.0–4.6 seconds of natural spoken language (about 8–16 words).
 The default target is 4.3 seconds per chunk. Do not pad a chunk.
 Each chunk must be at most 120 characters so it fits one 5-second take.

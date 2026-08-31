@@ -315,6 +315,8 @@ def test_writer_prompt_targets_four_to_four_point_six_seconds():
     assert "4.3" in system
     assert "120" in system
     assert "280" not in system
+    assert "not X, it's Y" in system
+    assert "just a vibe" in system
     assert captured["user"]["target_duration_s"] == 4.3
 
 
@@ -472,8 +474,9 @@ def test_non_bool_thought_open_is_rejected():
         _run(run())
 
 
-def test_fenced_markdown_content_fails_without_stripping():
-    fenced = "```json\n" + json_module.dumps(_valid_thought_payload()) + "\n```"
+def test_fenced_markdown_json_is_accepted():
+    payload = _valid_thought_payload()
+    fenced = "```json\n" + json_module.dumps(payload) + "\n```"
 
     async def http_post(url, *, headers, json, timeout):
         return FakeResponse(200, {"choices": [{"message": {"content": fenced}}]})
@@ -482,8 +485,8 @@ def test_fenced_markdown_content_fails_without_stripping():
         writer = Writer(_client(http_post))
         return await _write(writer)
 
-    with pytest.raises(TextClientError, match="JSON"):
-        _run(run())
+    thought = _run(run())
+    assert thought.text == payload["text"]
 
 
 def test_timeout_returns_no_invented_thought():

@@ -529,4 +529,6 @@ def test_discuss_source_has_no_forbidden_names():
     assert "host_b" not in text
     assert "PHASEONE" not in text
     assert "JSON object only" in HOST_SYSTEM
+    assert "not X, it's Y" in HOST_SYSTEM
+    assert "just a vibe" in HOST_SYSTEM
     assert isinstance(source, ast.Module)
