@@ -163,6 +163,65 @@ def test_segment_cli_does_not_open_obs(
     assert "session" not in calls[0]
 
 
+def test_live_segment_cli_allows_eighteen_take_hard_cap(
+    tmp_path: Path,
+    flight_setup: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _complete_env(monkeypatch, flight_setup)
+    monkeypatch.setenv("RUNTIME_ALLOW_PAID", "1")
+    monkeypatch.setenv("RUNTIME_SPEND_CAP_USD", "8.00")
+    config_path = _write_flight_config(tmp_path, flight_setup)
+    calls: list[dict] = []
+
+    code = main(
+        [
+            "segment",
+            "--config",
+            str(config_path),
+            "--confirm-spend",
+            "8.00",
+            "--max-fal-submissions",
+            "18",
+            "--max-text-requests",
+            "24",
+        ],
+        segment_runner=lambda **kwargs: calls.append(kwargs) or 0,
+    )
+    assert code == 0
+    assert calls[0]["max_fal_submissions"] == 18
+    assert calls[0]["max_text_requests"] == 24
+
+
+def test_live_segment_cli_refuses_nineteen_takes(
+    tmp_path: Path,
+    flight_setup: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _complete_env(monkeypatch, flight_setup)
+    monkeypatch.setenv("RUNTIME_ALLOW_PAID", "1")
+    monkeypatch.setenv("RUNTIME_SPEND_CAP_USD", "8.00")
+    config_path = _write_flight_config(tmp_path, flight_setup)
+    called = []
+    code = main(
+        [
+            "segment",
+            "--config",
+            str(config_path),
+            "--confirm-spend",
+            "8.00",
+            "--max-fal-submissions",
+            "19",
+        ],
+        segment_runner=lambda **kwargs: called.append(kwargs) or 0,
+    )
+    captured = capsys.readouterr()
+    assert code == 1
+    assert called == []
+    assert "90s hard cap" in captured.err
+
+
 def test_run_segment_hero_then_exact_chain(
     tmp_path: Path,
     flight_setup: dict,

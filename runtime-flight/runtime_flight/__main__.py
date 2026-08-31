@@ -93,7 +93,10 @@ def main(
 
     segment_parser = subparsers.add_parser(
         "segment",
-        help="Paid no-OBS segment loop: planner, writer, fal chain. Human-gated.",
+        help=(
+            "Paid no-OBS segment: talk until the topic is exhausted, "
+            "hard-capped at 90s (18 takes). Human-gated."
+        ),
     )
     _add_paid_args(segment_parser)
     segment_parser.add_argument("--max-fal-submissions", type=int, default=2)

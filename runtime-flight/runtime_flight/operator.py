@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from runtime_flight.config import (
+    LIVE_CAP_MAX_USD,
     SMOKE_CAP_MAX_USD,
     RuntimeConfig,
     load_config,
@@ -23,6 +24,7 @@ PAID_FLAG_ENV = "RUNTIME_ALLOW_PAID"
 SMOKE_MAX_TEXT = 6
 LIVE_MAX_TEXT = 24
 SMOKE_FAL_ATTEMPTS = frozenset({1, 2})
+LIVE_SEGMENT_MAX_FAL = 18
 
 
 class OperatorError(Exception):
@@ -60,6 +62,18 @@ def require_text_request_limit(mode: Literal["smoke", "live"], count: int) -> No
 def require_smoke_fal_limit(max_fal_submissions: int) -> None:
     if max_fal_submissions not in SMOKE_FAL_ATTEMPTS:
         raise OperatorError("smoke --max-fal-submissions must be 1 or 2")
+
+
+def require_segment_fal_limit(
+    mode: Literal["smoke", "live"], max_fal_submissions: int
+) -> None:
+    if mode == "smoke":
+        require_smoke_fal_limit(max_fal_submissions)
+        return
+    if max_fal_submissions < 1 or max_fal_submissions > LIVE_SEGMENT_MAX_FAL:
+        raise OperatorError(
+            "live segment --max-fal-submissions must be 1 to 18 (90s hard cap)"
+        )
 
 
 def load_reviewed_source(config: RuntimeConfig) -> Any:
@@ -131,10 +145,11 @@ def cmd_segment(
 ) -> int:
     require_paid_flag()
     require_confirm_spend(config, confirm_spend)
-    require_text_request_limit("smoke", max_text_requests)
-    require_smoke_fal_limit(max_fal_submissions)
-    if config.spend_cap_usd is None or config.spend_cap_usd > SMOKE_CAP_MAX_USD:
-        raise OperatorError("segment spend cap must be at most 2.00")
+    require_text_request_limit(config.mode, max_text_requests)
+    require_segment_fal_limit(config.mode, max_fal_submissions)
+    cap_max = SMOKE_CAP_MAX_USD if config.mode == "smoke" else LIVE_CAP_MAX_USD
+    if config.spend_cap_usd is None or config.spend_cap_usd > cap_max:
+        raise OperatorError(f"segment spend cap must be at most {cap_max}")
     load_reviewed_source(config)
     return run_segment(
         config=config,

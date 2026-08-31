@@ -90,7 +90,7 @@ async def _run_segment_async(
         cap_usd=config.spend_cap_usd or Decimal("2.00"),
         rate_768p_usd_per_s=config.spend_rate_768p_usd_per_s,
         duration_s=config.video_duration_s,
-        mode="smoke",
+        mode=config.mode,
         ledger=SpendLedger(work_dir / "reservations.jsonl"),
     )
     performer = (
@@ -285,7 +285,7 @@ def _evidence(
     return FlightEvidence(
         flight_id=flight_id,
         baseline_id=baseline.baseline_id,
-        mode="smoke",
+        mode=config.mode,
         target_duration_s=int(config.video_duration_s * max(len(takes), 1)),
         stop_reason=stop_reason,
         baseline_manifest_path=manifest,
