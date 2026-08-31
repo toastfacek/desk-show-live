@@ -6,7 +6,7 @@ import time
 from contextlib import contextmanager
 from typing import Any, Iterator, Protocol
 
-from runtime_flight.obs_setup import ensure_contract
+from runtime_flight.obs_setup import ensure_contract as validate_obs_contract
 
 
 class ObsLifecycleClient(Protocol):
@@ -25,7 +25,6 @@ class ObsSession:
         *,
         client: ObsLifecycleClient | None = None,
         player: Any | None = None,
-        live_mode: bool = False,
         finalize_timeout_s: float = 30.0,
         poll_interval_s: float = 0.05,
     ) -> None:
@@ -33,12 +32,16 @@ class ObsSession:
             raise ValueError("ObsSession requires client or player")
         self._client = client if client is not None else player._client
         self.player = player
-        self.live_mode = live_mode
         self.finalize_timeout_s = finalize_timeout_s
         self.poll_interval_s = poll_interval_s
+        self._owns_recording = False
+
+    @property
+    def owns_recording(self) -> bool:
+        return self._owns_recording
 
     def ensure_contract(self) -> None:
-        ensure_contract(self._client, create=not self.live_mode)
+        validate_obs_contract(self._client)
 
     def is_streaming(self) -> bool:
         return bool(getattr(self._client.get_stream_status(), "output_active", False))
@@ -57,29 +60,74 @@ class ObsSession:
         duration_ms = getattr(self._record_status(), "output_duration", 0) or 0
         return duration_ms / 1000.0
 
-    def start_recording(self) -> None:
-        self.refuse_streaming()
-        self._client.start_record()
+    def _wait_for_recording_inactive(self) -> None:
         deadline = time.monotonic() + self.finalize_timeout_s
         while time.monotonic() < deadline:
-            if self._recording_active():
+            try:
+                if not self._recording_active():
+                    return
+            except Exception:
                 return
             time.sleep(self.poll_interval_s)
+
+    def _cleanup_owned_recording(self) -> None:
+        if not self._owns_recording:
+            return
+        try:
+            self._client.stop_record()
+        except Exception:
+            pass
+        self._wait_for_recording_inactive()
+        self._owns_recording = False
+
+    def start_recording(self) -> None:
+        self.refuse_streaming()
+        if self._recording_active():
+            raise RuntimeError("OBS is already recording; refusing to continue")
+
+        self._client.start_record()
+        self._owns_recording = True
+        deadline = time.monotonic() + self.finalize_timeout_s
+        try:
+            while time.monotonic() < deadline:
+                try:
+                    if self._recording_active():
+                        return
+                except Exception:
+                    self._cleanup_owned_recording()
+                    raise
+                time.sleep(self.poll_interval_s)
+        except Exception:
+            if self._owns_recording:
+                self._cleanup_owned_recording()
+            raise
+
+        self._cleanup_owned_recording()
         raise RuntimeError("OBS recording did not become active")
 
     def stop_recording(self) -> str | None:
+        if not self._owns_recording:
+            return None
         if not self._recording_active():
+            self._owns_recording = False
             return None
         result = self._client.stop_record()
         deadline = time.monotonic() + self.finalize_timeout_s
         while time.monotonic() < deadline:
-            if not self._recording_active():
-                return getattr(result, "output_path", None)
+            try:
+                if not self._recording_active():
+                    self._owns_recording = False
+                    return getattr(result, "output_path", None)
+            except Exception:
+                self._owns_recording = False
+                raise
             time.sleep(self.poll_interval_s)
+        self._owns_recording = False
         raise RuntimeError("OBS recording did not finalize")
 
     @contextmanager
     def recording_session(self) -> Iterator[None]:
+        self.start_recording()
         try:
             yield
         finally:

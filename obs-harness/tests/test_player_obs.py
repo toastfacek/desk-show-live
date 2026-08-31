@@ -18,19 +18,31 @@ class FakeSceneItem:
 
 @dataclass
 class FakeObsClient:
-  calls: list[tuple] = field(default_factory=list)
-  scene_items: dict[str, list[FakeSceneItem]] = field(default_factory=dict)
+    calls: list[tuple] = field(default_factory=list)
+    scene_items: dict[str, list[FakeSceneItem]] = field(default_factory=dict)
 
-  def get_scene_item_list(self, name: str):
-      self.calls.append(("get_scene_item_list", name))
-      items = self.scene_items.get(name, [])
-      return type("SceneItemList", (), {"scene_items": items})()
+    def get_scene_item_list(self, name: str):
+        self.calls.append(("get_scene_item_list", name))
+        items = self.scene_items.get(name, [])
+        return type("SceneItemList", (), {"scene_items": items})()
 
-  def set_scene_item_enabled(self, scene_name: str, item_id: int, enabled: bool):
-      self.calls.append(("set_scene_item_enabled", scene_name, item_id, enabled))
+    def set_scene_item_enabled(self, scene_name: str, item_id: int, enabled: bool):
+        self.calls.append(("set_scene_item_enabled", scene_name, item_id, enabled))
 
-  def set_input_mute(self, name: str, muted: bool):
-      self.calls.append(("set_input_mute", name, muted))
+    def set_input_mute(self, name: str, muted: bool):
+        self.calls.append(("set_input_mute", name, muted))
+
+
+class ReconnectObsPlayer(ObsPlayer):
+    def __init__(self, clients: list[FakeObsClient]) -> None:
+        super().__init__()
+        self._clients = list(clients)
+
+    def connect(self) -> None:
+        if not self._clients:
+            raise RuntimeError("no clients left to connect")
+        self._client = self._clients.pop(0)
+        self._refresh_scene_item_cache()
 
 
 def _player_with_client(client: FakeObsClient) -> ObsPlayer:
@@ -105,15 +117,16 @@ def test_set_speaking_does_not_mute_audio_inputs():
     assert mute_calls == []
 
 
-def test_reconnect_refreshes_scene_item_cache():
-    client = FakeObsClient(scene_items=_scene_items_for_layouts())
-    player = ObsPlayer()
-    player._client = client
-    player._refresh_scene_item_cache()
-    assert player._scene_item_ids["wide"]["HL_A"] == client.scene_items["wide"][0].scene_item_id
+def test_reconnect_refreshes_scene_item_cache_with_replacement_client():
+    client1 = FakeObsClient(scene_items=_scene_items_for_layouts())
+    client2 = FakeObsClient(scene_items=_scene_items_for_layouts())
+    client2.scene_items["wide"][0].scene_item_id = 99
 
-    client.scene_items["wide"][0].scene_item_id = 99
-    player.connect = lambda: player._refresh_scene_item_cache()
-    player.reconnect()
+    player = ReconnectObsPlayer([client1, client2])
+    player.connect()
+    assert player._scene_item_ids["wide"]["HL_A"] == client1.scene_items["wide"][0].scene_item_id
 
+    player.reconnect(deadline_s=1.0)
+
+    assert player._client is client2
     assert player._scene_item_ids["wide"]["HL_A"] == 99
