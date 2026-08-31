@@ -1,0 +1,222 @@
+"""Topic map resolution and beat coverage. Clock does not live here."""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from runtime_flight.baseline import BaselineContext, CharacterPackTruth
+from runtime_flight.models import (
+    Beat,
+    CoverageState,
+    HostVoice,
+    SegmentPackage,
+    Thought,
+    TopicMap,
+)
+
+TOPIC_EXHAUSTED = "topic exhausted"
+
+
+def host_voices_from_baseline(baseline: BaselineContext) -> tuple[HostVoice, HostVoice]:
+    voices = [_voice_from_character(character) for character in baseline.characters]
+    voices.sort(key=lambda voice: voice.speaker)
+    if len(voices) != 2 or {voice.speaker for voice in voices} != {"BOT1", "BOT2"}:
+        raise ValueError("baseline must expose BOT1 and BOT2 host voices")
+    return voices[0], voices[1]
+
+
+def _voice_from_character(character: CharacterPackTruth) -> HostVoice:
+    persona = character.manifest.get("persona")
+    rules = character.manifest.get("writer_rules")
+    if not isinstance(persona, str) or not persona.strip():
+        persona = (
+            "Dry technical anchor. Ask whether there is a thesis, or only weather."
+            if character.slot == "BOT1"
+            else "Curious co-host. Ask what moved, by how much, for whom."
+        )
+    clean_rules: list[str] = []
+    if isinstance(rules, (list, tuple)):
+        clean_rules.extend(
+            rule for rule in rules if isinstance(rule, str) and rule.strip()
+        )
+    if not clean_rules:
+        if character.slot == "BOT1":
+            clean_rules.append("Make one clear claim per thought.")
+        else:
+            clean_rules.append("Ask what moved, by how much, for whom.")
+    return HostVoice(
+        speaker=character.slot,
+        persona=persona,
+        rules=tuple(clean_rules),
+    )
+
+
+def resolve_topic_map(package: SegmentPackage) -> TopicMap:
+    if package.topic_map is not None:
+        return package.topic_map
+    return synthesize_topic_map(package)
+
+
+def synthesize_topic_map(package: SegmentPackage) -> TopicMap:
+    bot1_job = package.angles[0]
+    bot2_job = package.angles[1] if len(package.angles) > 1 else package.angles[0]
+    tension = package.framing[:280] if package.framing else package.question
+    beat = Beat(
+        id="b1",
+        question=package.question,
+        tension=tension,
+        bot1_job=bot1_job,
+        bot2_job=bot2_job,
+        fact_ids=tuple(fact.id for fact in package.facts),
+        done_when="Both hosts have landed their job and have nothing grounded left to add.",
+    )
+    return TopicMap(
+        throughline=package.question,
+        fight=tension,
+        beats=(beat,),
+        done_when="The throughline has been argued from both host questions.",
+    )
+
+
+def current_beat(topic_map: TopicMap, coverage: CoverageState) -> Beat:
+    index = min(coverage.beat_index, len(topic_map.beats) - 1)
+    return topic_map.beats[index]
+
+
+def discussion_phase(
+    coverage: CoverageState, topic_map: TopicMap
+) -> Literal["open", "develop", "close"]:
+    if coverage.map_complete:
+        return "close"
+    nothing_said = (
+        coverage.beat_index == 0
+        and coverage.exchanges_on_beat == 0
+        and not coverage.bot1_landed
+        and not coverage.bot2_landed
+    )
+    if nothing_said:
+        return "open"
+    beat = current_beat(topic_map, coverage)
+    last_beat = coverage.beat_index >= len(topic_map.beats) - 1
+    both_landed = beat.id in coverage.bot1_landed and beat.id in coverage.bot2_landed
+    if last_beat and both_landed:
+        return "close"
+    return "develop"
+
+
+def advance_coverage(
+    state: CoverageState, thought: Thought, topic_map: TopicMap
+) -> CoverageState:
+    if state.map_complete:
+        return state
+    beat = current_beat(topic_map, state)
+    beat_id = thought.beat_id or beat.id
+    if beat_id != beat.id:
+        return state
+
+    bot1_landed = set(state.bot1_landed)
+    bot2_landed = set(state.bot2_landed)
+    bot1_exhausted = set(state.bot1_exhausted)
+    bot2_exhausted = set(state.bot2_exhausted)
+    if thought.landed_own_job:
+        if thought.speaker == "BOT1":
+            bot1_landed.add(beat.id)
+        else:
+            bot2_landed.add(beat.id)
+    if thought.beat_exhausted:
+        if thought.speaker == "BOT1":
+            bot1_exhausted.add(beat.id)
+        else:
+            bot2_exhausted.add(beat.id)
+
+    exchanges = state.exchanges_on_beat + (0 if thought.thought_open else 1)
+    both_landed = beat.id in bot1_landed and beat.id in bot2_landed
+    both_exhausted = beat.id in bot1_exhausted and beat.id in bot2_exhausted
+    if not (both_landed and both_exhausted):
+        return CoverageState(
+            beat_index=state.beat_index,
+            bot1_landed=frozenset(bot1_landed),
+            bot2_landed=frozenset(bot2_landed),
+            bot1_exhausted=frozenset(bot1_exhausted),
+            bot2_exhausted=frozenset(bot2_exhausted),
+            exchanges_on_beat=exchanges,
+            map_complete=False,
+            stop_reason="",
+        )
+
+    next_index = state.beat_index + 1
+    if next_index >= len(topic_map.beats):
+        return CoverageState(
+            beat_index=state.beat_index,
+            bot1_landed=frozenset(bot1_landed),
+            bot2_landed=frozenset(bot2_landed),
+            bot1_exhausted=frozenset(bot1_exhausted),
+            bot2_exhausted=frozenset(bot2_exhausted),
+            exchanges_on_beat=exchanges,
+            map_complete=True,
+            stop_reason=TOPIC_EXHAUSTED,
+        )
+    return CoverageState(
+        beat_index=next_index,
+        bot1_landed=frozenset(bot1_landed),
+        bot2_landed=frozenset(bot2_landed),
+        bot1_exhausted=frozenset(bot1_exhausted),
+        bot2_exhausted=frozenset(bot2_exhausted),
+        exchanges_on_beat=0,
+        map_complete=False,
+        stop_reason="",
+    )
+
+
+def coverage_as_dict(coverage: CoverageState, topic_map: TopicMap) -> dict[str, object]:
+    beat = current_beat(topic_map, coverage)
+    still_open: list[str] = []
+    if beat.id not in coverage.bot1_landed:
+        still_open.append("BOT1 has not landed the thesis yet")
+    if beat.id not in coverage.bot2_landed:
+        still_open.append("BOT2 has not landed the number yet")
+    if beat.id in coverage.bot1_landed and beat.id not in coverage.bot1_exhausted:
+        still_open.append("BOT1 still has more to say on this beat")
+    if beat.id in coverage.bot2_landed and beat.id not in coverage.bot2_exhausted:
+        still_open.append("BOT2 still has more to say on this beat")
+    if coverage.map_complete:
+        still_open = []
+    return {
+        "beat_id": beat.id,
+        "beat_index": coverage.beat_index,
+        "bot1_landed": beat.id in coverage.bot1_landed,
+        "bot2_landed": beat.id in coverage.bot2_landed,
+        "bot1_exhausted": beat.id in coverage.bot1_exhausted,
+        "bot2_exhausted": beat.id in coverage.bot2_exhausted,
+        "exchanges_on_beat": coverage.exchanges_on_beat,
+        "map_complete": coverage.map_complete,
+        "still_open": still_open,
+    }
+
+
+def beat_as_dict(beat: Beat) -> dict[str, object]:
+    return {
+        "id": beat.id,
+        "question": beat.question,
+        "tension": beat.tension,
+        "bot1_job": beat.bot1_job,
+        "bot2_job": beat.bot2_job,
+        "fact_ids": list(beat.fact_ids),
+        "done_when": beat.done_when,
+    }
+
+
+def topic_map_as_dict(topic_map: TopicMap) -> dict[str, object]:
+    return {
+        "throughline": topic_map.throughline,
+        "fight": topic_map.fight,
+        "done_when": topic_map.done_when,
+        "beats": [beat_as_dict(beat) for beat in topic_map.beats],
+    }
+
+
+def voice_payload(voice: HostVoice) -> dict[str, object]:
+    return {
+        "persona": voice.persona,
+        "writer_rules": list(voice.rules),
+    }

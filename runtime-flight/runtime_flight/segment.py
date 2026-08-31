@@ -16,8 +16,15 @@ from runtime_flight.config import RuntimeConfig
 from runtime_flight.evidence import FlightEvidence, write_evidence_bundle
 from runtime_flight.fal_gateway import FalGateway
 from runtime_flight.media import run_ffmpeg
-from runtime_flight.models import SegmentPackage, Thought
+from runtime_flight.models import CoverageState, SegmentPackage, Thought
 from runtime_flight.operator import OperatorError
+from runtime_flight.topic_map import (
+    TOPIC_EXHAUSTED,
+    advance_coverage,
+    discussion_phase,
+    host_voices_from_baseline,
+    resolve_topic_map,
+)
 from runtime_flight.performer_fal import FalPerformer, ReadyTake, TakeRequest
 from runtime_flight.prompt import assemble_prompt
 from runtime_flight.segment_planner import SegmentPlanner
@@ -71,7 +78,10 @@ async def _run_segment_async(
         http_post=http_post,
         timeout_s=float(config.text_timeout_s),
     )
-    package = await SegmentPlanner(client).plan(source, baseline)
+    voices = host_voices_from_baseline(baseline)
+    package = await SegmentPlanner(client).plan(
+        source, baseline, time_budget_s=int(config.target_duration_s), voices=voices
+    )
     writer = Writer(client)
     flight_id = f"segment-{_stamp()}"
     work_dir = Path("out") / "segment-work" / flight_id
@@ -96,23 +106,26 @@ async def _run_segment_async(
     planned: list[Thought] = []
     next_speaker: Literal["BOT1", "BOT2"] = "BOT1"
     thought_open = False
+    topic_map = resolve_topic_map(package)
+    coverage = CoverageState.initial()
+    stop_reason = "segment complete"
 
     for take in range(1, max_fal_submissions + 1):
-        phase: Literal["open", "develop", "close"]
-        if take == 1:
-            phase = "open"
-        elif take == max_fal_submissions:
-            phase = "close"
-        else:
-            phase = "develop"
+        if coverage.map_complete:
+            stop_reason = coverage.stop_reason or TOPIC_EXHAUSTED
+            break
+        phase = discussion_phase(coverage, topic_map)
         thought = await writer.write(
             package,
             tuple(planned),
             next_speaker,
             thought_open,
             phase,
+            voices=voices,
+            coverage=coverage,
         )
         planned.append(thought)
+        coverage = advance_coverage(coverage, thought, topic_map)
         request = _request_for(baseline, thought, take, completed)
         requests.append(request)
         events.append(
@@ -160,13 +173,19 @@ async def _run_segment_async(
         else:
             next_speaker = "BOT2" if thought.speaker == "BOT1" else "BOT1"
             thought_open = False
+        if coverage.map_complete:
+            stop_reason = coverage.stop_reason or TOPIC_EXHAUSTED
+            break
+
+    if not completed:
+        raise OperatorError("segment produced no takes")
 
     recording = work_dir / "segment.mp4"
     clip_paths = [item.clip_path for item in completed if item.clip_path is not None]
     await _concat_clips(clip_paths, recording)
     write_evidence_bundle(
         Path(out_dir or "out/flights"),
-        _evidence(
+            _evidence(
             baseline=baseline,
             package=package,
             config=config,
@@ -179,6 +198,7 @@ async def _run_segment_async(
             recording=recording,
             text_requests=limiter.attempts,
             text_request_limit=max_text_requests,
+            stop_reason=stop_reason,
         ),
         sleep=lambda _dt: None,
     )
@@ -251,6 +271,7 @@ def _evidence(
     recording: Path,
     text_requests: int,
     text_request_limit: int,
+    stop_reason: str,
 ) -> FlightEvidence:
     lock = json.loads(Path(config.source_lock).read_text(encoding="utf-8"))
     manifest = baseline.hero_path.parent / "manifest.json"
@@ -261,7 +282,7 @@ def _evidence(
         baseline_id=baseline.baseline_id,
         mode="smoke",
         target_duration_s=int(config.video_duration_s * max(len(takes), 1)),
-        stop_reason="segment complete",
+        stop_reason=stop_reason,
         baseline_manifest_path=manifest,
         source_packet_path=config.source_packet,
         source_lock_path=config.source_lock,
