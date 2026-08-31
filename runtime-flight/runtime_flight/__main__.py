@@ -89,7 +89,7 @@ def main(
     smoke_parser = subparsers.add_parser("smoke", help="Paid two-submission smoke. Human-gated.")
     _add_paid_args(smoke_parser)
     smoke_parser.add_argument("--max-fal-submissions", type=int, required=True)
-    smoke_parser.add_argument("--max-text-requests", type=int, default=4)
+    smoke_parser.add_argument("--max-text-requests", type=int, default=6)
 
     segment_parser = subparsers.add_parser(
         "segment",
@@ -97,7 +97,7 @@ def main(
     )
     _add_paid_args(segment_parser)
     segment_parser.add_argument("--max-fal-submissions", type=int, default=2)
-    segment_parser.add_argument("--max-text-requests", type=int, default=4)
+    segment_parser.add_argument("--max-text-requests", type=int, default=6)
 
     live_parser = subparsers.add_parser("live", help="Paid 90-second live flight. Human-gated.")
     _add_paid_args(live_parser)

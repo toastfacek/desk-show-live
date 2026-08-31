@@ -158,7 +158,7 @@ def test_smoke_text_request_limit(
             "--max-fal-submissions",
             "2",
             "--max-text-requests",
-            "5",
+            "7",
         ],
         obs_session=_session(),
         flight_runner=lambda **kwargs: 0,

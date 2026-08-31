@@ -13,7 +13,7 @@ text:
   api_key_env: TEXT_API_KEY
   model_env: TEXT_MODEL
   timeout_s: 60
-  smoke_max_requests: 4
+  smoke_max_requests: 6
   flight_max_requests: 24
 video:
   endpoint: minimax/h3-max/image-to-video
