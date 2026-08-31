@@ -1,8 +1,10 @@
 # Runtime — studio bible
 #
-# The single source of truth for what the generated frame contains.
-# Read by the generator to assemble every take prompt (see the architecture
-# doc, §5.3) and by the OBS driver for box geometry and display names.
+# Prompt-safe sheets for the generated frame. Reference only.
+# Pictures (hero still, pack versions, locked baseline) live in Pack Manager:
+#   pack-manager/data/  (gitignored)
+#   pack-manager/data/exports/<baseline-id>/
+# See ASSETS.md. `anchor` below is a historical path; that PNG was never in git.
 #
 # Rules that hold everywhere in this file:
 #   - Never name a show, studio, artist or character. Describe, don't cite.

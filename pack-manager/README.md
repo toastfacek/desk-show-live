@@ -17,7 +17,12 @@ python3 -m pack_manager.app --config config.yaml
 Open <http://127.0.0.1:8765>. The checked-in configuration permits local access
 only. The CLI rejects any host other than `127.0.0.1`.
 
-Data is written below `data/`, which is git-ignored. Uploaded image names never
+Data is written below `data/`, which is git-ignored. That directory is where
+Runtime's host pictures live (PHASEONE[lol], deb, the locked hero). They are
+not in `obs-harness/assets/clips/` and they are not `assets/hero_wide.png` in
+git. See root [`ASSETS.md`](../ASSETS.md).
+
+Uploaded image names never
 become filesystem paths: PNG, JPEG, and WebP content is size-limited, hashed,
 checked against the claimed format's file signature, and stored by SHA-256.
 Do not place secrets in `config.yaml` or pack manifests.

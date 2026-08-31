@@ -166,7 +166,8 @@ baseline:
 
 | Asset | What | Cost |
 | :---- | :---- | :---- |
-| `hero_wide.png` | The canonical composition. Clip 0's anchor and every re-anchor target. | ~$1–2 of iteration |
+| Locked Pack Manager baseline (1344×768) | Canonical two-shot. Clip 0's anchor and every re-anchor. Bytes live in `pack-manager/data/`, not git. See `ASSETS.md`. | ~$1–2 of iteration |
+| `hero_wide.png` (historical name) | Same idea. Root `assets/hero_wide.png` was **never committed**. Do not look there. | |
 | Stings, bumpers, ad reads | Bake once, play free forever. Every one is a free show-minute. | ~$2–4 |
 | Chyron / ticker / card templates | HTML. Free. | $0 |
 
