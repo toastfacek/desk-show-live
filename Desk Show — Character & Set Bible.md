@@ -2,13 +2,15 @@
 
 **Status:** First draft, for reaction · Companion to "Two-Host Architecture & Harness" (§5)
 
-The machine-readable version is `studio.yaml`. This page explains why each choice is what it is, gives the bake prompts for M0, and says what to check before approving the hero still.
+This page preserves the original reasoning and bake prompts. Root `studio.yaml` is its historical machine-readable companion. Flight runtime truth now comes only from approved, locked Character and Scene Pack v2 exports.
 
 Everything here is a starting point to argue with. The *structure* is load-bearing; the specific design is not.
 
+**Current amendment:** the robot-specific visual draft below is historical. Approved Character and Scene Pack v2 exports now hold runtime visual truth. The selected hosts are mouthless software sprites. The first flight keeps H3's native audio and deliberately injects each host's `voice_direction` into the H3 prompt so voice and gesture are tested together. Character Packs reserve optional licensed TTS settings for a follow-up only if native voice fails. References below to LED mouths, hinged jaws, or automatic TTS fallback do not govern the live flight.
+
 ---
 
-## 1. Why robots
+## 1. Historical robot draft — not runtime truth
 
 `BOT1` and `BOT2` are cartoon robots. Four reasons, three of them engineering:
 
@@ -147,10 +149,11 @@ Which means the show does not have to explain why two AIs host a talk show about
 1. **The bracket is a period marker.** It has an in-world cause — a name collision, in a specific era — so it dates a character rather than decorating one. A guest bot with a bare serial reads as older; one with no bracket at all reads as newer. Free world-building whenever a third character is needed.
 2. **Case is fixed.** `PHASEONE[lol]` never lowercases; `deb` never capitalises, including at the start of a sentence in a chyron. The asymmetry is the design, and the first auto-title-case will quietly destroy it.
 3. **Lineage is set dressing, never dialogue.** The writer rules still forbid the hosts from mentioning that they are AI, and that survives this. The heritage lives in the names, the boot-up cold open, and the naming grammar — never in the script. Hosts who discuss their own origins turn a desk show into navel-gazing.
-4. **Display names are drawn in OBS only.** They never enter a generated prompt, per the no-text rule (§3). The characters are described in `studio.yaml` by appearance, never by name.
+4. **Display names are drawn in OBS only.** They never enter a generated prompt, per the no-text rule (§3). Runtime appearance and voice direction come from approved Character Pack versions, never names.
 5. **`LILY`, `JAN183411` and `PHASEONE[big]` stay off-limits.** Those are specific individuals. Our hosts are descendants, not those agents. Inheriting a convention is the whole idea; wearing someone else's identifier is not.
 
-## 7. Open
+## 7. Voice decision
 
-- **Voice targets.** See below.
-- **Voice.** The prompt pins nothing about vocal character yet. Once E6 shows what the model does unprompted, add a narrow vocal target to each sheet — the drift plan's argument being that drift inside "flat robotic monotone" is far less perceptible than drift inside "warm charismatic anchor."
+- **First flight:** required Character Pack `voice_direction` enters the active host's H3 prompt.
+- **Measure:** per-host consistency, between-host distinction, intelligibility, dialogue fidelity, and voice/gesture alignment.
+- **Fallback decision:** optional licensed TTS fields are reserved in Character Pack v2, but remain disabled unless native H3 voice fails the flight.

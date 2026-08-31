@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Record one real 90-second Runtime segment from one Dwarkesh Patel post using an approved Pack Manager baseline, a real text model, real fal MiniMax H3 Max clips, last-frame chaining, and realtime OBS layouts.
+**Goal:** Record one real 90-second Runtime segment from one Dwarkesh Patel post using an approved Pack Manager baseline, a real text model, real fal MiniMax H3 Max picture/audio clips, last-frame chaining, and realtime OBS layouts.
 
-**Architecture:** Add a private `runtime-flight` package. The Pack Manager supplies immutable visual truth, `obs-harness` supplies the deterministic Director and OBS player contract, and `runtime-flight` owns text, fal, realtime orchestration, spend controls, recording, and evidence. A sequential content pipeline stays two completed thoughts ahead; a separate wall-clock loop takes timing from OBS and never waits for a model at a cut.
+**Architecture:** Add a private `runtime-flight` package. The Pack Manager supplies immutable visual and voice direction, `obs-harness` supplies the deterministic Director and OBS player contract, and `runtime-flight` owns text, fal, realtime orchestration, spend controls, recording, and evidence. A sequential Writer stays two completed thoughts ahead. H3 generates picture and programme audio together. A separate wall-clock loop takes timing from OBS and never waits for a model at a cut.
 
 **Tech Stack:** Python 3.11+, asyncio, PyYAML 6.0.3+, HTTPX2 2.12.0+, fal-client 1.0.1+, obsws-python 1.8.0+, Pillow 12.3.0+, ffmpeg/ffprobe, OBS Studio 28+ with WebSocket v5, pytest 9.1.1+.
 
@@ -22,7 +22,10 @@
 - Exactly one fal request may be active.
 - fal endpoint: `minimax/h3-max/image-to-video`.
 - Every take: 5 seconds, `"768P"`, safety checker enabled, `prompt_expansion_mode: "balanced"`.
-- Audible dialogue is human-rated for fidelity. Balanced expansion means exact verbatim delivery is not an automated guarantee.
+- Each Character Pack requires a narrow `voice_direction`. The active host's direction is deliberately included in every H3 prompt.
+- Writer targets 4.0–4.6 seconds of spoken language. Its contract is seconds-first, not a 280-character allowance.
+- H3 generates the programme voice and gesture together. No external TTS call occurs in this flight.
+- Character Packs reserve optional TTS provider, voice ID, speed, pitch, pronunciation, maximum duration, and license metadata for a later flight. Reserved fields never trigger a call.
 - Take 1 and resets use the immutable hero. Other takes use the immediately preceding take’s final decoded PNG URL.
 - Chain frames are PNG only.
 - A run uses one immutable `baseline_id`; it never reloads mutable Pack or Candidate records.
@@ -35,7 +38,7 @@
 - Text calls have a separate request-count limit: 4 for smoke, 24 for the full flight.
 - Secrets exist only in environment variables and never appear in logs, errors, evidence, prompts, or manifests.
 - Paid Tasks require explicit operator confirmation and are not delegated as unattended work.
-- No ffmpeg voice treatment runs on the flight path; the root scaffold’s robot filtergraph is historical MVP code.
+- No TTS or ffmpeg voice effect runs on the flight path. The root scaffold's robot filtergraph is historical MVP code.
 
 ## Prior art: merged root MVP scaffold
 
@@ -68,15 +71,15 @@ All must pass:
 1. Locked baseline verifies through the Pack Manager database and export hashes.
 2. Exact post text and linked article excerpt have operator-confirmed SHA-256 values.
 3. Segment Planner produces one cited package from only that source packet.
-4. Writer produces a coherent two-host conversation; both BOT1 and BOT2 air.
+4. Writer produces a coherent two-host conversation; H3 gives both BOT1 and BOT2 attributable native voices.
 5. At least 10 generated clips air.
 6. Take 1 uses `anchor: hero`; a later take uses the preceding take’s exact `frame_url`.
-7. OBS recording duration is at least 90 seconds and includes video plus audio.
+7. OBS recording duration is at least 90 seconds and includes H3 video plus native audio.
 8. OBS never shows black; no detected host-scene freeze lasts longer than 1 second.
 9. A hold/card beat is one continuous non-host programme interval between Director outputs; no such interval exceeds 15 seconds.
 10. One center card and headline remain grounded in the source.
 11. No fal overlap occurs and `reserved_cost_upper_bound_usd` never exceeds the confirmed cap.
-12. Evidence independently proves request IDs, attempt count, anchors, timing, media validity, recording validity, and reserved-cost calculations.
+12. Evidence independently proves text/fal request attempts, voice directions, speaker attribution, anchors, timing, media validity, recording validity, and reserved-cost calculations.
 
 ---
 
@@ -219,18 +222,35 @@ Character v2 requires:
   },
   "persona": "Calm, dry, optimistic technical anchor.",
   "writer_rules": ["Make one clear claim per thought."],
-  "voice_direction": "Measured, curious, warm.",
+  "voice_direction": "Low, measured, dry, warm, with restrained energy.",
+  "tts": {
+    "enabled": false,
+    "provider": null,
+    "voice_id": null,
+    "speed": null,
+    "pitch": null,
+    "pronunciations": [],
+    "max_duration_s": null,
+    "license": {
+      "broadcast_rights_confirmed": false,
+      "soundalike_or_cloned_person": false,
+      "notes": ""
+    }
+  },
   "asset_ids": ["asset_id"]
 }
 ```
 
 Scene v2 keeps `set`, `palette`, `lighting`, `frame`, `reanchor_every`, and `asset_ids`.
 
-- [ ] Write failing tests for v2 required descriptors and v1 compatibility.
+- [ ] Write failing tests for v2 required visual descriptors, nonempty `voice_direction`, optional reserved TTS fields, and v1 compatibility.
+- [ ] When `tts.enabled` is false, provider/voice/speed/pitch/duration may be null and no TTS configuration is required.
+- [ ] When a later flight enables TTS, require confirmed commercial broadcast rights and reject soundalike/cloned-person voices before accepting provider settings.
 - [ ] Confirm RED.
 - [ ] Implement v2 validation without mutating old Pack versions.
 - [ ] Update friendly UI fields/defaults for v2.
 - [ ] Export schema version and descriptors unchanged.
+- [ ] Never store a TTS API key or any provider credential in a Pack.
 - [ ] Run Pack Manager tests with warnings as errors.
 - [ ] Commit:
 
@@ -565,17 +585,19 @@ async def write(
     next_speaker: Literal["BOT1", "BOT2"],
     thought_open: bool,
     segment_phase: Literal["open", "develop", "close"],
+    target_duration_s: float = 4.3,
     reissue: Literal["shorter, blander"] | None = None,
 ) -> Thought: ...
 ```
 
-- [ ] Write tests for alternating speakers, full planned transcript, facts, thought completion, JSON validation, timeout, cancellation, and three-failure stop.
+- [ ] Write tests for alternating speakers, full planned transcript, facts, thought completion, JSON validation, timeout, cancellation, three-failure stop, and prompt instructions targeting 4.0–4.6 seconds of natural speech.
 - [ ] Prove only one Writer request runs at once.
 - [ ] Maintain an `asyncio.Queue(maxsize=2)` of completed thoughts, not two concurrent requests.
 - [ ] Do not copy root `writer.py`’s unwired `beats_ahead` claim or its canned-line fallback.
 - [ ] Keep separate `planned_transcript` and `aired_transcript`.
 - [ ] When a take is dropped, invalidate later queued thoughts that assumed it aired; regenerate from `aired_transcript` with `reissue="shorter, blander"`.
-- [ ] Harness computes `remaining_submit_slots = max(0, floor((target_duration_s - elapsed_s) / 5) - 1)` and passes only the derived phase to Writer: `close` when the value is ≤2, `develop` after the opener, otherwise `open`. Writer never receives raw OBS timing.
+- [ ] Do not enforce duration with a 280-character truncation. Tell the Writer the 4.3-second target, reject empty/control-character output, cap only pathological output at 120 characters, and score actual audible duration/fidelity from H3 in the flight evidence.
+- [ ] Writer pipeline accepts `segment_phase` from its caller and passes only that enum to Writer. Task 7 tests all three values directly; it does not import the future live harness or receive raw timing.
 - [ ] Enforce text request count before each call.
 - [ ] Run tests and commit.
 
@@ -598,13 +620,14 @@ Lighting: {lighting}
 Camera: locked wide eye-level two-shot, BOT1 left, BOT2 right, no camera movement.
 BOT1: {silhouette}; eyes: {eye_design}; proportions: {proportions}.
 BOT2: {silhouette}; eyes: {eye_design}; proportions: {proportions}.
+Active host voice: {speaker.voice_direction}
 Action: {speaker} speaks while the other host listens with small eye and body reactions.
 Dialogue: "{line}"
 No readable text, letters, numbers, logos, captions, lower thirds, or UI inside the generated frame.
 ```
 
-- [ ] Reject control characters and lines over 280 characters; escape quotes.
-- [ ] Assert prompt excludes display names, source text, local paths, persona, and secrets.
+- [ ] Reject control characters and pathological lines over 120 characters; escape quotes.
+- [ ] Assert prompt includes only the active host's `voice_direction` exactly once and excludes display names, source text, local paths, persona, reserved TTS fields, and secrets.
 - [ ] Run tests and commit.
 
 ---
@@ -681,9 +704,10 @@ Content-Type: application/json
 - Create: `runtime-flight/tests/test_media.py`
 - Create: `runtime-flight/tests/test_post.py`
 
-- [ ] Write tests rejecting wrong MP4 signature/MIME, oversized files, decode failure, duration outside 4.7–5.3s, dimensions other than 1344×768, and missing audio.
+- [ ] Write tests rejecting wrong MP4 signature/MIME, oversized files, decode failure, H3 duration outside 4.7–5.3s, dimensions other than 1344×768, missing/undecodable audio, or effectively silent audio.
 - [ ] Stream download to a temporary file with a hard size limit, fsync, then rename.
 - [ ] Validate with `ffprobe -v error -show_streams -show_format -of json`.
+- [ ] Decode audio and require max volume above -35 dBFS plus at least 1.0 second of non-silent audio using a -50 dBFS silence threshold. Log measured values; reject silent/near-silent takes before ready.
 - [ ] Extract the final decoded frame by decoding the final second through EOF and overwriting one PNG:
 
 ```bash
@@ -692,6 +716,8 @@ ffmpeg -y -sseof -1 -i take.mp4 -map 0:v:0 -fps_mode passthrough -update 1 frame
 
 - [ ] Record the final decoded frame timestamp from ffprobe and validate PNG decode/dimensions.
 - [ ] Upload frame PNG and return its exact URL.
+- [ ] Preserve H3 audio unchanged. Copy validated raw media into ready storage atomically; do not remux, filter, replace, normalize, or pad it.
+- [ ] Validate the ready copy retains the same video/audio stream fingerprints as raw H3 media.
 - [ ] A failed media check never enters the ready queue.
 - [ ] Do not port root `post.py`’s robot voice filtergraph.
 - [ ] Run tests and commit.
@@ -801,6 +827,7 @@ Use `obs-harness/loop.py` as the state/reference model. Do not use root `run_liv
 - [ ] Keep BOT1/BOT2 through Planner, Writer, Director, and logs. Map through `BaselineContext.host_map` only when calling `player.set_speaking`.
 - [ ] Do not copy obs-harness test-script `host_a`/`host_b` speaker values into flight Writer tests.
 - [ ] Wall-clock loop polls OBS no slower than 200ms.
+- [ ] Compute `remaining_submit_slots = max(0, floor((target_duration_s - elapsed_s) / 5) - 1)` and pass only the derived Writer phase: `close` when the value is ≤2, `develop` after the opener, otherwise `open`. Writer never receives raw OBS timing.
 - [ ] OBS media remaining owns host cut timing.
 - [ ] Director is called only at clip edge or when ready media arrives during hold.
 - [ ] Enrich schedule-only Director submit with anchor, prompt, and fixed H3 fields. `FalPerformer.start` creates exactly one reservation immediately before its one queue POST.
@@ -857,6 +884,7 @@ out/flights/${FLIGHT_ID}/
   logs/events.jsonl
   logs/fal_requests.jsonl
   recording.json
+  voice_review.json
   hashes.json
 ```
 
@@ -879,11 +907,13 @@ git commit -m "Write immutable live flight evidence"
 - Create: `runtime-flight/runtime_flight/verify.py`
 - Create: `runtime-flight/tests/test_verify.py`
 
+- [ ] Support two explicit modes: `--automated` verifies machine evidence before human review; `--final` additionally requires a complete `voice_review.json` and every required human score ≥3.
 - [ ] Use ffprobe to verify recording duration ≥90s, dimensions, and audio/video streams.
 - [ ] Use ffmpeg `blackdetect=d=0.2:pix_th=0.10`; any detected black interval of at least 0.2 seconds fails verification.
 - [ ] Use `freezedetect=n=-50dB:d=1.0`; correlate detected intervals with logged scene and watchdog-visible intervals. Freeze >1s fails only when a host layout was exposed. Watchdog, hold, and card intervals count as covered programme.
 - [ ] Verify at least 10 aired clips, both hosts, exact chain URL, no fal overlap, no hold/card interval longer than 15 seconds, cap, baseline ID, and request ledger.
 - [ ] Report `reserved_cost_upper_bound_usd`, not provider-billed cost. Record confirmed rate, rate effective date, duration, and every reservation calculation. If fal exposes a billing receipt, store it separately without making the flight depend on it.
+- [ ] Reserve `voice_review.json` for human scores: per-host consistency, between-host distinction, intelligibility, dialogue fidelity, and voice/gesture alignment. `--final` requires the file after human review; `--automated` does not require or fabricate it.
 - [ ] Scan actual configured secret values through every text artifact.
 - [ ] Run verifier tests and commit:
 
@@ -1032,14 +1062,21 @@ python3 -m runtime_flight live \
 ```
 
 - [ ] Do not rescue normal late takes. Let card/hold behavior prove itself. Panic only for black video, unsafe content, wrong baseline, active public stream, or runaway requests.
-- [ ] Verify:
+- [ ] Run automated verification:
 
 ```bash
-python3 -m runtime_flight verify-flight --latest --out out/flights
+python3 -m runtime_flight verify-flight --automated --latest --out out/flights
 ```
 
-- [ ] Human-score composition, speaker attribution, audible dialogue fidelity, listener behavior, identity, set persistence, re-anchor quality, source grounding, and hold quality from 1–5.
-- [ ] Flight passes only when automated verification passes and no human score is below 3.
+- [ ] Human-score composition, speaker attribution, BOT1 voice consistency, BOT2 voice consistency, between-host voice distinction, intelligibility, dialogue fidelity, voice/gesture alignment, listener behavior, visual identity, set persistence, re-anchor quality, source grounding, and hold quality from 1–5.
+- [ ] If either voice-consistency score, distinction, intelligibility, dialogue fidelity, or voice/gesture alignment is below 3, mark native H3 voice as failed and open the TTS-first follow-up; do not silently mix voice paths inside this flight.
+- [ ] Save `voice_review.json`, then run:
+
+```bash
+python3 -m runtime_flight verify-flight --final --latest --out out/flights
+```
+
+- [ ] Flight passes only when both verification modes pass and no human score is below 3.
 
 ---
 

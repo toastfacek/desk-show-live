@@ -23,11 +23,14 @@ Still a requirements doc. No code yet.
 | Original robot host, for drift tolerance | **Stylized 2D cartoon hosts**, for the same reason |
 | Streaming out of scope | **Twitch is the target.** RTMP is an OBS checkbox |
 | "One generated video window, ever" | **One *metered* window.** The wide two-shot is the only thing we pay for |
+| Voice path was undecided | **H3-first for the first flight.** Measure native voice before adding a third provider. |
 
-Two decisions from the older docs were re-litigated and **held**:
+Voice decision for the first live flight:
 
-- **Welded audio.** H3's own audio, generated with the picture. TTS was considered and rejected: fal's H3 Max endpoints accept a prompt and an image, not an audio track, so there is no way to make the model lip-sync to an external voice. TTS would also add a serial call before every video call. Clip length stays the show's clock.
-- **Archetype, not persona.** Original characters only. No named IP in any prompt, ever (see §3). The hosts inherit a naming convention from the August 2026 agent swarm as canon — see the Character & Set Bible §6 — but are never specific agents from it.
+- **H3 native audio first.** H3 generates picture and programme audio together. Each Character Pack supplies a narrow `voice_direction`, and the video prompt deliberately includes the active host's direction. This keeps voice and gesture timing in one generation and avoids adding a third live provider before native voice quality is measured.
+- **Measure, then decide.** The flight scores voice consistency within each host, distinction between hosts, intelligibility, dialogue fidelity, and voice/gesture alignment. If H3 fails those gates, TTS-first becomes the next flight rather than hidden fallback behavior in this one.
+- **Reserve TTS without activating it.** Character Pack v2 may store optional TTS provider, voice ID, speed, pitch, pronunciation, duration, and license metadata. Those fields do not trigger calls in the H3-first flight.
+- **Archetype, not persona remains held.** Original characters and voices only. No named person, soundalike, cloned voice, show, studio, or character in a generation prompt.
 
 **Pricing note:** the 50% promo (768p at $0.04/s) runs through **1 Sep 2026**. From 2 Sep it is $0.08/s. Every number below is given at both rates. Bake assets and run experiments before Monday.
 
@@ -87,7 +90,7 @@ A layout is an OBS scene. All of them are free and instant — they are transfor
 | `wide` | The generated frame, full width, one box. Both hosts. |
 | `split` | Two cropped instances of the **same source** — left half, right half — placed either side of the canvas, with the centre card layered on top of the seam. |
 | `solo_l` / `solo_r` | One crop, enlarged. For when one host is on a run. |
-| `card_full` | Center content full-frame, host audio still playing underneath. |
+| `card_full` | Center content full-frame, H3 programme audio still playing underneath. |
 | `hold` | Card or bumper up, tickers running, music bed up. The failure layout. |
 
 `split` is the signature look. `wide` is the establishing shot and the reset. Moving between them is a real-feeling camera move that costs nothing.
@@ -104,7 +107,7 @@ None of this costs anything, none of it has latency, and it is most of what make
 - **Bottom:** headline chyron, sponsor ticker, market ticker
 - **Optional:** Twitch chat piped in as a source
 
-The **on-air highlight** is cheap insurance. We always know who is speaking, so we draw it. Even if the model animates the wrong mouth, the viewer is told who is talking.
+The **on-air highlight** is cheap insurance. We always know who is supposed to speak, so we draw it. If H3 gives voice or motion to the wrong sprite, the recording makes that failure measurable.
 
 ---
 
@@ -129,37 +132,33 @@ The `wide` layout is the harder case, since the full frame stretches across the 
 
 **Baked assets are not capped.** The hero still, bumpers, ad reads and stings are made off-air, where slow is fine. Generate them large and downscale. The anchor PNG must match the live frame size, but the art it is derived from does not have to.
 
-## 5. The studio bible
+## 5. The locked baseline
 
-A data file plus baked assets. Built once, offline. This is what gives the system spatial knowledge — the model does not need to "know" the room, the bible tells it, identically, every take.
+Character Packs, one Scene Pack, and approved assets give the system spatial and voice truth. The Pack Manager versions them and locks one immutable baseline for a run. The video model does not need to remember the room or voices; every take receives the same locked descriptions.
 
-The drafted bible lives in `studio.yaml`, with the art-direction reasoning, bake prompts and the M0 approval gate in "Character & Set Bible".
+Root `studio.yaml` is an editable visual-research draft, not runtime truth. Live prompts use only hash-verified Character/Scene Pack v2 data from the locked baseline export.
 
 ### 5.1 Schema
 
 ```yaml
-studio:
+baseline:
   frame: {w: 1344, h: 768, fps: 24}
-  zones:
-    left:   [0.00, 0.50]
-    # centre is a card layer on top, not a zone
-    right:  [0.50, 1.00]
-  hosts:
+  hero: {path: hero.png, sha256: locked}
+  characters:
     BOT1:
-      seat: left
-      faces: right
-      sheet: |
-        <character description: silhouette, hair, wardrobe, props>
+      silhouette: broad rounded orange software sprite
+      eye_design: two solid cream ovals without pupils
+      proportions: low and wide
+      voice_direction: low, measured, dry, warm
     BOT2:
-      seat: right
-      faces: left
-      sheet: |
-        <character description>
-  set: |
-    <desk, monitor wall, lighting, palette>
-  style: |
-    <flat 2D cartoon, heavy linework, retro-futurist — §3, in our own words>
-  anchor: assets/hero_wide.png
+      silhouette: tall cobalt software sprite
+      eye_design: two solid cream rounded rectangles without pupils
+      proportions: tall and narrow
+      voice_direction: quicker, curious, playful
+  scene:
+    set: clean light-mode technology broadcast studio
+    palette: warm white, forest green, cobalt, signal orange
+    lighting: bright soft broadcast light
   reanchor_every: 5
 ```
 
@@ -178,12 +177,13 @@ Note we are **not** baking idle loops. The listener is animated inside the wide,
 Every take's prompt is assembled the same way, mechanically:
 
 ```
-style block + set block + BOT1 sheet + BOT2 sheet
+locked scene + BOT1 visual invariants + BOT2 visual invariants
++ active host's voice_direction
 + "BOT1 is speaking" (or BOT2)
 + the line, verbatim, in quotes
 ```
 
-The writer supplies only the line. The bible supplies everything else. Nothing about the prompt is improvised at runtime.
+The writer supplies only the line. The locked baseline supplies visual and voice direction. Nothing about the prompt is improvised at runtime, and reserved TTS fields never enter an H3 prompt.
 
 ---
 
@@ -197,7 +197,7 @@ One chain, for the whole frame.
 - **Hide every re-anchor behind a layout change** (`split` → `wide`, or the reverse). Layout changes are free and happen anyway; a small composition jump inside one is invisible.
 - Extract or upload failure → anchor to hero, keep going. Never stall.
 
-**Under test: end-frame pinning.** `image-to-video` accepts `end_image_url` as well as `image_url`. If we set the end frame to the canonical hero composition, every clip *returns* to canonical and drift cannot compound at all. The risk is motion that looks snapped-back, or a mouth that ends mid-word. Experiment E5. If it works, composition drift is close to solved and `reanchor_every` becomes a formality.
+**Under test: end-frame pinning.** `image-to-video` accepts `end_image_url` as well as `image_url`. If we set the end frame to the canonical hero composition, every clip *returns* to canonical and drift cannot compound at all. The risk is motion or native speech that visibly snaps back before the line ends. Experiment E5. If it works, composition drift is close to solved and `reanchor_every` becomes a formality.
 
 ---
 
@@ -217,7 +217,7 @@ At 480p it is $1.50/min promo, $3.00/min list — a 38% discount, pending E7. Se
 **Wall-to-wall talking is the ceiling, not the plan.** The lever for a Twitch-length block is how much of it is free:
 
 - baked bumpers, stings, ad reads — free, and TBPN runs them constantly
-- graphics beats: `card_full` with the host clip's audio still playing underneath (OBS keeps the audio in the mixer independent of which scene is on program — a cover shot over live audio)
+- graphics beats: `card_full` with H3 programme audio still playing underneath (OBS keeps audio in the mixer independent of which scene is on programme)
 - guest / chart / image in the center slot with the hosts quiet
 - replays and pre-recorded segments
 
@@ -238,8 +238,10 @@ Collapsed hard, on purpose. Latency and coordination complexity were the stated 
 | **Writer** | Writes the next complete thought for whoever is speaking. Runs 2 thoughts ahead. | Model. Never blocks the loop. |
 | **Director** | Picks the layout, the center content, the chyron, and whether to spend a take. | **Plain function. Rules, no model.** |
 | **Generator** | Assembles the prompt from the bible, calls fal, enforces the spend cap. | Function. |
-| **Post** | Downloads, extracts the last-frame PNG, uploads it, files a manifest row. | Function. |
+| **Post** | Downloads and validates H3 picture/audio, extracts/uploads the last-frame PNG, and files a manifest row. | Function. |
 | **OBS** | Compositor and playhead. | Not our code. |
+
+**Writer duration contract:** target natural speech that H3 can deliver in roughly 4.0–4.6 seconds. This is a prompt target, not blind truncation by word or character count. The flight records actual native-audio duration and human-rated fidelity; it does not pretend text length proves delivery.
 
 The I/O contracts and the "what is allowed to know what" table in the Conductor Layer Brief still apply, with `Conductor` renamed to `Director` and `Compositor` + `Playhead` both becoming OBS.
 
@@ -431,11 +433,11 @@ Ordered by what kills the design. Each is a script in `experiments/`. E1–E6 ca
 | # | Experiment | Pass |
 | :---- | :---- | :---- |
 | **E1** | **Composition stability.** 8-take chain, contact sheet of every frame 0. Does each host stay in their own half? | One host per half for 8 takes, no side-swapping, neither buried under where the card sits. **Fail → the split layout does not work as designed; fall back to generated singles and re-cost.** |
-| **E2** | **Speaker attribution.** Scripted lines alternating hosts. Does the *correct* mouth move? | ≥ 7/8 correct. Fail → lean on the on-air highlight, or go to singles. |
-| **E3** | **Verbatim delivery.** Transcribe and diff against the script. | ≥ 7/8 word-accurate. Fail → the writer is scripting a show the hosts are not performing. |
-| **E4** | **Listener behavior.** Does the non-speaking host sit plausibly — not frozen, not lip-syncing, not leaving frame? | Subjective 1–5, ≥ 3 on all 8. |
+| **E2** | **Speaker attribution.** Scripted lines alternate hosts. Does H3 give the intended sprite both the active motion and the audible line? | ≥ 7/8 correct. Fail → native H3 voice path does not work for the show. |
+| **E3** | **Dialogue fidelity and intelligibility.** Transcribe and compare H3 audio with the Writer line, then score whether a listener can understand it. | Both fidelity and intelligibility ≥3/5 on every aired take; log omissions, paraphrases, garbling, and inaudible delivery. |
+| **E4** | **Listener behavior and gesture sync.** Does the non-speaking host remain plausibly reactive, and do eye/body beats feel connected to the native speech? | Subjective ≥3/5 on every aired take. |
 | **E5** | **End-frame pinning.** Same 8 takes with `end_image_url` = hero. Compare drift and motion quality against E1. | Drift lower, motion not visibly snapped-back. Pass → drift is solved. |
-| **E6** | **Voice consistency, two hosts.** Blind listen. | Two distinguishable voices, each recognizable across 8 takes. |
+| **E6** | **Voice consistency, two hosts.** Blind listen to native H3 takes. | Each host is recognizable across 8 takes and the two voices are distinguishable; failure triggers the TTS-first follow-up flight. |
 | **E7** | **Crop quality.** Same take at 480p and 768p, composited into the real 1080 canvas at real box size, in **both** `split` and `wide`. Compare side by side. | 768p acceptable by eye in both. Tells us whether 480p is viable — a 38% discount, and `wide` is where it will break first (§4.4). |
 | **E8** | **90s segment.** Full harness, live. | No dead air; hold fires on purpose at least once; manifest complete. |
 | **E9** | **$/segment.** From the manifest, including drops and retries. | A real number with retry overhead as a percentage. |
@@ -473,7 +475,7 @@ One tweet in the center slot, both hosts in their boxes, roughly 10 beats of bac
 
 ## 15. Open items
 
-1. **Art.** The show is **Runtime**; the hosts are **PHASEONE[lol]** and **deb**. Character sheets and set are drafted in `studio.yaml`, but the hero still has not been baked or approved — that is the M0 gate.
+1. **Art.** The show is **Runtime**; the hosts are **PHASEONE[lol]** and **deb**. Root `studio.yaml` is reference only. M0 requires flight-ready Character/Scene Pack v2 versions plus one approved, locked 1344×768 hero baseline.
 2. **Live feed source.** Resolved for the MVP: **no X API at all.** Ingest reads a hand-pasted JSON file of ~20 posts. It exercises every downstream stage, costs nothing, and is byte-identical across runs — which `rehearse` and `replay` both need. Whose timeline (or list, or search) it eventually pulls from is deferred until the show works; live ingest is then a swap of one function.
 3. **Second generated framing.** v1 generates exactly one composition. A tighter two-shot as a "push in" for heated moments would need its own hero still and its own chain. Deferred until E1 says the first chain holds.
 4. **Twitch chat.** Displaying it is nearly free and can land any time. Letting it *influence* the show is v2 and comes with the full adversarial-input problem.
