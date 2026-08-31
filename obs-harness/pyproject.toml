@@ -9,6 +9,7 @@ description = "Clock and OBS player for a live show. No video vendor. No text ve
 requires-python = ">=3.11"
 dependencies = [
   "pyyaml>=6",
+  "obsws-python>=1.8.0,<2",
 ]
 
 [project.optional-dependencies]
