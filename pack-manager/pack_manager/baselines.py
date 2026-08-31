@@ -13,7 +13,7 @@ from pathlib import Path
 from .assets import Asset, AssetStore
 from .candidates import Candidate, CandidateService
 from .db import Database
-from .errors import IntegrityError
+from .errors import IntegrityError, ValidationError
 from .packs import PackService, PackVersion
 
 
@@ -251,6 +251,7 @@ class BaselineService:
             version = self.pack_service.get_version(
                 character.pack_id, character.version
             )
+            PackService.validate_flight_ready("character", version.manifest)
             pack_versions.append(version)
             relative_path = f"packs/character-{index:03d}.json"
             payload = {
@@ -277,6 +278,7 @@ class BaselineService:
         scene_version = self.pack_service.get_version(
             candidate.scene_pack_id, candidate.scene_version
         )
+        PackService.validate_flight_ready("scene", scene_version.manifest)
         pack_versions.append(scene_version)
         scene_relative = "packs/scene.json"
         scene_payload = {

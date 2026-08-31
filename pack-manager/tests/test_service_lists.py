@@ -5,6 +5,9 @@ from pack_manager.db import Database
 from pack_manager.packs import PackService
 
 
+from conftest import character_manifest_v2, scene_manifest_v2
+
+
 PNG = b"\x89PNG\r\n\x1a\nlist-test"
 
 
@@ -22,38 +25,19 @@ def test_services_expose_public_ordered_list_interfaces(tmp_path):
     scene = packs.create_pack("scene", "Studio")
     character_version = packs.create_version(
         character.id,
-        {
-            "visual_invariants": {
-                "locked_traits": ["silhouette", "eye_design", "proportions"]
-            },
-            "persona": "Calm.",
-            "writer_rules": ["Prefer evidence."],
-            "voice_direction": "Measured.",
-            "asset_ids": [asset.id],
-        },
+        character_manifest_v2([asset.id]),
     )
     character2_version = packs.create_version(
         character2.id,
         {
-            "visual_invariants": {
-                "locked_traits": ["silhouette", "eye_design", "proportions"]
-            },
+            **character_manifest_v2([asset.id]),
             "persona": "Curious.",
-            "writer_rules": ["Prefer evidence."],
             "voice_direction": "Warm.",
-            "asset_ids": [asset.id],
         },
     )
     scene_version = packs.create_version(
         scene.id,
-        {
-            "set": "Studio",
-            "palette": ["cream"],
-            "lighting": "Soft",
-            "frame": {"w": 1920, "h": 1080, "fps": 30},
-            "reanchor_every": 60,
-            "asset_ids": [asset.id],
-        },
+        scene_manifest_v2([asset.id]),
     )
     candidate = candidates.create(
         character_versions={

@@ -45,11 +45,31 @@
           <h3>Create immutable version</h3>
           <label>Pack <select name="pack_id" class="pack-options" required></select></label>
           <label>Manifest JSON
-            <textarea name="manifest" rows="10" required>{
-  "visual_invariants": {"locked_traits": ["silhouette", "eye_design", "proportions"]},
-  "persona": "Calm and curious.",
-  "writer_rules": ["Prefer evidence."],
-  "voice_direction": "Measured and warm.",
+            <textarea name="manifest" rows="18" required>{
+  "schema_version": 2,
+  "visual_invariants": {
+    "locked_traits": ["silhouette", "eye_design", "proportions"],
+    "silhouette": "Broad rounded orange software sprite.",
+    "eye_design": "Two solid cream ovals, no pupils or inner marks.",
+    "proportions": "Low and wide; width is about 1.35 times height."
+  },
+  "persona": "Calm, dry, optimistic technical anchor.",
+  "writer_rules": ["Make one clear claim per thought."],
+  "voice_direction": "Low, measured, dry, warm, with restrained energy.",
+  "tts": {
+    "enabled": false,
+    "provider": null,
+    "voice_id": null,
+    "speed": null,
+    "pitch": null,
+    "pronunciations": [],
+    "max_duration_s": null,
+    "license": {
+      "broadcast_rights_confirmed": false,
+      "soundalike_or_cloned_person": false,
+      "notes": ""
+    }
+  },
   "asset_ids": []
 }</textarea>
           </label>

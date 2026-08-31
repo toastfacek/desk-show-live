@@ -13,31 +13,18 @@ from pack_manager.assets import AssetStore
 from pack_manager.baselines import BaselineService
 from pack_manager.candidates import CandidateService
 from pack_manager.db import Database
-from pack_manager.errors import IntegrityError
+from pack_manager.errors import IntegrityError, ValidationError
 from pack_manager.packs import PackService
+
+from conftest import character_manifest_v1, character_manifest_v2, scene_manifest_v2
 
 
 def character_manifest(asset_ids):
-    return {
-        "visual_invariants": {
-            "locked_traits": ["silhouette", "eye_design", "proportions"]
-        },
-        "persona": "Calm and curious.",
-        "writer_rules": ["Prefer evidence."],
-        "voice_direction": "Measured and warm.",
-        "asset_ids": list(asset_ids),
-    }
+    return character_manifest_v2(asset_ids)
 
 
 def scene_manifest(asset_ids):
-    return {
-        "set": "Warm studio",
-        "palette": ["orange", "cream"],
-        "lighting": "Soft key light",
-        "frame": {"w": 1920, "h": 1080, "fps": 30},
-        "reanchor_every": 60,
-        "asset_ids": list(asset_ids),
-    }
+    return scene_manifest_v2(asset_ids)
 
 
 @pytest.fixture
@@ -557,3 +544,47 @@ def test_cleanup_cannot_remove_an_active_export(baseline_setup):
         init_future.result(timeout=5)
 
     service.verify(baseline.id)
+
+
+def test_lock_run_rejects_v1_packs(baseline_setup):
+    packs = baseline_setup["pack_service"]
+    candidates = baseline_setup["candidate_service"]
+    baselines = baseline_setup["baseline_service"]
+    asset = baseline_setup["source_assets"][0]
+
+    bot1 = packs.create_pack("character", "Legacy BOT1")
+    bot2 = packs.create_pack("character", "Legacy BOT2")
+    scene = packs.create_pack("scene", "Legacy Studio")
+    bot1_version = packs.create_version(bot1.id, character_manifest_v1([asset.id]))
+    bot2_version = packs.create_version(bot2.id, character_manifest_v1([asset.id]))
+    scene_version = packs.create_version(scene.id, scene_manifest_v2([asset.id]))
+    hero = baseline_setup["source_assets"][3]
+    candidate = candidates.create(
+        character_versions={
+            "BOT1": (bot1_version.pack_id, bot1_version.version),
+            "BOT2": (bot2_version.pack_id, bot2_version.version),
+        },
+        scene_pack_id=scene_version.pack_id,
+        scene_version=scene_version.version,
+        hero_asset_id=hero.id,
+    )
+    candidate = candidates.approve(
+        candidate.id, canonical=True, review_note="legacy packs"
+    )
+
+    with pytest.raises(ValidationError, match="schema_version|flight"):
+        baselines.lock_run(candidate.cast_key)
+
+
+def test_export_preserves_schema_version_and_visual_descriptors(
+    baseline_setup, locked_baseline
+):
+    manifest = json.loads(locked_baseline.manifest_path.read_text())
+    character_path = locked_baseline.manifest_path.parent / manifest["packs"]["characters"][0]["path"]
+    character_payload = json.loads(character_path.read_text())
+    stored = character_payload["manifest"]
+
+    assert stored["schema_version"] == 2
+    assert stored["visual_invariants"]["silhouette"].startswith("Broad rounded")
+    assert stored["voice_direction"]
+    assert stored["tts"]["enabled"] is False

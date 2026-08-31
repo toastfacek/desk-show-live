@@ -36,6 +36,20 @@ console.log(JSON.stringify(result.map((item) => ({
     ]
 
 
+def test_ui_default_manifest_is_flight_ready_v2():
+    root = Path(__file__).parents[1] / "pack_manager" / "web"
+    html = (root / "index.html").read_text()
+
+    manifest_text = html.split('name="manifest"', 1)[1].split("</textarea>", 1)[0]
+    manifest = json.loads(manifest_text.split(">", 1)[1])
+
+    assert manifest["schema_version"] == 2
+    assert manifest["voice_direction"].strip()
+    assert manifest["tts"]["enabled"] is False
+    for descriptor in ("silhouette", "eye_design", "proportions"):
+        assert manifest["visual_invariants"][descriptor].strip()
+
+
 def test_ui_requires_two_hosts_and_refreshes_requested_candidates():
     root = Path(__file__).parents[1] / "pack_manager" / "web"
     html = (root / "index.html").read_text()

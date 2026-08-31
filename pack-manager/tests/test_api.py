@@ -15,27 +15,16 @@ def manager_client(app):
     )
 
 
+from conftest import character_manifest_v2, scene_manifest_v2
+
+
 def character_manifest(asset_id):
-    return {
-        "visual_invariants": {
-            "locked_traits": ["silhouette", "eye_design", "proportions"]
-        },
-        "persona": "Calm and curious.",
-        "writer_rules": ["Prefer evidence."],
-        "voice_direction": "Measured and warm.",
-        "asset_ids": [asset_id],
-    }
+    manifest = character_manifest_v2([asset_id])
+    return manifest
 
 
 def scene_manifest(asset_id):
-    return {
-        "set": "Warm studio",
-        "palette": ["orange", "cream"],
-        "lighting": "Soft key light",
-        "frame": {"w": 1920, "h": 1080, "fps": 30},
-        "reanchor_every": 60,
-        "asset_ids": [asset_id],
-    }
+    return scene_manifest_v2([asset_id])
 
 
 def upload(client, name, content=PNG, mime_type="image/png"):
