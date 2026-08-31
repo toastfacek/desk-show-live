@@ -395,6 +395,51 @@ def test_load_locked_baseline_returns_verified_bytes_without_reopen(flight_data_
     assert loaded.manifest["packs"]["scene"]["path"] in loaded.verified_bytes
 
 
+def test_baseline_load_metadata_verification_uses_verified_bytes_only(
+    flight_data_dir, monkeypatch
+):
+    service = flight_data_dir["baseline_service"]
+    locked = flight_data_dir["locked"]
+    metadata_phase = {"active": False}
+    original_read = service._read_file
+    original_verify = service._verify_runtime_metadata
+
+    def guarded_read(path):
+        if metadata_phase["active"]:
+            raise AssertionError(
+                f"_read_file called during metadata verification: {path}"
+            )
+        return original_read(path)
+
+    def wrapped_verify(manifest, verified_bytes):
+        metadata_phase["active"] = True
+        try:
+            return original_verify(manifest, verified_bytes)
+        finally:
+            metadata_phase["active"] = False
+
+    monkeypatch.setattr(service, "_read_file", guarded_read)
+    monkeypatch.setattr(service, "_verify_runtime_metadata", wrapped_verify)
+
+    service.load(locked.id)
+
+
+def test_verify_runtime_metadata_rejects_inconsistent_captured_bytes(flight_data_dir):
+    service = flight_data_dir["baseline_service"]
+    locked = flight_data_dir["locked"]
+    loaded = service.load(locked.id)
+    manifest = loaded.manifest
+    verified_bytes = dict(loaded.verified_bytes)
+
+    character_path = manifest["packs"]["characters"][0]["path"]
+    payload = json.loads(verified_bytes[character_path])
+    payload["version"] = 999
+    verified_bytes[character_path] = service._normalized_json(payload)
+
+    with pytest.raises(IntegrityError, match="character pack metadata mismatch"):
+        service._verify_runtime_metadata(manifest, verified_bytes)
+
+
 def test_load_locked_baseline_returns_pack_truth_scene_and_reset_interval(flight_data_dir):
     loaded = load_locked_baseline(flight_data_dir["data_dir"], flight_data_dir["locked"].id)
     manifest = loaded.manifest

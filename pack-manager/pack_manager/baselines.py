@@ -220,7 +220,7 @@ class BaselineService:
         if referenced != set(verified_paths):
             raise IntegrityError("manifest file references do not match hash records")
         self._verify_export_contents(export_dir, set(verified_paths))
-        self._verify_runtime_metadata(manifest, verified_paths)
+        self._verify_runtime_metadata(manifest, verified_bytes)
 
         return LoadedBaseline(
             id=baseline_id,
@@ -365,7 +365,7 @@ class BaselineService:
         return row["name"]
 
     def _verify_runtime_metadata(
-        self, manifest: dict, verified_paths: dict[str, Path]
+        self, manifest: dict, verified_bytes: dict[str, bytes]
     ) -> None:
         if manifest.get("host_map") != {
             "BOT1": "host_a",
@@ -381,9 +381,8 @@ class BaselineService:
         expected = {}
         try:
             for record in characters:
-                payload = json.loads(
-                    self._read_file(verified_paths[record["path"]])
-                )
+                relative_path = record["path"]
+                payload = json.loads(verified_bytes[relative_path])
                 if any(
                     payload.get(field) != record.get(field)
                     for field in ("slot", "pack_id", "version")
@@ -394,7 +393,7 @@ class BaselineService:
                 expected[record["slot"]] = payload["name"]
             scene_record = manifest["packs"]["scene"]
             scene_payload = json.loads(
-                self._read_file(verified_paths[scene_record["path"]])
+                verified_bytes[scene_record["path"]]
             )
             if any(
                 scene_payload.get(field) != scene_record.get(field)
