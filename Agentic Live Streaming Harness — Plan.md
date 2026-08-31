@@ -330,7 +330,7 @@ A pace order is a separate, rare object: `hold` | `next_segment` | `bumper` | `e
 }
 ```
 
-A **thought** is a finished move in the conversation. It is not “fill five seconds.” If the thought needs two clips, `thought_open` stays true and the next call finishes it. The clip length must not write the script.
+A **point** is the claim this host wants to make. A **chunk** is one 5-second file. The Writer may batch a point into 1–4 chunks in one call. Earlier chunks keep `thought_open` true so the same host keeps talking. The last chunk may close the point or leave it open if the rant is not done. The clip length must not write the script.
 
 The Writer stays on the current beat until both host jobs have landed and both hosts have nothing grounded left to add. Landing a job is not the same as exhausting the beat. Do not restate the card. React to the previous line. Cover the beat from this host’s perspective, then the other host’s, in depth.
 

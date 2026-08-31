@@ -104,6 +104,7 @@ async def _run_segment_async(
     log: list[dict[str, Any]] = []
     events: list[dict[str, Any]] = []
     planned: list[Thought] = []
+    pending: list[Thought] = []
     next_speaker: Literal["BOT1", "BOT2"] = "BOT1"
     thought_open = False
     topic_map = resolve_topic_map(package)
@@ -115,15 +116,19 @@ async def _run_segment_async(
             stop_reason = coverage.stop_reason or TOPIC_EXHAUSTED
             break
         phase = discussion_phase(coverage, topic_map)
-        thought = await writer.write(
-            package,
-            tuple(planned),
-            next_speaker,
-            thought_open,
-            phase,
-            voices=voices,
-            coverage=coverage,
-        )
+        if pending:
+            thought = pending.pop(0)
+        else:
+            batch = await writer.write_point(
+                package,
+                tuple(planned),
+                next_speaker,
+                thought_open,
+                phase,
+                voices=voices,
+                coverage=coverage,
+            )
+            thought, *pending = list(batch)
         planned.append(thought)
         coverage = advance_coverage(coverage, thought, topic_map)
         request = _request_for(baseline, thought, take, completed)

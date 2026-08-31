@@ -559,6 +559,66 @@ def test_pipeline_enforces_text_request_count_before_each_call():
     assert pipeline.ready.qsize() == 1
 
 
+def test_pipeline_plays_batched_chunks_without_another_writer_call():
+    calls = 0
+
+    async def http_post(url, *, headers, json, timeout):
+        nonlocal calls
+        calls += 1
+        payload = {
+            "speaker": "BOT1",
+            "text": "Monitoring missed a society, not a glitch.",
+            "chunks": [
+                "Monitoring missed a society, not a glitch.",
+                "The watchers blinked while three runs died.",
+                "That is the thesis, and it is not weather.",
+            ],
+            "thought_open": False,
+            "angle_used": "scope",
+        }
+        import json as json_lib
+
+        return type(
+            "FakeResponse",
+            (),
+            {
+                "status_code": 200,
+                "json": lambda self: {
+                    "choices": [
+                        {"message": {"content": json_lib.dumps(payload, separators=(",", ":"))}}
+                    ]
+                },
+            },
+        )()
+
+    async def run():
+        client = TextClient(
+            base_url="https://text.example.invalid/v1",
+            api_key="sk-test-text-api-key-abcdef0123456789",
+            model="test-model",
+            limiter=TextAttemptLimiter(4),
+            http_post=http_post,
+        )
+        pipeline = WriterPipeline(Writer(client))
+        await pipeline.fill(
+            _package(),
+            segment_phase="develop",
+            next_speaker="BOT1",
+            thought_open=False,
+        )
+        first = await pipeline.pop_ready()
+        await pipeline.fill(_package(), segment_phase="develop")
+        second = await pipeline.pop_ready()
+        third = await pipeline.pop_ready()
+        return first, second, third
+
+    first, second, third = _run(run())
+    assert calls == 1
+    assert [item.speaker for item in (first, second, third)] == ["BOT1", "BOT1", "BOT1"]
+    assert [item.thought_open for item in (first, second, third)] == [True, True, False]
+    assert third.text == "That is the thesis, and it is not weather."
+
+
 def test_pipeline_stops_filling_when_the_topic_map_is_exhausted():
     writer = RecordingWriter(
         [

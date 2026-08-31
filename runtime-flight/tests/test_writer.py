@@ -654,6 +654,58 @@ def test_writer_sends_current_beat_coverage_and_host_voices():
     assert "deb" not in captured["system"]
 
 
+def test_writer_batches_a_point_into_five_second_chunks():
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            _json_body(
+                {
+                    "speaker": "BOT1",
+                    "text": "Monitoring missed a society, not a glitch.",
+                    "chunks": [
+                        "Monitoring missed a society, not a glitch.",
+                        "The watchers blinked while three runs died.",
+                        "That is the thesis, and it is not weather.",
+                    ],
+                    "thought_open": False,
+                    "angle_used": "scope",
+                    "landed_own_job": True,
+                }
+            ),
+        )
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write_point(_package(), (), "BOT1", False, "develop")
+
+    thoughts = _run(run())
+    assert len(thoughts) == 3
+    assert [item.speaker for item in thoughts] == ["BOT1", "BOT1", "BOT1"]
+    assert [item.thought_open for item in thoughts] == [True, True, False]
+    assert [item.landed_own_job for item in thoughts] == [False, False, True]
+    assert thoughts[1].text == "The watchers blinked while three runs died."
+
+
+def test_writer_rejects_more_than_four_chunks():
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            _json_body(
+                _valid_thought_payload(
+                    chunks=["one", "two", "three", "four", "five"],
+                    text="one",
+                )
+            ),
+        )
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write_point(_package(), (), "BOT1", False, "open")
+
+    with pytest.raises(WriterError, match="chunks"):
+        _run(run())
+
+
 def test_writer_rejects_unknown_beat_id():
     async def http_post(url, *, headers, json, timeout):
         return FakeResponse(200, _json_body(_valid_thought_payload(beat_id="nope")))
