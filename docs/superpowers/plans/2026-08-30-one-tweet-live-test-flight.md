@@ -64,22 +64,157 @@ Unsafe patterns that must not enter the flight:
 
 The root scaffold remains available for historical experiments but is deprecated for this flight. No flight command delegates to `run_live.py`.
 
-## Flight acceptance criteria
+## End criteria
 
-All must pass:
+This plan is finished when one **terminal verdict** is written into the flight evidence. The purpose of the flight is to answer two questions once, not to keep generating until the show looks good:
 
-1. Locked baseline verifies through the Pack Manager database and export hashes.
-2. Exact post text and linked article excerpt have operator-confirmed SHA-256 values.
-3. Segment Planner produces one cited package from only that source packet.
-4. Writer produces a coherent two-host conversation; H3 gives both BOT1 and BOT2 attributable native voices.
-5. At least 10 generated clips air.
-6. Take 1 uses `anchor: hero`; a later take uses the preceding take’s exact `frame_url`.
-7. OBS recording duration is at least 90 seconds and includes H3 video plus native audio.
-8. OBS never shows black; no detected host-scene freeze lasts longer than 1 second.
-9. A hold/card beat is one continuous non-host programme interval between Director outputs; no such interval exceeds 15 seconds.
-10. One center card and headline remain grounded in the source.
-11. No fal overlap occurs and `reserved_cost_upper_bound_usd` never exceeds the confirmed cap.
-12. Evidence independently proves text/fal request attempts, voice directions, speaker attribution, anchors, timing, media validity, recording validity, and reserved-cost calculations.
+1. Can the harness produce one real 90-second two-host segment from the locked Dwarkesh source packet?
+2. Is native H3 voice usable for that show, or must the next flight be TTS-first?
+
+Agents stop at **S-CODE**. Paid smoke and the 90-second flight are human-gated and are never implied by code-complete.
+
+### Terminal verdicts
+
+Exactly one of these closes the plan. Do not invent a new verdict. Do not keep iterating H3 prompts, packs, or layouts after a scored flight.
+
+| Verdict | Who may declare it | Meaning | Next work |
+| :---- | :---- | :---- | :---- |
+| **S-CODE** | Coding agent after Task 15B | Zero-cost path is proven. No paid job has run. | STOP. Wait for the operator. |
+| **S-OPS** | Operator before Task 16 | Real source packet, locked baseline, and OBS are ready. | Human may start smoke. |
+| **X-ABORT** | Operator after Task 16 | Paid smoke failed a safety or chain check. | Fix the defect. Do not run Task 17. |
+| **F-PASS** | Operator after `--final` | Path proven and native H3 voice usable. | Close this plan. Do not open a TTS flight. |
+| **F-PATH** | Operator after `--final` | Path proven. Native H3 voice failed its gates. | Close this plan. Open a TTS-first follow-up. Do not mix TTS into this flight. |
+| **F-ARCH** | Operator after `--final` | Path ran, but composition or identity kills the two-host split design. | Close this plan. Do not open TTS. Revisit packs, framing, or singles. |
+| **F-FAIL** | Operator or `--automated` | The harness did not produce a valid 90-second segment. | Write the failing gate. One scoped software fix and one reflight are allowed. No feature expansion. |
+| **F-INCONCLUSIVE** | Operator | Evidence is missing, so voice or architecture cannot be scored. | Re-run only the missing measurement. Do not add features. |
+
+`S-CODE` and `S-OPS` are gates, not flight success. The plan is closed only by `F-PASS`, `F-PATH`, `F-ARCH`, `F-FAIL`, or `F-INCONCLUSIVE`.
+
+### S-CODE — software complete
+
+All of the following must be true. None of them authorizes a paid call.
+
+1. Tasks 1–15B are implemented and independently reviewed.
+2. `pack-manager`, `obs-harness`, and `runtime-flight` pytest suites pass with `-W error` in a clean venv.
+3. The AST isolation scan rejects imports of root `writer`, `post`, `spend`, `generator`, `playhead`, `run_live`, and `studio`.
+4. `python3 -m runtime_flight check` exits nonzero when config, source review, baseline, or stream-off is missing; it never submits text or fal jobs.
+5. The zero-cost integration test uses a locked Pack Manager fixture, a real 1344×768 PNG, fake text/fal/OBS, real ffmpeg/ffprobe fixture media, and produces a complete evidence bundle.
+6. That bundle would pass `--automated` except that request IDs and media URLs are fixtures.
+7. Zero-cost tests prove `card_full`/`hold` recovery, panic/signal cleanup, stream-active refusal, and reservation-before-network.
+8. No TTS provider is called. Reserved TTS fields never enter an H3 prompt.
+9. Orchestrator chat, three-camera generation, Twitch ingest, and public streaming are absent.
+
+### S-OPS — operator ready
+
+Required before Task 16. Coding agents cannot declare this.
+
+1. Task 0 files exist as regular files in `runtime-flight/inputs/`: `source_packet.local.json`, `dwarkesh-agent-civilizations.txt`, and `source_packet.lock.json`.
+2. `reviewed` is true. All three lock hashes verify against the files on disk using the Task 0 canonical rules.
+3. One approved v2 baseline is locked. Hero is a decoded 1344×768 PNG whose hash matches the locked export.
+4. `setup-obs` has created the contract. Split crop-sync is verified by eye. Local recording is configured. OBS is not streaming.
+5. Text and fal keys are present as environment variables only. `check --probe-text --confirm-text-requests 1` may be run; no fal job has been submitted.
+
+### X-ABORT — smoke failed
+
+Task 16 must pass before Task 17. Fail any one of these and stop:
+
+- more than two fal reservations, or a reservation without a request ID or explicit unknown-submission state
+- any use of `fal_client.submit_async`
+- a returned clip that fails media validation
+- take 1 not `anchor: hero`, or take 2 not using take 1’s exact `frame_url`
+- OBS did not record both clips
+- `reserved_cost_upper_bound_usd` > $2.00
+- `--automated` evidence verification fails
+- OBS was streaming, or the run stopped an existing stream
+
+### Machine gates — required for F-PASS, F-PATH, and F-ARCH
+
+`--automated` must pass all of these. Failure of any one is **F-FAIL**.
+
+1. Locked baseline verifies through the Pack Manager database and export hashes. The run used one immutable `baseline_id`.
+2. Exact post text and linked article excerpt match the operator-confirmed SHA-256 values. No X or article fetch occurred on air.
+3. Segment Planner produced one cited package from only that source packet.
+4. Writer produced a two-host conversation. At least one aired take is attributed to BOT1 and at least one to BOT2.
+5. At least 10 generated clips aired.
+6. Take 1 uses `anchor: hero`. A later aired take uses the immediately preceding take’s exact `frame_url`.
+7. OBS recording duration is ≥90 seconds and contains H3 video plus native H3 audio. No external TTS or ffmpeg voice effect is present.
+8. `blackdetect=d=0.2:pix_th=0.10` finds no black interval ≥0.2 seconds. `freezedetect=n=-50dB:d=1.0` finds no exposed host-layout freeze >1.0 second. Watchdog, hold, and card intervals are covered programme, not freezes.
+9. Every hold/card beat is one continuous non-host programme interval between Director outputs, and no such interval exceeds 15 seconds. A hold is not required to fire if no take was late; the zero-cost suite must still prove the path.
+10. One center card and headline remain grounded in the source packet.
+11. No fal overlap occurred. Every submission attempt consumed one reservation before network I/O. `reserved_cost_upper_bound_usd` never exceeds the confirmed cap ($2 smoke / $12 full flight). Text request counts stay at ≤4 smoke / ≤24 full flight.
+12. Evidence independently proves text and fal request attempts, `voice_direction` injection, speaker attribution, anchors, scene/watchdog/stream timing, media validity, recording validity, secret absence, and reserved-cost calculations.
+
+`--automated` does not require or fabricate `voice_review.json`.
+
+### Human scores
+
+Score each dimension 1–5 after watching the recording with the evidence bundle. 1 = unusable, 2 = frequent failure, 3 = acceptable, 4 = good, 5 = excellent. `--final` requires a complete `voice_review.json`. Do not average scores across dimensions.
+
+**Voice gates.** Any score below 3 yields **F-PATH**, not another H3 reflight:
+
+- BOT1 voice consistency
+- BOT2 voice consistency
+- between-host voice distinction
+- speaker attribution
+- intelligibility
+- dialogue fidelity
+- voice/gesture alignment
+
+**Architecture-kill gates.** Any score below 3 yields **F-ARCH**, not a TTS flight:
+
+- composition: each host stays in its assigned half; no side-swap; neither buried under the card
+- visual identity: both hosts remain the approved sprites
+- set persistence: the set matches the locked Scene Pack
+- re-anchor quality: chain reads as the same shot, not a snap or melt
+
+**Logged, not gates.** Record these so the next plan can use them. They do not change the verdict:
+
+- listener behavior
+- source grounding
+- hold quality
+- overall composition polish
+
+### F-PASS / F-PATH / F-ARCH
+
+Declare only after `--automated` and `--final` both pass the machine gates and every required human score exists.
+
+- **F-PASS:** every voice gate ≥3 and every architecture-kill gate ≥3.
+- **F-PATH:** every architecture-kill gate ≥3, and at least one voice gate <3.
+- **F-ARCH:** at least one architecture-kill gate <3. Voice scores are still recorded.
+
+If both a voice gate and an architecture-kill gate are below 3, the verdict is **F-ARCH**. The split design is the blocker.
+
+### F-FAIL
+
+Declare when `--automated` fails, the recording is shorter than 90 seconds, public streaming was active, spend or request limits were exceeded, secrets appear in evidence, or the run used the root scaffold / TTS / a second fal request in parallel.
+
+One scoped software fix plus one reflight is allowed. A second F-FAIL closes the plan. Prompt-tuning, pack regeneration, and adding TTS are not in-scope fixes.
+
+### F-INCONCLUSIVE
+
+Declare when the recording or evidence is incomplete in a way that blocks scoring: missing audio, missing `voice_review.json` after the operator watched the tape, unreadable chain URLs, or an OBS recording that did not finalize. Re-run only the missing measurement.
+
+### Hard stops — not this plan
+
+These remain unfinished after any terminal verdict. Do not implement them to “make the flight pass”:
+
+- Orchestrator chat
+- three parallel camera generations
+- TTS mux, ElevenLabs, or ffmpeg voice effects
+- public Twitch/RTMP
+- live X or article fetch
+- multi-tweet rundowns
+- Producer agent
+- daily-variant generation during a live run
+- changing `baseline_id` mid-flight
+- 480p or 1080 generation
+- reference-to-video substitution for last-frame chaining
+
+### Evidence required to close
+
+`out/flights/${FLIGHT_ID}/` must contain `flight.json` with exactly one verdict, plus `config.redacted.json`, `baseline/manifest.json`, the source packet and lock, the segment package, `logs/takes.jsonl`, `logs/events.jsonl`, `logs/fal_requests.jsonl`, `recording.json`, `hashes.json`, and — except for F-FAIL before human review — `voice_review.json`. `flight.json` records `reserved_cost_upper_bound_usd`, not provider-billed cost. If fal exposes a receipt, store it separately.
+
+The flight is done when that bundle exists, one verdict is written, and no further work from this plan is queued.
 
 ---
 
@@ -907,7 +1042,7 @@ git commit -m "Write immutable live flight evidence"
 - Create: `runtime-flight/runtime_flight/verify.py`
 - Create: `runtime-flight/tests/test_verify.py`
 
-- [ ] Support two explicit modes: `--automated` verifies machine evidence before human review; `--final` additionally requires a complete `voice_review.json` and every required human score ≥3.
+- [ ] Support two explicit modes: `--automated` verifies the machine gates before human review; `--final` requires a complete `voice_review.json` and writes exactly one terminal verdict. `--final` exits 0 when the bundle is complete enough to close the plan as `F-PASS`, `F-PATH`, or `F-ARCH`. Scores below 3 are verdict inputs, not verifier crashes. Machine-gate failure is `F-FAIL` and a nonzero exit.
 - [ ] Use ffprobe to verify recording duration ≥90s, dimensions, and audio/video streams.
 - [ ] Use ffmpeg `blackdetect=d=0.2:pix_th=0.10`; any detected black interval of at least 0.2 seconds fails verification.
 - [ ] Use `freezedetect=n=-50dB:d=1.0`; correlate detected intervals with logged scene and watchdog-visible intervals. Freeze >1s fails only when a host layout was exposed. Watchdog, hold, and card intervals count as covered programme.
@@ -1068,22 +1203,26 @@ python3 -m runtime_flight live \
 python3 -m runtime_flight verify-flight --automated --latest --out out/flights
 ```
 
-- [ ] Human-score composition, speaker attribution, BOT1 voice consistency, BOT2 voice consistency, between-host voice distinction, intelligibility, dialogue fidelity, voice/gesture alignment, listener behavior, visual identity, set persistence, re-anchor quality, source grounding, and hold quality from 1–5.
-- [ ] If either voice-consistency score, distinction, intelligibility, dialogue fidelity, or voice/gesture alignment is below 3, mark native H3 voice as failed and open the TTS-first follow-up; do not silently mix voice paths inside this flight.
-- [ ] Save `voice_review.json`, then run:
+- [ ] Human-score the End criteria dimensions from 1–5. Save `voice_review.json`, then run:
 
 ```bash
 python3 -m runtime_flight verify-flight --final --latest --out out/flights
 ```
 
-- [ ] Flight passes only when both verification modes pass and no human score is below 3.
+- [ ] Write exactly one terminal verdict into `flight.json`. Do not mix TTS into this flight. Do not start another H3 prompt iteration.
+- [ ] Close the plan:
+  - `F-PASS` if machine gates passed and every voice and architecture-kill gate is ≥3.
+  - `F-PATH` if machine gates passed, architecture-kill gates are ≥3, and at least one voice gate is <3. Open a TTS-first follow-up after this plan is closed.
+  - `F-ARCH` if machine gates passed and at least one architecture-kill gate is <3. Do not open TTS.
+  - `F-FAIL` if `--automated` failed. One scoped software fix and one reflight are allowed.
+  - `F-INCONCLUSIVE` if scores or media are missing. Re-run only the missing measurement.
 
 ---
 
 ## Delegation
 
-Tasks 1–15 are implementation tasks suitable for a Cursor coding model after this plan is approved. Use one task at a time, test-first, with an independent review after each task.
+Tasks 1–15B are implementation tasks suitable for a Cursor coding model after this plan is approved. Use one task at a time, test-first, with an independent review after each task. The coding agent’s end state is **S-CODE**. It must not run Task 16 or Task 17.
 
-Task 0 needs the operator’s exact X text. Tasks 16–17 require explicit human approval because they submit paid jobs and control OBS.
+Task 0 and **S-OPS** need the operator. Tasks 16–17 require explicit human approval because they submit paid jobs and control OBS.
 
 The Orchestrator chat is intentionally excluded. After this flight path works, chat can select a locked baseline, help author the source packet/rundown, invoke `check`, and request `smoke` or `live`. It must not replace the deterministic Director, spend meter, OBS stream guard, or wall-clock loop.

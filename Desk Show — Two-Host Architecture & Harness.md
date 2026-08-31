@@ -452,12 +452,15 @@ E1 is the one that can invalidate the architecture. Run it first, before anythin
 
 One tweet in the center slot, both hosts in their boxes, roughly 10 beats of back-and-forth, headline chyron up throughout, ending on a sting.
 
-**Done when:**
-- 90 seconds runs with no dead air
-- the hold layout fires at least once, on purpose
-- both hosts stay recognizable and stay inside their crop zones across the whole segment
-- the operator veto works — one take killed and recovered from
-- we have a real $/segment including drops
+**Done when** the one-tweet live flight reaches a terminal verdict. The scored definition lives in `docs/superpowers/plans/2026-08-30-one-tweet-live-test-flight.md` § End criteria. Summary:
+
+- **S-CODE:** zero-cost harness proven. Agents stop here.
+- **F-PASS:** one ≥90s OBS recording from the locked Dwarkesh packet; machine gates pass; native H3 voice and two-host composition both score ≥3. No TTS follow-up.
+- **F-PATH:** same recording and machine gates, but native H3 voice fails. Close this flight and open TTS-first. Do not mix voice paths here.
+- **F-ARCH:** recording exists, but composition or identity kills the split two-host design. Do not open TTS.
+- **F-FAIL / F-INCONCLUSIVE:** the segment was not validly measured. One scoped fix plus one reflight, or re-run only the missing measurement.
+
+Hold/card recovery and operator panic are proven in the zero-cost suite. A live hold is not required if no take was late. Reserved-cost upper bound is the $/segment number this flight records.
 
 ### Milestones
 
