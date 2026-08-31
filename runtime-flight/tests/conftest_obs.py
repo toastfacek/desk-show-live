@@ -127,6 +127,9 @@ class FakeObsClient:
             FakeSceneItem(sourceName, self._next_scene_item_id())
         )
 
+    def set_input_settings(self, name: str, settings: dict, overlay: bool):
+        self.calls.append(("set_input_settings", name, settings, overlay))
+
     def _next_scene_item_id(self) -> int:
         item_id = self.next_scene_item_id
         self.next_scene_item_id += 1

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import secrets
@@ -11,6 +12,8 @@ ENV_NAME = "OBS_WEBSOCKET_PASSWORD"
 DEFAULT_PORT = 4455
 CONFIG_DIR = Path.home() / ".config" / "obs-studio"
 SECRET_PATH = Path.home() / ".config" / "desk-show" / "obs.env"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_RECORD_DIR = REPO_ROOT / "out" / "obs-recordings"
 
 
 def _read_secret_file(path: Path) -> str | None:
@@ -25,10 +28,7 @@ def _read_secret_file(path: Path) -> str | None:
 
 def ensure_password() -> str:
     existing = os.environ.get(ENV_NAME) or _read_secret_file(SECRET_PATH)
-    if existing:
-        os.environ[ENV_NAME] = existing
-        return existing
-    password = secrets.token_urlsafe(24)
+    password = existing or secrets.token_urlsafe(24)
     SECRET_PATH.parent.mkdir(parents=True, exist_ok=True)
     SECRET_PATH.write_text(f"{ENV_NAME}={password}\n", encoding="utf-8")
     SECRET_PATH.chmod(0o600)
@@ -36,7 +36,12 @@ def ensure_password() -> str:
     return password
 
 
-def write_obs_files(*, password: str, port: int = DEFAULT_PORT) -> None:
+def write_obs_files(
+    *,
+    password: str,
+    port: int = DEFAULT_PORT,
+    record_dir: Path = DEFAULT_RECORD_DIR,
+) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     (CONFIG_DIR / "plugin_config" / "obs-websocket").mkdir(parents=True, exist_ok=True)
     (CONFIG_DIR / "basic" / "profiles" / "Untitled").mkdir(parents=True, exist_ok=True)
@@ -77,7 +82,7 @@ def write_obs_files(*, password: str, port: int = DEFAULT_PORT) -> None:
     )
     os.chmod(CONFIG_DIR / "plugin_config" / "obs-websocket" / "config.json", 0o600)
 
-    record_dir = Path("/workspace/out/obs-recordings")
+    record_dir = Path(record_dir).resolve()
     record_dir.mkdir(parents=True, exist_ok=True)
     (CONFIG_DIR / "basic" / "profiles" / "Untitled" / "basic.ini").write_text(
         "\n".join(
@@ -114,9 +119,13 @@ def write_obs_files(*, password: str, port: int = DEFAULT_PORT) -> None:
     )
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument("--record-dir", type=Path, default=DEFAULT_RECORD_DIR)
+    args = parser.parse_args(argv)
     password = ensure_password()
-    write_obs_files(password=password)
+    write_obs_files(password=password, port=args.port, record_dir=args.record_dir)
     print(f"{ENV_NAME} ready (length {len(password)})")
     print(f"secret_file={SECRET_PATH}")
     print(f"obs_config={CONFIG_DIR}")

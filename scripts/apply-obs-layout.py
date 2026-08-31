@@ -11,7 +11,11 @@ from pathlib import Path
 
 from obsws_python import ReqClient
 
-from runtime_flight.obs_setup import setup_obs, validate_contract
+from runtime_flight.obs_setup import (
+    DEFAULT_WATCHDOG_URL,
+    setup_obs,
+    validate_contract,
+)
 
 ALIGN_TOP_LEFT = 5
 SOURCE_W = 1344
@@ -19,13 +23,20 @@ SOURCE_H = 768
 HALF_W = SOURCE_W // 2
 CANVAS_W = 1920
 CANVAS_H = 1080
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_CLIP = REPO_ROOT / "assets" / "clips" / "sync_check.mp4"
+DEFAULT_RECORD_DIR = REPO_ROOT / "out" / "obs-recordings"
+HIGHLIGHT_COLORS = {
+    "HL_A": 0xFFF2A541,  # BOT1 amber
+    "HL_B": 0xFF2FB7B2,  # BOT2 teal
+}
 
 # Runtime template one — research/runtime-graphics-spec.md rectangles.
 WELLS = {
     "left": {"x": 40, "y": 100, "w": 620, "h": 700},
     "right": {"x": 1260, "y": 100, "w": 620, "h": 700},
     "center": {"x": 660, "y": 100, "w": 600, "h": 700},
-    "solo": {"x": 80, "y": 80, "w": 960, "h": 900},
+    "solo": {"x": 80, "y": 80, "w": 620, "h": 700},
 }
 
 
@@ -73,7 +84,34 @@ def _bounds(x: float, y: float, w: float, h: float, *, crop_left: int = 0, crop_
 def ensure_sync_check(path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_file() and path.stat().st_size > 0:
-        return path
+        try:
+            probe = subprocess.run(
+                [
+                    "ffprobe",
+                    "-v",
+                    "error",
+                    "-select_streams",
+                    "v:0",
+                    "-show_entries",
+                    "stream=width,height",
+                    "-of",
+                    "csv=p=0:s=x",
+                    str(path),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except (OSError, subprocess.CalledProcessError) as error:
+            if path.resolve() != DEFAULT_CLIP.resolve():
+                raise RuntimeError(f"unable to inspect clip: {path}") from error
+        else:
+            if probe.stdout.strip() == f"{SOURCE_W}x{SOURCE_H}":
+                return path
+            if path.resolve() != DEFAULT_CLIP.resolve():
+                raise RuntimeError(
+                    f"clip must be {SOURCE_W}x{SOURCE_H}: {path}"
+                )
     filtergraph = (
         "color=c=0xcc2222:s=672x768:d=5:r=24[l];"
         "color=c=0x2244cc:s=672x768:d=5:r=24[r];"
@@ -107,10 +145,23 @@ def ensure_sync_check(path: Path) -> Path:
     return path
 
 
-def apply_layout(client: ReqClient, *, clip: Path, watchdog_url: str) -> dict:
+def _refuse_streaming(client: ReqClient) -> None:
+    stream = client.get_stream_status()
+    if bool(getattr(stream, "output_active", False)):
+        raise RuntimeError("OBS is already streaming; refusing to continue")
+
+
+def apply_layout(
+    client: ReqClient,
+    *,
+    clip: Path,
+    watchdog_url: str,
+    record_dir: Path = DEFAULT_RECORD_DIR,
+) -> dict:
+    _refuse_streaming(client)
     created = setup_obs(client, watchdog_url=watchdog_url)
     client.set_video_settings(30, 1, CANVAS_W, CANVAS_H, CANVAS_W, CANVAS_H)
-    record_dir = Path("/workspace/out/obs-recordings")
+    record_dir = Path(record_dir).resolve()
     record_dir.mkdir(parents=True, exist_ok=True)
     client.set_record_directory(str(record_dir))
 
@@ -189,7 +240,11 @@ def apply_layout(client: ReqClient, *, clip: Path, watchdog_url: str) -> dict:
     ):
         client.set_input_settings(
             name=name,
-            settings={"width": 8, "height": int(well["h"]), "color": 0xFF2EE6A6},
+            settings={
+                "width": 8,
+                "height": int(well["h"]),
+                "color": HIGHLIGHT_COLORS[name],
+            },
             overlay=True,
         )
         for scene in ("wide", "split", "solo_l", "solo_r"):
@@ -201,15 +256,12 @@ def apply_layout(client: ReqClient, *, clip: Path, watchdog_url: str) -> dict:
                 )
                 client.set_scene_item_enabled(scene, item_id, False)
 
-    client.set_current_program_scene("split")
-
     errors = validate_contract(client)
     if errors:
         raise RuntimeError(errors[0])
 
-    stream = client.get_stream_status()
-    if bool(getattr(stream, "output_active", False)):
-        raise RuntimeError("OBS is already streaming; refusing to continue")
+    _refuse_streaming(client)
+    client.set_current_program_scene("split")
 
     return {
         "created": created,
@@ -231,9 +283,10 @@ def main() -> int:
     parser.add_argument(
         "--clip",
         type=Path,
-        default=Path("/workspace/assets/clips/sync_check.mp4"),
+        default=DEFAULT_CLIP,
     )
-    parser.add_argument("--watchdog-url", default="http://127.0.0.1:8765/")
+    parser.add_argument("--record-dir", type=Path, default=DEFAULT_RECORD_DIR)
+    parser.add_argument("--watchdog-url", default=DEFAULT_WATCHDOG_URL)
     args = parser.parse_args()
     password = os.environ.get("OBS_WEBSOCKET_PASSWORD")
     if not password:
@@ -241,7 +294,12 @@ def main() -> int:
         return 2
     clip = ensure_sync_check(args.clip)
     client = ReqClient(host=args.host, port=args.port, password=password, timeout=5)
-    summary = apply_layout(client, clip=clip, watchdog_url=args.watchdog_url)
+    summary = apply_layout(
+        client,
+        clip=clip,
+        watchdog_url=args.watchdog_url,
+        record_dir=args.record_dir,
+    )
     print(json.dumps(summary, indent=2))
     return 0
 

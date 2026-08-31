@@ -20,8 +20,11 @@ REQUIRED_INPUTS = (
     "WATCHDOG",
 )
 HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
+WATCHDOG_HOST = "127.0.0.1"
+WATCHDOG_PORT = 8765
+DEFAULT_WATCHDOG_URL = f"http://{WATCHDOG_HOST}:{WATCHDOG_PORT}/"
 
-_VERSION_SUFFIX = re.compile(r"_v\d+$")
+_VERSION_SUFFIX = re.compile(r"_v(?P<version>\d+)$")
 
 ROLE_KIND_CANDIDATES: dict[str, tuple[str, ...]] = {
     "media": ("ffmpeg_source",),
@@ -123,6 +126,8 @@ class ObsSetupClient(Protocol):
     def get_scene_item_list(self, name: str) -> Any: ...
 
     def create_scene_item(self, sceneName: str, sourceName: str, enabled: bool) -> Any: ...
+
+    def set_input_settings(self, name: str, settings: dict, overlay: bool) -> Any: ...
 
 
 def normalize_input_kind(kind: str) -> str:
@@ -233,13 +238,20 @@ def _required_roles() -> set[str]:
 def _preferred_kind(supported_kinds: set[str], candidates: tuple[str, ...]) -> str | None:
     """Pick a CreateInput kind. Prefer a versioned name OBS actually registers."""
     best: str | None = None
-    best_key: tuple[int, int] | None = None
+    best_key: tuple[int, int, int, str] | None = None
     for kind in supported_kinds:
         normalized = normalize_input_kind(kind)
         if normalized not in candidates:
             continue
-        # Higher is better: versioned kinds first, then ROLE_KIND_CANDIDATES order.
-        key = (1 if kind != normalized else 0, -candidates.index(normalized))
+        match = _VERSION_SUFFIX.search(kind)
+        version = int(match.group("version")) if match else 0
+        # Higher is better: versioned kinds, newest version, then candidate order.
+        key = (
+            1 if match else 0,
+            version,
+            -candidates.index(normalized),
+            kind,
+        )
         if best_key is None or key > best_key:
             best = kind
             best_key = key
@@ -334,7 +346,7 @@ def _missing_scene_item_counts(
 def setup_obs(
     client: ObsSetupClient,
     *,
-    watchdog_url: str = "http://127.0.0.1:8765/",
+    watchdog_url: str = DEFAULT_WATCHDOG_URL,
 ) -> dict[str, list[str]]:
     kind_errors = _input_kind_errors(client)
     if kind_errors:
@@ -354,16 +366,17 @@ def setup_obs(
             scenes.add(scene)
 
     anchor_scene = "wide"
+    watchdog_settings = {
+        "url": watchdog_url,
+        "width": 1920,
+        "height": 1080,
+        "reroute_audio": False,
+    }
     for input_name in REQUIRED_INPUTS:
         if input_name not in inputs:
             settings: dict[str, Any] = {}
             if input_name == "WATCHDOG":
-                settings = {
-                    "url": watchdog_url,
-                    "width": 1920,
-                    "height": 1080,
-                    "reroute_audio": False,
-                }
+                settings = watchdog_settings
             client.create_input(
                 anchor_scene,
                 input_name,
@@ -373,6 +386,14 @@ def setup_obs(
             )
             created_inputs.append(input_name)
             inputs[input_name] = input_kinds[input_name]
+        elif input_name == "WATCHDOG":
+            # setup-obs may be rerun after the overlay URL changes. Keep the
+            # existing browser source pointed at the contract URL.
+            client.set_input_settings(
+                name=input_name,
+                settings=watchdog_settings,
+                overlay=True,
+            )
 
     for scene in REQUIRED_SCENES:
         items = _scene_items(client, scene)

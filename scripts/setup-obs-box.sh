@@ -8,6 +8,10 @@ cd "$ROOT"
 
 OBS_BIN="${OBS_BIN:-obs}"
 DISPLAY_VALUE="${DISPLAY:-:1}"
+OBS_PORT="${OBS_PORT:-4455}"
+WATCHDOG_URL="${WATCHDOG_URL:-http://127.0.0.1:8765/}"
+RECORD_DIR="${RECORD_DIR:-${ROOT}/out/obs-recordings}"
+CLIP_PATH="${CLIP_PATH:-${ROOT}/assets/clips/sync_check.mp4}"
 SECRET_PATH="${HOME}/.config/desk-show/obs.env"
 LOG_PATH="${HOME}/.config/obs-studio/obs-box.log"
 CONFIG_YAML="${ROOT}/runtime-flight/config.local.yaml"
@@ -22,7 +26,9 @@ if [[ ! -x "${ROOT}/.venv/bin/python" ]]; then
   exit 1
 fi
 
-"${ROOT}/.venv/bin/python" "${ROOT}/scripts/obs_box_config.py"
+"${ROOT}/.venv/bin/python" "${ROOT}/scripts/obs_box_config.py" \
+  --port "$OBS_PORT" \
+  --record-dir "$RECORD_DIR"
 
 # shellcheck disable=SC1090
 set -a
@@ -41,7 +47,7 @@ if [[ ! -f "$CONFIG_YAML" ]]; then
 fi
 
 port_open() {
-  "${ROOT}/.venv/bin/python" -c 'import socket,sys; s=socket.socket(); s.settimeout(1); sys.exit(0 if s.connect_ex(("127.0.0.1", 4455))==0 else 1)'
+  "${ROOT}/.venv/bin/python" -c 'import socket,sys; s=socket.socket(); s.settimeout(1); sys.exit(0 if s.connect_ex(("127.0.0.1", int(sys.argv[1])))==0 else 1)' "$OBS_PORT"
 }
 
 if ! port_open; then
@@ -59,7 +65,7 @@ if ! port_open; then
   echo $! >"${HOME}/.config/obs-studio/obs-box.pid"
 fi
 
-echo "waiting for websocket :4455"
+echo "waiting for websocket :${OBS_PORT}"
 for _ in $(seq 1 60); do
   if port_open; then
     break
@@ -67,13 +73,19 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 if ! port_open; then
-  echo "OBS websocket did not bind :4455. last log lines:" >&2
+  echo "OBS websocket did not bind :${OBS_PORT}. last log lines:" >&2
   tail -n 40 "$LOG_PATH" >&2 || true
   exit 1
 fi
 
 export PYTHONPATH="${ROOT}/runtime-flight${PYTHONPATH:+:$PYTHONPATH}"
 cd "${ROOT}/runtime-flight"
-"${ROOT}/.venv/bin/python" -m runtime_flight setup-obs --config "$CONFIG_YAML"
-"${ROOT}/.venv/bin/python" "${ROOT}/scripts/apply-obs-layout.py"
+"${ROOT}/.venv/bin/python" -m runtime_flight setup-obs \
+  --config "$CONFIG_YAML" \
+  --watchdog-url "$WATCHDOG_URL"
+"${ROOT}/.venv/bin/python" "${ROOT}/scripts/apply-obs-layout.py" \
+  --port "$OBS_PORT" \
+  --clip "$CLIP_PATH" \
+  --record-dir "$RECORD_DIR" \
+  --watchdog-url "$WATCHDOG_URL"
 echo "OBS box ready. program scene=split. not streaming."
