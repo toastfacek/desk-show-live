@@ -328,3 +328,33 @@ def test_recording_session_body_exception_preserves_original_on_stop_failure():
     assert ("stop_record",) in client.calls
     assert client.post_stop_polls >= 1
     assert session.owns_recording is True
+
+
+class OBSSDKRequestError(Exception):
+    """Fake vendor error not derived from RuntimeError."""
+
+
+def test_recording_session_normal_exit_sdk_stop_error_propagates():
+    client = complete_obs_client()
+    client.stop_record_raises = OBSSDKRequestError("StopRecord rejected")
+    session = ObsSession(client=client, poll_interval_s=0.0)
+    with pytest.raises(OBSSDKRequestError, match="StopRecord rejected"):
+        with session.recording_session():
+            pass
+    assert ("stop_record",) in client.calls
+    assert session.owns_recording is True
+
+
+def test_recording_session_body_exception_preserves_original_on_sdk_stop_error():
+    client = complete_obs_client()
+    client.stop_record_raises = OBSSDKRequestError("StopRecord rejected")
+    session = ObsSession(client=client, poll_interval_s=0.0)
+
+    class Boom(Exception):
+        pass
+
+    with pytest.raises(Boom):
+        with session.recording_session():
+            raise Boom()
+    assert ("stop_record",) in client.calls
+    assert session.owns_recording is True

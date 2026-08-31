@@ -41,6 +41,7 @@ class FakeObsClient:
     stop_pending: bool = False
     post_stop_polls: int = 0
     stop_never_finalizes: bool = False
+    stop_record_raises: Exception | None = None
     next_scene_item_id: int = 1
 
     def get_scene_list(self):
@@ -185,6 +186,8 @@ class FakeObsClient:
 
     def stop_record(self):
         self.calls.append(("stop_record",))
+        if self.stop_record_raises is not None:
+            raise self.stop_record_raises
         self.stop_pending = True
         self.post_stop_polls = 0
         return type("StopRecord", (), {"output_path": self.output_path})()

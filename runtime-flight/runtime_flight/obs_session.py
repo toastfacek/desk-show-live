@@ -132,6 +132,6 @@ class ObsSession:
         finally:
             try:
                 self.stop_recording()
-            except RuntimeError:
+            except Exception:
                 if body_error is None:
                     raise
