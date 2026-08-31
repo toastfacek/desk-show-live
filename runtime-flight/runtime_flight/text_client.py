@@ -40,12 +40,14 @@ class TextClient:
         model: str,
         limiter: TextAttemptLimiter,
         http_post: HttpPost | None = None,
+        timeout_s: float = 8.0,
     ) -> None:
         self._base_url = base_url
         self._api_key = api_key
         self._model = model
         self._limiter = limiter
         self._http_post = http_post
+        self._timeout_s = float(timeout_s)
 
     def __repr__(self) -> str:
         return f"TextClient(model={self._model!r})"
@@ -108,12 +110,12 @@ class TextClient:
                 url,
                 headers=headers,
                 json=payload,
-                timeout=8.0,
+                timeout=self._timeout_s,
             )
         async with httpx2.AsyncClient() as client:
             return await client.post(
                 url,
                 headers=headers,
                 json=payload,
-                timeout=8.0,
+                timeout=self._timeout_s,
             )

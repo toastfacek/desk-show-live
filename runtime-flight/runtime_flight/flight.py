@@ -207,6 +207,7 @@ async def _run_paid_async(
         model=config.text_model or "",
         limiter=limiter,
         http_post=http_post,
+        timeout_s=float(config.text_timeout_s),
     )
     package = await SegmentPlanner(client).plan(source, baseline)
     writer = Writer(client)

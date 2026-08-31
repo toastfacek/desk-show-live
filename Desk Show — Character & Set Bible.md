@@ -123,7 +123,7 @@ Check in this order. The first three are structural — if they fail, regenerate
 5. **Rest state.** Mouths closed, expressions neutral, nobody mid-gesture.
 6. **Headroom.** No head clipped at the top. The chyron and tickers eat the bottom ~180px of the 1080 canvas — check nothing important lives there.
 
-Once it passes, `hero_wide.png` is frozen. Changing it later invalidates every chain and every baked asset that references it.
+Once it passes, freeze it as the Pack Manager canonical / locked baseline (1344×768). Changing that later invalidates every chain. The filename `hero_wide.png` in older notes is that baseline, not a file in git. See `ASSETS.md`.
 
 ---
 

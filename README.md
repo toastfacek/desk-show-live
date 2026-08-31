@@ -1,3 +1,25 @@
+# Desk Show
+
+**Current `main` is two-host Runtime.** Pictures for PHASEONE[lol] and deb live in Pack Manager, not in git. See [`ASSETS.md`](ASSETS.md).
+
+| Piece | Path |
+| :---- | :---- |
+| Hosts, scenes, locked hero | `pack-manager/` (`data/` is gitignored; seed still is `pack-manager/fixtures/hero_wide.png`) |
+| OBS clock | `obs-harness/` |
+| Live flight | `runtime-flight/` |
+| Prompt-safe sheets (words only) | `studio.yaml` |
+| Asset map | [`ASSETS.md`](ASSETS.md) |
+
+Stage this Cloud Agent / an empty clone (no fal, no OBS):
+
+```bash
+./scripts/stage-demo.sh
+```
+
+The one-host prototype (`run_live.py`, `bake_assets.py`) is still in this repo. Do not look there for the two hosts.
+
+---
+
 # Desk Show — MVP
 
 A single-host live desk-show prototype: a hosted LLM writes each line, fal

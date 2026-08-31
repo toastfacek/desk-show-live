@@ -131,16 +131,18 @@ def load_config(path: Path) -> RuntimeConfig:
     )
 
 
-def validate_config(config: RuntimeConfig) -> None:
+def validate_config(config: RuntimeConfig, *, require_obs: bool = True) -> None:
     errors: list[str] = []
 
-    for env_name, value in (
+    required_env = [
         (config.baseline_id_env, config.baseline_id),
         (config.text_base_url_env, config.text_base_url),
         (config.text_api_key_env, config.text_api_key),
         (config.text_model_env, config.text_model),
-        (config.obs_password_env, config.obs_password),
-    ):
+    ]
+    if require_obs:
+        required_env.append((config.obs_password_env, config.obs_password))
+    for env_name, value in required_env:
         if not value:
             errors.append(f"missing required environment variable: {env_name}")
 

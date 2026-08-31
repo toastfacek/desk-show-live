@@ -20,11 +20,13 @@ from runtime_flight.operator import (
     OperatorError,
     cmd_paid_flight,
     cmd_replay,
+    cmd_segment,
     cmd_setup_obs,
     cmd_verify_flight,
     latest_bundle,
     load_validated_config,
 )
+from runtime_flight.segment import run_segment
 from runtime_flight.preflight import (
     PreflightError,
     open_obs_session,
@@ -46,6 +48,7 @@ def main(
     panic_installer=None,
     cleanup=None,
     network_call=None,
+    segment_runner=None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="runtime_flight")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -88,6 +91,14 @@ def main(
     smoke_parser.add_argument("--max-fal-submissions", type=int, required=True)
     smoke_parser.add_argument("--max-text-requests", type=int, default=4)
 
+    segment_parser = subparsers.add_parser(
+        "segment",
+        help="Paid no-OBS segment loop: planner, writer, fal chain. Human-gated.",
+    )
+    _add_paid_args(segment_parser)
+    segment_parser.add_argument("--max-fal-submissions", type=int, default=2)
+    segment_parser.add_argument("--max-text-requests", type=int, default=4)
+
     live_parser = subparsers.add_parser("live", help="Paid 90-second live flight. Human-gated.")
     _add_paid_args(live_parser)
     live_parser.add_argument("--max-text-requests", type=int, default=24)
@@ -122,6 +133,15 @@ def main(
                 return rehearsal_runner(args.rundown)
             config = load_validated_config(args.config)
             return run_rehearsal(config=config, rundown=args.rundown)
+        if args.command == "segment":
+            config = load_validated_config(args.config, require_obs=False)
+            return cmd_segment(
+                config,
+                confirm_spend=args.confirm_spend,
+                max_text_requests=args.max_text_requests,
+                max_fal_submissions=args.max_fal_submissions,
+                run_segment=segment_runner or run_segment,
+            )
         if args.command in {"smoke", "live"}:
             config = load_validated_config(args.config)
             session = _session(config, obs_session)
