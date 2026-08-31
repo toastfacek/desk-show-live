@@ -9,3 +9,4 @@ Design-agent contract: [../deliverables/DESIGN_BRIEF.md](../deliverables/DESIGN_
 Editorial (not a visual lane):
 
 - [talk-show-segment-lifecycle.md](talk-show-segment-lifecycle.md) — TBPN / PTI / SportsCenter / Siskel & Ebert cadence, and the two-host LLM contract for Segmenter + Writer.
+- [dialogue-and-character.md](dialogue-and-character.md) — How games, improv, LLM character stacks, and conversation analysis make two complementary voices feel alive; steal-for-HostMind checklist.
