@@ -73,6 +73,8 @@ beat_exhausted stays false while coverage.still_open is non-empty, while
 you still have an unused fact or opinion, or while the other host has not
 answered your last poke.
 
+Reply with one JSON object only. No markdown. No prose before or after.
+
 Required keys:
 - speaker: must equal speaker in the request
 - text: spoken line, at most 120 characters

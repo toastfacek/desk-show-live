@@ -95,7 +95,7 @@ class TextClient:
         if not isinstance(content, str):
             raise TextClientError("assistant content is not a string")
         try:
-            parsed = json.loads(_strip_json_fence(content))
+            parsed = _loads_json_object(content)
         except json.JSONDecodeError as error:
             raise TextClientError("assistant content is not JSON") from error
         if not isinstance(parsed, dict):
@@ -130,3 +130,15 @@ def _strip_json_fence(content: str) -> str:
     if body and body[-1].strip() == "```":
         body = body[:-1]
     return "\n".join(body).strip()
+
+
+def _loads_json_object(content: str) -> object:
+    text = _strip_json_fence(content)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        start = text.find("{")
+        if start < 0:
+            raise
+        parsed, _end = json.JSONDecoder().raw_decode(text[start:])
+        return parsed

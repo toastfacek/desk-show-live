@@ -333,6 +333,29 @@ def test_fenced_markdown_json_is_accepted():
     assert _run(run()) == payload
 
 
+def test_json_object_extracted_from_leading_prose():
+    payload = {"ok": True, "speaker": "BOT1"}
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "content": 'Sure.\n{"ok": true, "speaker": "BOT1"}'
+                        }
+                    }
+                ]
+            },
+        )
+
+    async def run():
+        return await _client(http_post).complete_json(system="sys", user={"k": "v"})
+
+    assert _run(run()) == payload
+
+
 def test_unfenced_non_json_content_still_fails():
     async def http_post(url, *, headers, json, timeout):
         return FakeResponse(
