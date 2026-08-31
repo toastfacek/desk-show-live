@@ -423,6 +423,16 @@ def _fit_line(text: str) -> str:
     words = text.split()
     if not words or any(len(word) > MAX_LINE_CHARS for word in words):
         raise DiscussError("line exceeds 120 characters")
+    window = text[:MAX_LINE_CHARS]
+    clause = ""
+    for marker in (".", "?", "!", "—", ";"):
+        index = window.rfind(marker)
+        if index >= 48:
+            candidate = window[: index + 1].strip()
+            if len(candidate) > len(clause):
+                clause = candidate
+    if clause:
+        return clause
     current = ""
     for word in words:
         candidate = word if not current else f"{current} {word}"

@@ -483,6 +483,7 @@ def test_overlong_line_is_wrapped_to_one_take():
     thought, turn = _run(run())
     assert len(thought.text) <= 120
     assert thought.text.startswith("Name the cluster")
+    assert thought.text.endswith((".", "?", "!", "—", ";")) or "cluster" in thought.text
     assert turn["text"] == thought.text
 
 
