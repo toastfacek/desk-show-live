@@ -60,15 +60,17 @@ class ObsSession:
         duration_ms = getattr(self._record_status(), "output_duration", 0) or 0
         return duration_ms / 1000.0
 
-    def _wait_for_recording_inactive(self) -> None:
+    def _confirm_recording_inactive(self) -> None:
         deadline = time.monotonic() + self.finalize_timeout_s
         while time.monotonic() < deadline:
             try:
                 if not self._recording_active():
+                    self._owns_recording = False
                     return
-            except Exception:
-                return
+            except Exception as exc:
+                raise RuntimeError("OBS recording status unavailable") from exc
             time.sleep(self.poll_interval_s)
+        raise RuntimeError("OBS recording did not finalize")
 
     def _cleanup_owned_recording(self) -> None:
         if not self._owns_recording:
@@ -77,8 +79,7 @@ class ObsSession:
             self._client.stop_record()
         except Exception:
             pass
-        self._wait_for_recording_inactive()
-        self._owns_recording = False
+        self._confirm_recording_inactive()
 
     def start_recording(self) -> None:
         self.refuse_streaming()
@@ -94,15 +95,19 @@ class ObsSession:
                     if self._recording_active():
                         return
                 except Exception:
-                    self._cleanup_owned_recording()
+                    try:
+                        self._cleanup_owned_recording()
+                    except RuntimeError:
+                        pass
                     raise
                 time.sleep(self.poll_interval_s)
         except Exception:
-            if self._owns_recording:
-                self._cleanup_owned_recording()
             raise
 
-        self._cleanup_owned_recording()
+        try:
+            self._cleanup_owned_recording()
+        except RuntimeError:
+            raise RuntimeError("OBS recording did not become active") from None
         raise RuntimeError("OBS recording did not become active")
 
     def stop_recording(self) -> str | None:
@@ -112,18 +117,8 @@ class ObsSession:
             self._owns_recording = False
             return None
         result = self._client.stop_record()
-        deadline = time.monotonic() + self.finalize_timeout_s
-        while time.monotonic() < deadline:
-            try:
-                if not self._recording_active():
-                    self._owns_recording = False
-                    return getattr(result, "output_path", None)
-            except Exception:
-                self._owns_recording = False
-                raise
-            time.sleep(self.poll_interval_s)
-        self._owns_recording = False
-        raise RuntimeError("OBS recording did not finalize")
+        self._confirm_recording_inactive()
+        return getattr(result, "output_path", None)
 
     @contextmanager
     def recording_session(self) -> Iterator[None]:
@@ -131,4 +126,7 @@ class ObsSession:
         try:
             yield
         finally:
-            self.stop_recording()
+            try:
+                self.stop_recording()
+            except RuntimeError:
+                pass

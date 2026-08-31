@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -19,12 +20,13 @@ REQUIRED_INPUTS = (
 )
 HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
 
+_VERSION_SUFFIX = re.compile(r"_v\d+$")
+
 ROLE_KIND_CANDIDATES: dict[str, tuple[str, ...]] = {
-    "media": ("ffmpeg_source", "vlc_source"),
-    "text": ("text_ft2_source", "text_gdiplus_v2", "text_gdiplus_source"),
-    "color": ("color_source_v3", "color_source"),
+    "media": ("ffmpeg_source",),
+    "text": ("text_gdiplus", "text_ft2_source"),
+    "color": ("color_source",),
     "image": ("image_source",),
-    "browser": ("browser_source",),
 }
 
 INPUT_ROLE: dict[str, str] = {
@@ -109,6 +111,15 @@ class ObsSetupClient(Protocol):
     def create_scene_item(self, sceneName: str, sourceName: str, enabled: bool) -> Any: ...
 
 
+def normalize_input_kind(kind: str) -> str:
+    return _VERSION_SUFFIX.sub("", kind)
+
+
+def role_kind_compatible(role: str, kind: str) -> bool:
+    normalized = normalize_input_kind(kind)
+    return normalized in ROLE_KIND_CANDIDATES[role]
+
+
 def _scene_names(client: ObsSetupClient) -> set[str]:
     response = client.get_scene_list()
     scenes = getattr(response, "scenes", None) or []
@@ -144,7 +155,7 @@ def _supported_input_kinds(client: ObsSetupClient) -> set[str]:
     kinds = getattr(response, "input_kinds", None)
     if kinds is None:
         kinds = getattr(response, "inputKinds", None) or []
-    return {str(kind) for kind in kinds}
+    return {normalize_input_kind(str(kind)) for kind in kinds}
 
 
 def _scene_items(client: ObsSetupClient, scene_name: str) -> list[tuple[str, int]]:
@@ -199,11 +210,15 @@ def _required_roles() -> set[str]:
 
 
 def resolve_role_kinds(supported_kinds: set[str]) -> dict[str, str]:
+    normalized_supported = {normalize_input_kind(kind) for kind in supported_kinds}
     resolved: dict[str, str] = {}
     missing_roles: list[str] = []
     for role in sorted(_required_roles()):
         candidates = ROLE_KIND_CANDIDATES[role]
-        chosen = next((kind for kind in candidates if kind in supported_kinds), None)
+        chosen = next(
+            (kind for kind in candidates if kind in normalized_supported),
+            None,
+        )
         if chosen is None:
             missing_roles.append(role)
         else:
@@ -235,7 +250,7 @@ def _input_kind_errors(client: ObsSetupClient) -> list[str]:
         if actual is None:
             continue
         role = INPUT_ROLE[input_name]
-        if actual not in ROLE_KIND_CANDIDATES[role]:
+        if not role_kind_compatible(role, actual):
             errors.append(
                 f"input {input_name} has incompatible kind {actual} for role {role}"
             )
@@ -285,6 +300,10 @@ def _missing_scene_item_counts(
 
 
 def setup_obs(client: ObsSetupClient) -> dict[str, list[str]]:
+    kind_errors = _input_kind_errors(client)
+    if kind_errors:
+        raise RuntimeError(kind_errors[0])
+
     created_scenes: list[str] = []
     created_inputs: list[str] = []
     created_scene_items: list[str] = []
@@ -318,6 +337,10 @@ def setup_obs(client: ObsSetupClient) -> dict[str, list[str]]:
                 client.create_scene_item(scene, source_name, True)
                 created_scene_items.append(f"{scene}:{source_name}")
                 items.append((source_name, -1))
+
+    remaining_errors = validate_contract(client)
+    if remaining_errors:
+        raise RuntimeError(remaining_errors[0])
 
     return {
         "created_scenes": created_scenes,
