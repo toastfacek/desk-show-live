@@ -1,8 +1,10 @@
 # Agentic Live Streaming Harness — Plan
 
-**Status:** Plan for review · **Date:** 30 Aug 2026 · **Owner:** Jesse
+**Status:** Plan for review · **Date:** 30 Aug 2026 · **Amended:** 31 Aug 2026 · **Owner:** Jesse
 
 This is a plan, not a build. No code. It does not replace the two-host architecture. It answers one question that doc left open: **if the live show is run by software agents instead of a room of people, who is in charge, which jobs still exist, and which jobs were only there because humans are scarce?**
+
+§17 (31 Aug 2026) records product and switcher decisions after the one-tweet segment: what we sell, OBS as a hidden runtime, when NDI matters, and the source/well primitives so Runtime does not become the only show the harness can run. Where §17 disagrees with §2.4 or §8, §17 wins.
 
 Read this first if you have not read the other files. The other files assume you already know the show. This one does not.
 
@@ -70,7 +72,7 @@ Until a later “pin this face” feature is proven, we keep identity by feeding
 
 **OBS Studio** is free, open-source software (GPL v2 or later) that people use to record and live-stream. It layers cameras, video files, text, and web pages onto one output and can send that output to Twitch.
 
-We use OBS as the **switcher and the player**. We do not write our own compositor. We talk to OBS over its built-in remote-control port (the WebSocket server, on since OBS 28). Our code is a client. That matters for licensing: talking to OBS over the network does not force our code to be GPL. Shipping a plugin that is compiled into OBS would.
+We use OBS as the **first switcher and the player**. We talk to OBS over its built-in remote-control port (the WebSocket server, on since OBS 28). Our code is a client. That matters for licensing: talking to OBS over the network does not force our code to be GPL. Shipping a plugin that is compiled into OBS would. We do not write a second OBS. A later, narrow compositor behind the same `Player` interface is allowed — see §17.3.
 
 OBS is not what a Super Bowl truck runs. It is what a lean studio runs when one box has to be the switcher, the graphics machine, and the stream encoder. That is enough for this show. Twitch out is an OBS checkbox.
 
@@ -457,7 +459,7 @@ duck_music(db)
 set_crop(item, rect)    → live tune of the split (setup, not every cut)
 ```
 
-**Layouts** are OBS scenes, built by hand:
+**Layouts** in this command list are the Runtime template: OBS scenes, built once (by hand or by `setup-obs`). They are not the only layouts the harness may ever know. See §17.4.
 
 | Layout | On screen |
 | :---- | :---- |
@@ -541,7 +543,7 @@ These are physics, money, or taste. Headcount does not move them.
 - Let any agent own the spend cap.
 - Put a language model on the short loop in v1.
 - Build a second paid camera.
-- Let chat change the show in v1 (showing chat later is cheap; letting it write is a safety problem).
+- Let chat change the show in the Runtime v1 proof (showing chat is cheap; letting it write is a safety problem). Continuous input that edits the rundown — not the pixels — is the later product. See §17.6.
 - Name other people’s shows, faces, or characters in a video prompt.
 - Treat this plan as permission to write code before the two-host M0/M1 video tests. Those tests can still kill the look. This plan is the org chart, not a skip-ahead.
 
@@ -583,9 +585,9 @@ Please mark each as agree / change / defer.
 
 6. **One writer for both hosts, forever on air.** Extra writers only in rehearsal, if at all. Agree?
 
-7. **The public cut is `OBS Harness — TDD.md` only** (clock + OBS + stub). Text and fal stay in a later package. Right line?
+7. **The public cut is `OBS Harness — TDD.md` only** (clock + OBS + stub). Text and fal stay in a later package. **Still the first public cut.** The *company* cut is the harness + Live Sockets + packs; Runtime is the proof template. See §17.1.
 
-8. **License for a later public repo.** Talking to OBS over the network can be MIT or Apache. Confirm a preference when we split the repo. Not a blocker for this plan.
+8. **License for a later public repo.** **Settled 31 Aug 2026, §17.2.** The harness sidecar is MIT or Apache. OBS stays a separate GPL runtime. Do not link `libobs`. Do not ship a forked OBS inside our binary.
 
 9. **Reference-to-video.** If pinning a face removes the last-frame chain, most of §11.2 goes away and clips can cook in parallel. That is a measurement (already listed in the two-host doc). This plan does not depend on it.
 
@@ -593,7 +595,7 @@ Please mark each as agree / change / defer.
 
 ## 15. What “done” means for this plan
 
-This plan is accepted when the answers to §14 are written down (even as “defer”), and nobody is still treating the director as the orchestrator or an agent as the clock.
+This plan is accepted when the answers to §14 are written down (even as “defer”), and nobody is still treating the director as the orchestrator or an agent as the clock. §17 records the 31 Aug 2026 product/switcher answers so a later reader does not treat Runtime’s six scenes as the harness.
 
 It is **not** done when code exists. The next writing, if this is accepted, is a short addition to the two-host doc: rename conductor/segmenter in the role table, add the producer package, point here.
 
@@ -610,3 +612,113 @@ Clock starts at 00:12.4. Take 2 is on air (split, BOT2 speaking), ends at 00:15.
 **~00:90 — slow loop.** Producer looks at new posts, spend trend, holds. Emits the next package or a bumper. Writer switches questions when the current thought closes. The short loop never waited for that.
 
 If at 00:15.0 the producer had been “thinking,” nothing changes. The card still goes up. That is the whole point of two bosses.
+
+---
+
+## 17. Product and switcher decisions (31 Aug 2026)
+
+Recorded after the no-OBS paid segment and a review of OBS vs writing our own mixer vs NDI. This section is about **what the company is**, not about Runtime’s look. Runtime stays the first proof. It is not the only show the harness may run.
+
+### 17.1 Two products, one machine (locked)
+
+§3 stays in force, with the sell line made explicit.
+
+| Piece | What it is | Who owns it |
+| :---- | :---- | :---- |
+| **Harness** | Clock, layouts, furniture slots, hold, spend cap, video adapter, input adapters | The company. Candidate to sell or make public. |
+| **Show / template** | Hosts, voice, set, segment rules, first layout pack | Runtime is ours and is the PoC. Later, customers bring a pack. |
+| **Live Sockets** | Their text key and their video key | Later package. The customer-keys cut. |
+
+The harness is a switcher you can rent. A show is one production that rents it. Infinite TV, fal’s own live demo, and “slop news” sell the other product: live input mutates **pixels**. We sell: live input mutates the **rundown**. Hosts, crops, and 1080 type stay a production.
+
+Two doors, one kernel:
+
+- **Studio (now).** Local app. Requires stock OBS 28+. Customer never *operates* OBS. They open our window.
+- **Cloud (later).** Same harness API. We run the encoder. Customer never installs OBS.
+
+Do not build the Cloud door before Runtime’s picture holds (identity, last-frame chain, furniture, hold, native speech).
+
+### 17.2 We can charge. OBS stays someone else’s program.
+
+A sidecar that speaks `obs-websocket` on localhost is not a plugin and not a fork. We can charge for that app. GPL does not make the client free.
+
+The customer promise is: **you never operate OBS.** It is not: OBS is not there. We start it minimized, write the websocket config, run `setup-obs`, apply crops. First-run and crash recovery may still show an OBS window. Treat OBS like Chromium under Electron: we depend on it, we launch it, we do not pretend we wrote it.
+
+Safe ship: “Requires OBS Studio 28+,” or detect and launch the official build. Two processes on disk.
+
+Do not: compile into OBS, link `libobs`, or ship one fused binary that is really OBS with our name on it.
+
+### 17.3 Do we write our own switcher?
+
+A full OBS is a company. The switcher this product needs is not.
+
+Runtime’s first proof uses almost none of OBS: one file at a time, six named layouts, 1080 furniture, host audio on that file, a ducked bed, record now / stream later, hold when the next file is late. That is a **narrow compositor**.
+
+What is actually hard: decode **once** and crop twice (shared playhead — H0), gapless 5s file swap, picture-off / audio-still (`card_full`), and four-hour encode boredom. Layout names are easy.
+
+| Approach | When |
+| :---- | :---- |
+| **OBS backend** | Studio proof and local SKU. Hidden process. |
+| **ffmpeg graph** | Record / smoke / later Cloud encode. LGPL binary we exec. Bad at live HTML furniture. |
+| **Our window is the switcher** (Electron or browser) | Product path if the customer must never see OBS. One `<video>`, two crops, DOM furniture. Shared playhead is free. Encode out through ffmpeg or MediaMTX. |
+
+We do **not** start a second OBS. We **do** keep the `Player` interface (`FakePlayer` / `ObsPlayer` / later `FfmpegPlayer` or `BrowserPlayer`). Replace the backend, not the harness.
+
+The first extra feature (second independent video, a live camera, “just one plugin”) is how a narrow compositor becomes OBS 2. Refuse it until a customer show requires a new **source kind**, not a new hobby.
+
+### 17.4 Primitives so we do not overfit Runtime
+
+Do not bake “two cartoon robots at a desk” into the harness. Bake **sources, wells, layouts, and hold**.
+
+**Source** — a thing that can feed program. Four kinds:
+
+| Kind | What it is | Clock | Money | Examples |
+| :---- | :---- | :---- | :---- | :---- |
+| **Live** | Present now. You can cut to it. | Wall clock | Usually $0 after ingest | Webcam, NDI, WebRTC guest |
+| **Clip** | A file. May be late. May need the previous file’s last frame. | Playhead | Often paid (H3) or $0 (upload) | fal take, canned VO, user mp4 |
+| **Graphic** | Drawn. No cook time. | Instant | $0 | Chyron, names, card, ticker, HTML overlay |
+| **Audio** | Bed, sting, or the clip’s attached speech | Mixer | $0 | `BED`, H3 native VO |
+
+**Well** (aperture) — a rectangle on the canvas that shows part of **one** source (full frame or a crop). Two wells may share one clip source so they share one playhead. That is the split. It is not “two cameras.”
+
+**Layout** — a named graph of wells + graphics. Runtime’s `wide` / `split` / `solo_*` / `card_full` / `hold` is **template one**. A later show may have one well, a guest well, or no hosts.
+
+**Hold** — the layout you go to when a **clip** source the current layout needs is not ready. Live and graphic sources do not need this move. A frozen face is not a hold.
+
+**“Camera” is still a useful idea. It is not a USB camera.**
+
+In a real room, a camera is a live well you can cut to. In this machine, most “cameras” are clip sources: late, paid, one-at-a-time. §2.3 stays true for generated hosts. It is **not** a law for every show. A customer who puts a real person in a well has a live source. The director still asks the same question: what is in this well, and is it healthy?
+
+Do not put “camera” in the customer UI if it means “webcam.” Use **source** and **well**. Internally, keep the slot. That is what stops the harness from being a Runtime-only script.
+
+v1 may still ship one clip source (`HOST_WIDE`) and the Runtime layout pack. The **types** must already allow a second live well later without renaming the clock.
+
+### 17.5 NDI — what it is, when it matters
+
+**NDI** (Vizrt) is a LAN video I/O protocol. It is a way to move frames between machines and programs. It is not a switcher, not a clock, and not a host pack.
+
+It is **not** useful for the Runtime proof: one box, one generated file, no hardware camera, no second machine.
+
+It becomes relevant when a show needs a **live** well whose picture is produced somewhere else:
+
+- A real camera or capture card on the same LAN
+- A guest or return feed from another PC
+- Split: furniture/HTML on one box, encode on another
+- Send our program into a venue’s existing switcher or an LED wall
+- Bring someone else’s OBS/vMix output in as a well
+
+Then NDI is one **ingest/egress adapter** on a live source, same family as WebRTC or a webcam. The harness still owns time. NDI does not replace OBS or a `Player`. OBS can already send and receive NDI if that plugin is present; we would set a source, not become an NDI stack.
+
+Do not take NDI as a core dependency. The SDK is not MIT. Add it when a customer template has a live well that arrives over the LAN. Until then, do not design layouts around it.
+
+### 17.6 Continuous real-time input
+
+Input may change the next package: topic, headline, center, who speaks, spend policy. It may not change host sheets, crop math, or the type on the furniture.
+
+Showing chat (or any feed) as a graphic is cheap. Letting that feed **write the show** is the product, and it is adversarial. Runtime v1 stays a reviewed local packet. The next harness step that serves the company is one more input adapter with the same packet shape (even a “next topic” file), not a full-frame regen mode.
+
+Do not add an Infinite-TV / full-frame customer mode. That trains people that hosts can melt.
+
+### 17.7 What this does not change
+
+§4 (two bosses), §11 (physics), and M0 (split shares one play time) are untouched. A second paid **clip** at the same cut is still refused. A live well next to a clip well is a later template, and only when both are ready at the cut — the same rule as §5.4 / §11.3, applied to kinds rather than to “H3.”
