@@ -52,6 +52,20 @@ def cover_crop(
     return resized.crop((x, y, x + width, y + height))
 
 
+def is_blank_panel(image: Image.Image, *, panel: tuple[int, int, int] = PANEL) -> bool:
+    rgb = image.convert("RGB")
+    pixels = rgb.load()
+    total = rgb.width * rgb.height
+    if total < 1:
+        return True
+    matches = 0
+    for y in range(rgb.height):
+        for x in range(rgb.width):
+            if pixels[x, y] == panel:
+                matches += 1
+    return matches / total > 0.98
+
+
 def trim_panel(image: Image.Image, *, panel: tuple[int, int, int] = PANEL) -> Image.Image:
     rgb = image.convert("RGB")
     pixels = rgb.load()
@@ -143,6 +157,8 @@ def capture_embed_shot(
                 completed.stderr.strip() or "chrome did not write a tweet still"
             )
         image = Image.open(raw)
+        if is_blank_panel(image):
+            raise TweetShotError("chrome tweet still is an empty panel")
         write_shot_set(image, dest)
     return dest / SHOT_NAME
 

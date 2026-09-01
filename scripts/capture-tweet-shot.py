@@ -53,10 +53,13 @@ def main() -> int:
         if args.from_obs:
             path = _from_obs(args.dest)
         else:
-            path = capture_embed_shot(
-                args.embed_origin.rstrip("/") + embed_frame_path(args.tweet_id),
-                args.dest,
-            )
+            try:
+                path = capture_embed_shot(
+                    args.embed_origin.rstrip("/") + embed_frame_path(args.tweet_id),
+                    args.dest,
+                )
+            except TweetShotError:
+                path = _from_obs(args.dest)
     except TweetShotError as error:
         print(str(error), file=sys.stderr)
         return 2

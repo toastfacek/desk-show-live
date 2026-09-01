@@ -151,6 +151,8 @@ def test_overlay_live_polls_card_without_html_injection() -> None:
     assert "America/New_York" in script
     assert "formatEasternClock" in script
     assert "applyOverlayLayout" in script
+    assert "preview.card_mode" in script
+    assert "applyTweetShot" in script
     assert ".layout-card_full #hid-a" in text
     assert ".layout-solo_l #card-well{left:668px;width:1188px}" in text
     assert ".layout-solo_r #card-well{left:64px;width:1188px}" in text

@@ -12,6 +12,7 @@ from runtime_flight.tweet_shot import (
     SPLIT_SIZE,
     cover_crop,
     crop_program_well,
+    is_blank_panel,
     trim_panel,
     write_shot_set,
 )
@@ -43,6 +44,13 @@ def test_cover_crop_and_well_extract_write_the_shot_set(tmp_path: Path) -> None:
     assert Image.open(paths["split"]).size == SPLIT_SIZE
     assert Image.open(paths["solo"]).size == SOLO_SIZE
     assert Image.open(paths["card"]).size == CARD_SIZE
+
+
+def test_blank_panel_rejects_empty_chrome_stills() -> None:
+    empty = Image.new("RGB", (64, 64), (21, 19, 15))
+    assert is_blank_panel(empty) is True
+    marked = _plate(64, 64)
+    assert is_blank_panel(marked) is False
 
 
 def test_trim_panel_drops_empty_bottom() -> None:
