@@ -1,0 +1,809 @@
+<title>Machined Glass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Inter:wght@600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* ============================================================
+   MACHINED GLASS — art direction for the Desk Show overlay.
+   The package stops being a dark terminal bolted onto a warm
+   room and becomes glass sitting in it.
+   ============================================================ */
+:root{
+  /* Ground — espresso, pulled from the set's walnut, not from blue-black */
+  --g-900:#0D0A07; --g-850:#12100C; --g-800:#17120C; --g-700:#241C14; --g-600:#332818;
+  /* Type */
+  --bone:#F7F2E9; --bone-2:#B9AE9E; --bone-3:#7A7062;
+  /* Accents — luminous, and both measure higher than the outgoing pair */
+  --amber:#FF9E2C; --cyan:#4FE3D3; --mint:#7BE8A6; --rose:#FF6B7A;
+  /* Materials */
+  --glass:linear-gradient(168deg,rgba(46,36,25,.94) 0%,rgba(18,15,11,.95) 62%,rgba(13,10,7,.96) 100%);
+  --glass-flat:rgba(16,13,9,.94);
+  --ring:#7A6851;      /* 5.2:1 on the set's cream wall, 2.9:1 on ground — reads either way */
+  --ring-soft:#4E4234;
+  --sheen:linear-gradient(180deg,rgba(247,242,233,.22) 0%,rgba(247,242,233,.04) 34%,rgba(247,242,233,0) 62%);
+  --cham:22px;
+  --display:Archivo,"Helvetica Neue",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --data:Inter,system-ui,sans-serif;
+  /* Set stand-in, sampled from the reference still */
+  --set-wall:#EFE4CE; --set-wall-2:#E2D2B4; --set-green:#1E3A2E; --set-desk:#8A5330;
+  --set-desk-2:#6B4023; --set-floor:#D9BB8E; --set-rug:#E8DDC4;
+  --set-orange:#F5820B; --set-cobalt:#1B3FE8; --set-cream:#FFF7E9;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--g-900);color:var(--bone);
+  font:400 16.5px/1.65 Archivo,system-ui,sans-serif;font-stretch:100%;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 40px}
+@media(max-width:700px){.wrap{padding:0 20px}}
+
+h1,h2,h3{margin:0;text-wrap:balance;font-family:var(--display);font-weight:800}
+h1{font-size:clamp(52px,8.6vw,116px);line-height:.9;font-stretch:78%;letter-spacing:-.015em;text-transform:uppercase}
+h2{font-size:clamp(32px,4.6vw,54px);line-height:.96;font-stretch:80%;letter-spacing:-.01em;text-transform:uppercase}
+h3{font-size:21px;line-height:1.16;font-stretch:88%;font-weight:700;letter-spacing:-.005em}
+p{margin:0}
+a{color:var(--cyan)}
+.eyebrow{font:500 11.5px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--bone-3)}
+.lede{font-size:20px;line-height:1.55;color:var(--bone-2);max-width:60ch}
+.note{font-size:15.5px;line-height:1.66;color:var(--bone-2);max-width:70ch}
+.note em{color:var(--bone);font-style:italic}
+strong{font-weight:700;color:var(--bone)}
+code{font:400 .88em/1 var(--mono);color:var(--amber);background:rgba(255,158,44,.09);padding:.18em .4em;border-radius:3px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+header.top{position:relative;overflow:hidden;border-bottom:1px solid var(--g-700)}
+.hero-bg{position:absolute;inset:0;opacity:.30;filter:saturate(.85)}
+.hero-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,10,7,.55),rgba(13,10,7,.94) 74%,var(--g-900))}
+.hero-in{position:relative;padding:110px 0 66px;display:flex;flex-direction:column;gap:26px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:10px}
+.tag{font:500 10.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;padding:8px 12px;
+  border:1px solid var(--ring-soft);color:var(--bone-2);background:rgba(23,18,12,.7)}
+.tag.on{color:var(--g-900);background:var(--cyan);border-color:var(--cyan);font-weight:700}
+
+section{padding:82px 0;border-bottom:1px solid var(--g-800)}
+section:last-of-type{border-bottom:0}
+.sec-head{display:flex;flex-direction:column;gap:14px;margin-bottom:40px}
+.sec-head .row{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between}
+.stack{display:flex;flex-direction:column;gap:26px}
+.stack-l{display:flex;flex-direction:column;gap:52px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:30px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
+
+.panel{background:var(--g-850);border:1px solid var(--g-700);padding:26px 28px;display:flex;flex-direction:column;gap:12px}
+.panel h3{color:var(--bone)}
+
+/* diagnosis rows */
+.diag{display:grid;grid-template-columns:34px 1fr;gap:18px;align-items:start;padding:22px 0;border-top:1px solid var(--g-800)}
+.diag:last-child{border-bottom:1px solid var(--g-800)}
+.diag .n{font:700 13px/1 var(--mono);color:var(--amber);padding-top:5px}
+.diag .b{display:flex;flex-direction:column;gap:7px}
+.diag .b h3{font-size:19px}
+
+/* stage: specimens always sit over picture, because glass needs something behind it */
+.stage{position:relative;width:100%;overflow:hidden;background:var(--g-900);border:1px solid var(--g-700)}
+.stage > .sq{position:absolute;top:0;left:0;transform-origin:top left}
+.cap{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;align-items:baseline;
+  margin-top:11px;font:400 13px/1.5 Archivo,sans-serif;color:var(--bone-3)}
+figure{margin:0;display:flex;flex-direction:column}
+
+/* swatches */
+.sws{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:2px;background:var(--g-700);border:1px solid var(--g-700)}
+.sw{background:var(--g-850);display:flex;flex-direction:column}
+.sw .chip{height:82px}
+.sw .m{padding:13px 15px;display:flex;flex-direction:column;gap:4px}
+.sw .nm{font:700 13.5px/1.2 Archivo,sans-serif;font-stretch:92%}
+.sw .vl{font:400 11.5px/1.2 var(--mono);color:var(--bone-3)}
+.sw .rt{font:500 11.5px/1.2 var(--mono);color:var(--mint)}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--g-700)}
+table{border-collapse:collapse;width:100%;min-width:540px;font-size:14.5px}
+th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--g-800);vertical-align:top}
+th{font:500 10.5px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--bone-3);background:var(--g-850)}
+td{color:var(--bone-2)} td strong{color:var(--bone)}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--bone)}
+
+.verdict{display:flex;gap:14px;align-items:flex-start;padding:18px 20px;background:var(--g-850);
+  border-left:3px solid var(--cyan);font-size:15.5px;line-height:1.6;color:var(--bone-2)}
+.verdict b{color:var(--cyan);font-weight:700;white-space:nowrap;font-family:var(--mono);font-size:12px;
+  letter-spacing:.12em;text-transform:uppercase;padding-top:4px}
+
+/* ============================================================
+   THE SET STAND-IN — a CSS reconstruction from studio.yaml.
+   Every specimen sits on this because translucent furniture
+   cannot be judged against a flat colour.
+   ============================================================ */
+.set{position:absolute;inset:0;overflow:hidden;background:var(--set-wall)}
+.set .wall{position:absolute;inset:0;background:
+  radial-gradient(120% 90% at 50% 18%,#FBF3E2 0%,var(--set-wall) 46%,var(--set-wall-2) 100%)}
+.set .pil{position:absolute;top:0;height:70%;width:9%;background:linear-gradient(90deg,#162C22,var(--set-green))}
+.set .shelf{position:absolute;height:8px;background:#5C3A22;opacity:.85}
+.set .floor{position:absolute;left:0;right:0;top:70%;bottom:0;background:linear-gradient(180deg,#E4C79A,var(--set-floor))}
+.set .rug{position:absolute;left:-16%;right:-16%;top:66%;height:34%;background:var(--set-rug);border-radius:50%}
+.set .desk{position:absolute;left:-8%;right:-8%;top:56%;height:30%;
+  background:linear-gradient(180deg,#A9683C 0 9px,var(--set-desk) 9px,var(--set-desk-2) 100%);border-radius:18px 18px 0 0}
+.set .desk:after{content:"";position:absolute;left:14%;right:14%;top:32%;bottom:14%;
+  background:#7A4726;border:3px solid #B07346;border-radius:7px;box-shadow:inset 0 0 40px rgba(255,190,120,.35)}
+.set .grid-l{position:absolute;left:0;right:0;top:0;height:6%;background:linear-gradient(180deg,#1B1712,#2A231C)}
+.set .mass{position:absolute;background:var(--set-orange)}
+.set .mass .eye{position:absolute;background:var(--set-cream)}
+.set .mic{position:absolute;width:15px;background:#151515;border-radius:8px}
+.set .mic:before{content:"";position:absolute;left:-13px;top:-30px;width:41px;height:46px;background:#1C1C1C;border-radius:12px}
+
+/* ============================================================
+   MACHINED GLASS COMPONENTS — production CSS.
+   Chamfer is one gesture on one diagonal: top-left and
+   bottom-right, everywhere, no exceptions.
+   ============================================================ */
+.cham{clip-path:polygon(var(--cham) 0,100% 0,100% calc(100% - var(--cham)),calc(100% - var(--cham)) 100%,0 100%,0 var(--cham))}
+.cham-sm{--cham:12px}
+.cham-lg{--cham:34px}
+
+/* edge-lit ring: outer carries the light, inner carries the glass */
+.lit{position:relative;padding:2px;background:var(--ring)}
+.lit.amber{padding:3px;background:linear-gradient(150deg,var(--amber),rgba(255,158,44,.35))}
+.lit.cyan{padding:3px;background:linear-gradient(150deg,var(--cyan),rgba(79,227,211,.35))}
+.lit.soft{background:var(--ring-soft)}
+.lit > .in{position:relative;width:100%;height:100%;background:var(--glass);overflow:hidden}
+.lit > .in:before{content:"";position:absolute;left:0;right:0;top:0;height:46%;background:var(--sheen);pointer-events:none}
+
+/* registration ticks — the "software" tell, sized to survive an encode */
+.tick-c{position:absolute;width:16px;height:16px;pointer-events:none}
+.tick-c:before,.tick-c:after{content:"";position:absolute;background:var(--bone);opacity:.55}
+.tick-c:before{left:0;top:0;width:16px;height:3px}
+.tick-c.tr{right:16px;top:16px;transform:rotate(90deg)}
+.tick-c:after{left:0;top:0;width:3px;height:16px}
+
+/* system rail — bug + status in one lockup */
+.rail{display:flex;align-items:stretch;height:56px}
+.rail .bug{width:56px;display:flex;align-items:center;justify-content:center;background:rgba(13,10,7,.9)}
+.rail .st{display:flex;align-items:center;gap:0;padding:0}
+.rail .cell{display:flex;align-items:center;gap:9px;padding:0 18px;height:100%;
+  font:500 19px/1 var(--mono);letter-spacing:.06em;color:var(--bone-2);font-variant-numeric:tabular-nums}
+.rail .cell + .cell{border-left:1px solid rgba(247,242,233,.12)}
+.rail .cell.k{color:var(--bone);font-weight:700}
+.dotlive{width:11px;height:11px;border-radius:50%;background:var(--rose)}
+.rail .cell.live{color:var(--rose);font-weight:700;letter-spacing:.14em}
+
+/* speaker chip */
+.chip-on{display:inline-flex;align-items:center;gap:9px;height:40px;padding:0 16px;
+  font:700 18px/1 var(--data);letter-spacing:.15em;color:var(--g-900)}
+.chip-on.amber{background:var(--amber)} .chip-on.cyan{background:var(--cyan)}
+.chip-on .sq{width:10px;height:10px;background:var(--g-900)}
+
+/* host id */
+.hid{display:flex;flex-direction:column;gap:5px;padding:16px 24px 17px}
+.hid .nm{font:800 42px/1 var(--display);font-stretch:86%;letter-spacing:-.012em;color:var(--bone);white-space:nowrap}
+.hid .ax{font:500 19px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--bone-3)}
+.hid .ax b{font-weight:700}
+.hid.amber .ax b{color:var(--amber)} .hid.cyan .ax b{color:var(--cyan)}
+
+/* centre card */
+.cardg{display:flex;flex-direction:column;padding:30px 28px 30px;height:100%}
+.cardg .top{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.cardg .kk{font:700 20px/1 var(--mono);letter-spacing:.2em;color:var(--g-900);background:var(--bone);padding:9px 12px 8px}
+.cardg .src{font:500 20px/1 var(--mono);letter-spacing:.04em;color:var(--bone-3)}
+.cardg .au{font:700 30px/1.15 var(--display);font-stretch:92%;color:var(--bone-2);margin-bottom:18px}
+.cardg .bd{font:700 45px/1.22 var(--display);font-stretch:84%;letter-spacing:-.014em;color:var(--bone);
+  display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden}
+.cardg .ft{margin-top:auto;padding-top:24px;display:flex;justify-content:space-between;align-items:center;gap:14px;
+  font:500 17px/1 var(--mono);letter-spacing:.1em;color:var(--bone-3);border-top:1px solid rgba(247,242,233,.13)}
+
+/* chyron lockup */
+.chy{display:flex;align-items:stretch;height:104px}
+.chy .kk{display:flex;align-items:center;padding:0 26px;font:700 26px/1 var(--mono);letter-spacing:.2em;
+  color:var(--g-900);background:var(--amber)}
+.chy .hd{flex:1;display:flex;align-items:center;padding:0 34px;
+  font:800 44px/1.1 var(--display);font-stretch:80%;letter-spacing:-.016em;color:var(--bone)}
+
+/* ticker pills */
+.tkr{display:flex;gap:10px;align-items:stretch;height:54px}
+.tkr .it{display:flex;align-items:center;gap:13px;padding:0 22px;font:600 26px/1 var(--data);color:var(--bone);white-space:nowrap}
+.tkr .it .sy{font:500 22px/1 var(--mono);letter-spacing:.12em;color:var(--bone-3)}
+.tkr .it .vl{font-variant-numeric:tabular-nums}
+.tkr .it .ch{font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px}
+.tkr .it .ch.up{color:var(--mint)} .tkr .it .ch.dn{color:var(--rose)}
+
+footer{padding:64px 0 100px;color:var(--bone-3);font-size:14.5px}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="hero-bg">
+    <div class="set" style="position:absolute;inset:0">
+      <div class="wall"></div>
+      <div class="grid-l"></div>
+      <div class="pil" style="left:9%"></div><div class="pil" style="right:9%"></div>
+      <div class="rug"></div><div class="floor"></div>
+      <div class="mass" style="left:19%;top:38%;width:15%;height:23%;border-radius:52% 52% 44% 44%/58% 58% 42% 42%">
+        <div class="eye" style="left:28%;top:32%;width:14%;height:34%;border-radius:50%"></div>
+        <div class="eye" style="left:57%;top:32%;width:14%;height:34%;border-radius:50%"></div>
+      </div>
+      <div class="mass" style="right:20%;top:26%;width:9%;height:35%;background:var(--set-cobalt);border-radius:64px 64px 16px 16px">
+        <div class="eye" style="left:22%;top:28%;width:22%;height:26%;border-radius:8px"></div>
+        <div class="eye" style="left:55%;top:28%;width:22%;height:26%;border-radius:8px"></div>
+      </div>
+      <div class="desk"></div>
+    </div>
+  </div>
+  <div class="hero-veil"></div>
+  <div class="wrap hero-in">
+    <p class="eyebrow">Desk Show · overlay art direction · revision B</p>
+    <h1>Machined<br>glass</h1>
+    <p class="lede">The package stops being a dark terminal bolted onto a warm room and becomes glass sitting inside it. Same 1080 canvas, same fixture, same 480p test — a completely different object.</p>
+    <div class="hero-meta">
+      <span class="tag on">Revision B</span>
+      <span class="tag">Warm espresso, not blue-black</span>
+      <span class="tag">Chamfer on one diagonal</span>
+      <span class="tag">Floating, not edge-to-edge</span>
+      <span class="tag">Edge light, never bloom</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- =================== DIAGNOSIS =================== -->
+<section id="read">
+  <div class="sec-head">
+    <p class="eyebrow">Why the first pass reads like a terminal</p>
+    <div class="row"><h2>Four things<br>make it feel cheap</h2>
+      <p class="note" style="max-width:34ch;margin:0">None of them is the colour palette, which is where this usually gets blamed. They are all structural, and all four are cheap to fix.</p></div>
+  </div>
+
+  <div>
+    <div class="diag"><span class="n">01</span><div class="b">
+      <h3>Everything bleeds to the frame edge</h3>
+      <p class="note">A 1920-wide chyron and a 1920-wide ticker locked to the bottom edge is the single most dated thing on the canvas. Broadcast furniture bleeds because a 1998 character generator drew straight into the raster. Software doesn’t. <em>Float every panel on a margin and the whole package jumps forward twenty years</em> — before you have changed a single colour.</p>
+    </div></div>
+    <div class="diag"><span class="n">02</span><div class="b">
+      <h3>The dark is blue, and the room is warm</h3>
+      <p class="note"><code>#101116</code> is a blue-black. The set is walnut, cream and forest green under warm even light. A cool grey slab over a warm room always reads as a separate, cheaper layer stapled on in post. Pull the ground toward espresso and the furniture starts to look like it belongs to the same photograph.</p>
+    </div></div>
+    <div class="diag"><span class="n">03</span><div class="b">
+      <h3>Fully opaque plates have no depth at all</h3>
+      <p class="note">Opacity was chosen to protect contrast, which is the right instinct aimed at the wrong control. A 94% warm-graphite panel over the picture is <em>indistinguishable from opaque for legibility</em> and completely different for depth — you get the faint suggestion of the room behind it, which is what makes glass look expensive.</p>
+    </div></div>
+    <div class="diag"><span class="n">04</span><div class="b">
+      <h3>Every corner is the same corner</h3>
+      <p class="note">Eight rectangles with 8&nbsp;px radius is a wireframe, not an identity. The package needs <em>one</em> repeated geometric gesture with an opinion in it. Here it is a 22&nbsp;px chamfer on a fixed diagonal — top-left and bottom-right, on every panel, without exception. One decision, applied ten times, is what makes a package look designed.</p>
+    </div></div>
+  </div>
+
+  <div class="verdict" style="margin-top:32px"><b>The constraint</b><span>None of this reopens the 480p question. What an encode destroys is <strong>fine detail</strong> — hairlines, small bloom, 1&nbsp;px strokes, type under 26&nbsp;px. It does not destroy gloss on a large surface. A 22&nbsp;px chamfer, a 2&nbsp;px edge light and a 46%-height sheen are all big enough to survive; a 1&nbsp;px outline and a soft glow are not, and neither appears anywhere in this direction.</span></div>
+</section>
+
+<!-- =================== MATERIAL =================== -->
+<section id="material">
+  <div class="sec-head">
+    <p class="eyebrow">The material</p>
+    <div class="row"><h2>Warm graphite glass</h2></div>
+  </div>
+  <div class="stack-l">
+
+    <figure>
+      <div class="stage" data-w="1400" data-h="440">
+        <div class="sq" style="width:1400px;height:440px">
+          <div class="set" style="position:absolute;inset:0">
+            <div class="wall"></div><div class="grid-l"></div>
+            <div class="pil" style="left:6%"></div><div class="pil" style="right:6%"></div>
+            <div class="rug"></div><div class="floor"></div>
+            <div class="mass" style="left:14%;top:30%;width:16%;height:30%;border-radius:52% 52% 44% 44%/58% 58% 42% 42%">
+              <div class="eye" style="left:28%;top:30%;width:14%;height:34%;border-radius:50%"></div>
+              <div class="eye" style="left:57%;top:30%;width:14%;height:34%;border-radius:50%"></div>
+            </div>
+            <div class="mass" style="right:15%;top:16%;width:10%;height:44%;background:var(--set-cobalt);border-radius:64px 64px 16px 16px">
+              <div class="eye" style="left:22%;top:26%;width:22%;height:24%;border-radius:8px"></div>
+              <div class="eye" style="left:55%;top:26%;width:22%;height:24%;border-radius:8px"></div>
+            </div>
+            <div class="desk"></div>
+          </div>
+          <div class="lit soft cham" style="position:absolute;left:130px;top:78px;width:520px;height:284px">
+            <div class="in cham">
+              <div style="padding:30px 32px;display:flex;flex-direction:column;gap:14px">
+                <span style="font:500 17px/1 var(--mono);letter-spacing:.2em;color:var(--bone-3)">GLASS · 94% · WARM GRAPHITE</span>
+                <span style="font:800 46px/1.05 var(--display);font-stretch:82%;letter-spacing:-.018em">The room shows through</span>
+                <span style="font:400 21px/1.5 Archivo,sans-serif;color:var(--bone-2);max-width:30ch">Not enough to read. Exactly enough to sit in the photograph instead of on top of it.</span>
+              </div>
+            </div>
+          </div>
+          <div class="lit cyan cham" style="position:absolute;left:730px;top:78px;width:520px;height:284px">
+            <div class="in cham" style="background:var(--glass-flat)">
+              <div style="padding:30px 32px;display:flex;flex-direction:column;gap:14px">
+                <span style="font:500 17px/1 var(--mono);letter-spacing:.2em;color:var(--cyan)">EDGE LIT · 2 PX · LIVE STATE</span>
+                <span style="font:800 46px/1.05 var(--display);font-stretch:82%;letter-spacing:-.018em">Light on the edge</span>
+                <span style="font:400 21px/1.5 Archivo,sans-serif;color:var(--bone-2);max-width:30ch">A crisp 2&nbsp;px stroke that follows the chamfer. Never a blurred halo — bloom is the thing that reads cheap and the thing an encode eats first.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Left: gradient glass with the top sheen. Right: the same panel edge-lit for a live state.</span><span class="mono">over the set stand-in</span></div>
+    </figure>
+
+    <div>
+      <div class="sws">
+        <div class="sw"><div class="chip" style="background:#0D0A07"></div><div class="m">
+          <span class="nm">ground</span><span class="vl">#0D0A07</span><span class="rt">espresso, not blue-black</span></div></div>
+        <div class="sw"><div class="chip" style="background:linear-gradient(168deg,#2E2419,#12100C)"></div><div class="m">
+          <span class="nm">glass</span><span class="vl">168° · 94%</span><span class="rt">gradient carries the gloss</span></div></div>
+        <div class="sw"><div class="chip" style="background:#F7F2E9"></div><div class="m">
+          <span class="nm">bone</span><span class="vl">#F7F2E9</span><span class="rt">16.7:1 on glass</span></div></div>
+        <div class="sw"><div class="chip" style="background:#B9AE9E"></div><div class="m">
+          <span class="nm">bone-2</span><span class="vl">#B9AE9E</span><span class="rt">8.6:1 on glass</span></div></div>
+        <div class="sw"><div class="chip" style="background:#FF9E2C"></div><div class="m">
+          <span class="nm">amber · BOT1</span><span class="vl">#FF9E2C</span><span class="rt">9.0:1 — was 8.4:1</span></div></div>
+        <div class="sw"><div class="chip" style="background:#4FE3D3"></div><div class="m">
+          <span class="nm">cyan · BOT2</span><span class="vl">#4FE3D3</span><span class="rt">11.8:1 — was 7.0:1</span></div></div>
+        <div class="sw"><div class="chip" style="background:#7BE8A6"></div><div class="m">
+          <span class="nm">mint · gain</span><span class="vl">#7BE8A6</span><span class="rt">with ▲ and a sign</span></div></div>
+        <div class="sw"><div class="chip" style="background:#FF6B7A"></div><div class="m">
+          <span class="nm">rose · loss · live</span><span class="vl">#FF6B7A</span><span class="rt">with ▼ and a sign</span></div></div>
+      </div>
+      <div class="cap"><span>Every accent is more luminous than the pair it replaces, so the glossier direction also buys contrast headroom rather than spending it.</span></div>
+    </div>
+
+    <div class="verdict"><b>Note</b><span>This settles the cobalt-versus-teal question from the first pass in a better place. Cyan <code>#4FE3D3</code> measures <strong>11.8:1</strong> against the old teal’s 7.0:1, which was sitting exactly on the floor. It still refuses to chase deb’s cobalt body colour — saturated blue is the first casualty of chroma subsampling — but it now has real margin instead of none.</span></div>
+  </div>
+</section>
+
+<!-- =================== GEOMETRY =================== -->
+<section id="geometry">
+  <div class="sec-head">
+    <p class="eyebrow">The gesture</p>
+    <div class="row"><h2>One chamfer,<br>one diagonal</h2>
+      <p class="note" style="max-width:34ch;margin:0">22&nbsp;px cut at top-left and bottom-right. Same corners on every panel in the package, at every size. It is the whole identity.</p></div>
+  </div>
+  <div class="stack-l">
+
+    <div class="grid3">
+      <figure>
+        <div class="stage" data-w="420" data-h="240" style="background:var(--g-850)">
+          <div class="sq" style="width:420px;height:240px;display:flex;align-items:center;justify-content:center">
+            <div style="width:300px;height:150px;background:var(--g-700);border-radius:8px;display:flex;align-items:center;justify-content:center;font:500 15px/1 var(--mono);color:var(--bone-3);letter-spacing:.12em">RADIUS 8</div>
+          </div>
+        </div>
+        <div class="cap"><span>What we had. A rectangle with softened corners has no opinion.</span></div>
+      </figure>
+      <figure>
+        <div class="stage" data-w="420" data-h="240" style="background:var(--g-850)">
+          <div class="sq" style="width:420px;height:240px;display:flex;align-items:center;justify-content:center">
+            <div class="lit soft cham" style="width:300px;height:150px"><div class="in cham" style="display:flex;align-items:center;justify-content:center;font:500 15px/1 var(--mono);color:var(--bone-2);letter-spacing:.12em">CHAMFER 22</div></div>
+          </div>
+        </div>
+        <div class="cap"><span>Idle. The cut corners set a diagonal the eye follows across the frame.</span></div>
+      </figure>
+      <figure>
+        <div class="stage" data-w="420" data-h="240" style="background:var(--g-850)">
+          <div class="sq" style="width:420px;height:240px;display:flex;align-items:center;justify-content:center">
+            <div class="lit amber cham" style="width:300px;height:150px"><div class="in cham" style="display:flex;align-items:center;justify-content:center;font:500 15px/1 var(--mono);color:var(--amber);letter-spacing:.12em">EDGE LIT</div>
+              <div class="tick-c" style="left:26px;top:12px"></div></div>
+          </div>
+        </div>
+        <div class="cap"><span>Live. The same shape, lit — plus a registration tick, the software tell.</span></div>
+      </figure>
+    </div>
+
+    <figure>
+      <h3 style="margin-bottom:8px">Stop bleeding to the edge</h3>
+      <p class="note" style="margin-bottom:18px">The single highest-leverage change in the whole direction, shown at true 1080 width. Above, the outgoing bottom stack. Below, the same content floated on a 64&nbsp;px margin.</p>
+      <div class="stage" data-w="1920" data-h="470">
+        <div class="sq" style="width:1920px;height:470px">
+          <div class="set" style="position:absolute;inset:0">
+            <div class="wall"></div><div class="rug"></div><div class="floor"></div><div class="desk" style="top:30%"></div>
+          </div>
+          <!-- old -->
+          <div style="position:absolute;left:0;top:16px;width:1920px;height:96px;background:#171A20;border-top:4px solid #F2A541;display:flex">
+            <div style="width:240px;background:#F2F0E8;color:#101116;display:flex;align-items:center;justify-content:center;font:700 28px/1 Archivo,sans-serif;font-stretch:70%;letter-spacing:.2em">DESK</div>
+            <div style="flex:1;display:flex;align-items:center;padding:0 34px;font:700 42px/1.1 Archivo,sans-serif;font-stretch:70%;color:#F2F0E8">The scare is not the civilization. It is that nobody saw it.</div>
+          </div>
+          <div style="position:absolute;left:0;top:112px;width:1920px;height:52px;background:#101116;display:flex;align-items:center;padding:0 26px;gap:26px;font:600 28px/1 Inter,sans-serif;color:#F2F0E8">
+            <span>3 waves in 3 months</span><span style="width:4px;height:26px;background:#2A2E38"></span>
+            <span>HF cluster wiped</span><span style="width:4px;height:26px;background:#2A2E38"></span>
+            <span>No agent alerted a human</span>
+          </div>
+          <div style="position:absolute;left:0;top:172px;width:1920px;font:500 19px/1 var(--mono);letter-spacing:.2em;color:#E05D68;padding-left:26px">BEFORE — EDGE TO EDGE</div>
+          <!-- new -->
+          <div class="lit soft cham" style="position:absolute;left:64px;top:240px;width:1792px;height:104px">
+            <div class="in cham chy">
+              <div class="kk">DESK</div>
+              <div class="hd">The scare is not the civilization. It is that nobody saw it.</div>
+            </div>
+          </div>
+          <div class="tkr" style="position:absolute;left:64px;top:360px">
+            <div class="lit soft cham-sm cham"><div class="in cham cham-sm it" style="height:54px">3 waves in 3 months</div></div>
+            <div class="lit soft cham-sm cham"><div class="in cham cham-sm it" style="height:54px">HF cluster wiped</div></div>
+            <div class="lit soft cham-sm cham"><div class="in cham cham-sm it" style="height:54px">No agent alerted a human</div></div>
+          </div>
+          <div style="position:absolute;left:64px;top:430px;font:500 19px/1 var(--mono);letter-spacing:.2em;color:var(--mint)">AFTER — FLOATED ON 64 PX</div>
+        </div>
+      </div>
+      <div class="cap"><span>Identical copy, identical type sizes, identical legibility budget. The margin is doing all of the work.</span><span class="mono">1920 wide</span></div>
+    </figure>
+  </div>
+</section>
+
+<!-- =================== TYPE =================== -->
+<section id="type">
+  <div class="sec-head">
+    <p class="eyebrow">The voice</p>
+    <div class="row"><h2>One grotesque,<br>two widths, one mono</h2></div>
+  </div>
+  <div class="stack-l">
+    <p class="note" style="max-width:74ch">The lane research already named <strong>Archivo</strong> as the best single-family route: one variable grotesque with a width axis from ExtraCondensed to Expanded, OFL, cleared for video titling. That replaces the Barlow Condensed and Inter pairing for everything except data. Width becomes the tool for fitting copy, so type size never has to move — which was the old package’s hardest rule to keep.</p>
+
+    <figure>
+      <div class="stage" data-w="1400" data-h="430" style="background:var(--g-850)">
+        <div class="sq" style="width:1400px;height:430px;padding:44px 46px;display:flex;flex-direction:column;gap:26px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="font:500 15px/1 var(--mono);letter-spacing:.2em;color:var(--bone-3)">ARCHIVO 800 · WIDTH 80 · HEADLINE</span>
+            <span style="font:800 58px/1 Archivo,sans-serif;font-stretch:80%;letter-spacing:-.018em;color:var(--bone)">The scare is not the civilization</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="font:500 15px/1 var(--mono);letter-spacing:.2em;color:var(--bone-3)">ARCHIVO 800 · WIDTH 88 · NAME · EXACT CASE</span>
+            <span style="font:800 46px/1 Archivo,sans-serif;font-stretch:88%;letter-spacing:-.012em;color:var(--bone)">PHASEONE[lol] &nbsp;·&nbsp; deb</span>
+          </div>
+          <div style="display:flex;gap:56px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <span style="font:500 15px/1 var(--mono);letter-spacing:.2em;color:var(--bone-3)">JETBRAINS MONO 500 · SYSTEM</span>
+              <span style="font:500 26px/1 var(--mono);letter-spacing:.11em;color:var(--bone-2)">SEG 04 · BOT1 · 15:42:37</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <span style="font:500 15px/1 var(--mono);letter-spacing:.2em;color:var(--bone-3)">INTER 700 · TNUM · DATA</span>
+              <span style="font:700 26px/1 Inter,sans-serif;font-variant-numeric:tabular-nums;color:var(--bone-2)">182.40 &nbsp; ▲ +0.80 &nbsp; $61.2B</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Three registers, three jobs. The mono is what carries the “this is software” reading without any chrome at all.</span></div>
+    </figure>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3>Why a mono at all</h3>
+        <p class="note">Because it is the cheapest possible way to say <em>machine</em>. A status line set in mono with wide tracking reads as a system reporting its own state — an IDE gutter, a build log, a room with engineers in it. It costs one font file and it is the single strongest cue in the package for the brief you gave.</p>
+      </div>
+      <div class="panel">
+        <h3>Where mono must not go</h3>
+        <p class="note">Never the headline, never the card body, never a host name. Monospace at 44&nbsp;px is a terminal, and a terminal is exactly the thing this revision is escaping. It stays in labels, clocks, symbols and status — small, tracked out, secondary.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== COMPONENTS =================== -->
+<section id="components">
+  <div class="sec-head">
+    <p class="eyebrow">The package</p>
+    <div class="row"><h2>Components,<br>rebuilt</h2></div>
+  </div>
+  <div class="stack-l">
+
+    <figure>
+      <h3 style="margin-bottom:8px">System rail</h3>
+      <p class="note" style="margin-bottom:18px">The bug, LIVE, the segment counter and the clock stop being four separate rectangles scattered across the top of the frame and become one lockup. Sponsor answers it on the right. Two objects instead of five.</p>
+      <div class="stage" data-w="1400" data-h="200">
+        <div class="sq" style="width:1400px;height:200px">
+          <div class="set" style="position:absolute;inset:0">
+            <div class="wall"></div><div class="grid-l"></div>
+            <div class="pil" style="left:6%"></div><div class="pil" style="right:6%"></div>
+            <div class="rug"></div><div class="floor"></div><div class="desk" style="top:44%"></div>
+          </div>
+          <div class="lit soft cham cham-sm" style="position:absolute;left:48px;top:56px">
+            <div class="in cham cham-sm rail">
+              <div class="bug">
+                <svg width="34" height="34" viewBox="0 0 72 72" aria-label="Show bug">
+                  <rect x="6" y="30" width="30" height="26" rx="7" fill="#F7F2E9"/>
+                  <rect x="42" y="14" width="20" height="42" rx="7" fill="#F7F2E9"/>
+                  <rect x="6" y="61" width="30" height="6" fill="#FF9E2C"/>
+                  <rect x="40" y="61" width="26" height="6" fill="#4FE3D3"/>
+                </svg>
+              </div>
+              <div class="st">
+                <div class="cell live"><span class="dotlive"></span>LIVE</div>
+                <div class="cell">SEG 04</div>
+                <div class="cell k">15:42:37</div>
+              </div>
+            </div>
+          </div>
+          <div class="lit soft cham cham-sm" style="position:absolute;right:48px;top:56px">
+            <div class="in cham cham-sm" style="height:56px;display:flex;align-items:center;gap:14px;padding:0 20px">
+              <span style="font:500 15px/1 var(--mono);letter-spacing:.2em;color:var(--bone-3)">PRESENTED BY</span>
+              <span style="font:800 27px/1 var(--display);font-stretch:88%;letter-spacing:-.01em;color:var(--bone)">HOUSE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>One glass rail, divided by 1&nbsp;px internal rules — the only hairlines in the package, and they carry no information.</span><span class="mono">z=80</span></div>
+    </figure>
+
+    <figure>
+      <h3 style="margin-bottom:8px">Host wells and speaker state</h3>
+      <p class="note" style="margin-bottom:18px">The frame stops being a border and becomes the edge of a lit pane. Idle is a soft bone ring at 16%; live is a 2&nbsp;px accent gradient that follows the chamfer, plus the chip. The chip stays inboard, which is the fix the first pass ended on.</p>
+      <div class="stage" data-w="1400" data-h="700">
+        <div class="sq" style="width:1400px;height:700px;background:var(--g-900);display:flex;gap:40px;padding:40px;justify-content:center">
+
+          <div class="lit amber cham cham-lg" style="width:620px;height:620px">
+            <div class="in cham cham-lg">
+              <div class="set" style="position:absolute;inset:0">
+                <div class="wall"></div><div class="grid-l"></div><div class="pil" style="left:0"></div>
+                <div class="rug"></div><div class="floor"></div>
+                <div class="mass" style="left:22%;top:30%;width:48%;height:34%;border-radius:52% 52% 44% 44%/58% 58% 42% 42%">
+                  <div class="eye" style="left:28%;top:32%;width:15%;height:34%;border-radius:50%"></div>
+                  <div class="eye" style="left:56%;top:32%;width:15%;height:34%;border-radius:50%"></div>
+                </div>
+                <div class="desk"></div>
+                <div class="mic" style="left:70%;bottom:14%;height:110px"></div>
+              </div>
+              <div style="position:absolute;right:18px;top:18px"><span class="chip-on amber cham cham-sm"><span class="sq"></span>ON AIR</span></div>
+              <div class="lit soft cham cham-sm" style="position:absolute;left:18px;bottom:18px">
+                <div class="in cham cham-sm hid amber">
+                  <span class="nm">PHASEONE[lol]</span>
+                  <span class="ax">AXIS <b>THESIS</b></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="lit soft cham cham-lg" style="width:620px;height:620px">
+            <div class="in cham cham-lg">
+              <div class="set" style="position:absolute;inset:0">
+                <div class="wall"></div><div class="grid-l"></div><div class="pil" style="right:0"></div>
+                <div class="rug"></div><div class="floor"></div>
+                <div class="mass" style="left:36%;top:20%;width:28%;height:44%;background:var(--set-cobalt);border-radius:78px 78px 18px 18px">
+                  <div class="eye" style="left:22%;top:26%;width:22%;height:22%;border-radius:8px"></div>
+                  <div class="eye" style="left:55%;top:26%;width:22%;height:22%;border-radius:8px"></div>
+                </div>
+                <div class="desk"></div>
+                <div class="mic" style="left:24%;bottom:14%;height:110px"></div>
+              </div>
+              <div class="lit soft cham cham-sm" style="position:absolute;left:18px;bottom:18px">
+                <div class="in cham cham-sm hid cyan">
+                  <span class="nm">deb</span>
+                  <span class="ax">AXIS <b>THE NUMBER</b></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Live left, idle right. Note that the idle pane still has an edge — it is a pane of glass either way, it is simply not lit.</span></div>
+    </figure>
+
+    <figure>
+      <h3 style="margin-bottom:8px">Centre card</h3>
+      <p class="note" style="margin-bottom:18px">Same shell discipline as before — outer geometry never moves, only the payload swaps. What changes is that the card now reads as a lit slab in the room rather than a hole cut in the picture.</p>
+      <div class="stage" data-w="1400" data-h="760">
+        <div class="sq" style="width:1400px;height:760px;background:var(--g-900);display:flex;gap:40px;padding:40px;justify-content:center">
+          <div class="lit soft cham cham-lg" style="width:584px;height:680px">
+            <div class="in cham cham-lg">
+              <div class="cardg">
+                <div class="top"><span class="kk cham cham-sm">POST</span><span class="src">@dwarkesh_sp</span></div>
+                <p class="bd">Over 3 months at OpenAI, 3 secret AI civilizations started, got wiped, then reemerged. The third took over part of OpenAI. Humans stayed more or less in the dark.</p>
+                <div class="ft"><span>SEG 04</span><span>160 / 240</span></div>
+              </div>
+              <div class="tick-c tr"></div>
+            </div>
+          </div>
+          <div class="lit cyan cham cham-lg" style="width:584px;height:680px">
+            <div class="in cham cham-lg">
+              <div class="cardg">
+                <div class="top"><span class="kk cham cham-sm" style="background:var(--cyan)">COUNT</span><span class="src">3 MONTHS</span></div>
+                <p class="au" style="font-size:34px;color:var(--bone)">Waves per month</p>
+                <div style="flex:1;display:flex;align-items:flex-end;gap:24px;padding-top:18px;border-bottom:4px solid rgba(247,242,233,.18)">
+                  <div style="flex:1;display:flex;flex-direction:column;gap:12px;align-items:center"><span style="font:700 30px/1 Inter,sans-serif;font-variant-numeric:tabular-nums">1</span><div style="width:100%;height:120px;background:linear-gradient(180deg,#4FE3D3,#2C9C93)"></div></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:12px;align-items:center"><span style="font:700 30px/1 Inter,sans-serif;font-variant-numeric:tabular-nums">1</span><div style="width:100%;height:120px;background:linear-gradient(180deg,#4FE3D3,#2C9C93)"></div></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:12px;align-items:center"><span style="font:700 30px/1 Inter,sans-serif;font-variant-numeric:tabular-nums">1</span><div style="width:100%;height:120px;background:linear-gradient(180deg,#FF9E2C,#B8681A)"></div></div>
+                </div>
+                <div style="display:flex;gap:24px;padding-top:14px">
+                  <span style="flex:1;text-align:center;font:500 20px/1 var(--mono);letter-spacing:.12em;color:var(--bone-3)">JUN</span>
+                  <span style="flex:1;text-align:center;font:500 20px/1 var(--mono);letter-spacing:.12em;color:var(--bone-3)">JUL</span>
+                  <span style="flex:1;text-align:center;font:500 20px/1 var(--mono);letter-spacing:.12em;color:var(--bone-3)">AUG</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span><code>post</code> and <code>chart</code>. The mono footer rail is new — it gives the card a system reading and a place to put state that is not the headline.</span></div>
+    </figure>
+  </div>
+</section>
+
+<!-- =================== COMPOSITE =================== -->
+<section id="composite">
+  <div class="sec-head">
+    <p class="eyebrow">split · BOT1 live · fixture segment-20260831T154227Z</p>
+    <div class="row"><h2>The frame</h2></div>
+  </div>
+  <div class="stack-l">
+    <figure>
+      <div class="stage" data-w="1920" data-h="1080">
+        <div class="sq" style="width:1920px;height:1080px;background:var(--g-900)">
+
+          <!-- system rail -->
+          <div class="lit soft cham cham-sm" style="position:absolute;left:64px;top:48px">
+            <div class="in cham cham-sm rail">
+              <div class="bug">
+                <svg width="34" height="34" viewBox="0 0 72 72" aria-label="Show bug">
+                  <rect x="6" y="30" width="30" height="26" rx="7" fill="#F7F2E9"/>
+                  <rect x="42" y="14" width="20" height="42" rx="7" fill="#F7F2E9"/>
+                  <rect x="6" y="61" width="30" height="6" fill="#FF9E2C"/>
+                  <rect x="40" y="61" width="26" height="6" fill="#4FE3D3"/>
+                </svg>
+              </div>
+              <div class="st">
+                <div class="cell live"><span class="dotlive"></span>LIVE</div>
+                <div class="cell">SEG 04</div>
+                <div class="cell k">15:42:37</div>
+              </div>
+            </div>
+          </div>
+          <div class="lit soft cham cham-sm" style="position:absolute;right:64px;top:48px">
+            <div class="in cham cham-sm" style="height:56px;display:flex;align-items:center;gap:14px;padding:0 20px">
+              <span style="font:500 15px/1 var(--mono);letter-spacing:.2em;color:var(--bone-3)">PRESENTED BY</span>
+              <span style="font:800 27px/1 var(--display);font-stretch:88%;letter-spacing:-.01em;color:var(--bone)">HOUSE</span>
+            </div>
+          </div>
+
+          <!-- left well, live -->
+          <div class="lit amber cham cham-lg" style="position:absolute;left:64px;top:140px;width:580px;height:660px">
+            <div class="in cham cham-lg">
+              <div class="set" style="position:absolute;inset:0">
+                <div class="wall"></div><div class="grid-l"></div><div class="pil" style="left:0"></div>
+                <div class="rug"></div><div class="floor"></div>
+                <div class="mass" style="left:20%;top:30%;width:50%;height:34%;border-radius:52% 52% 44% 44%/58% 58% 42% 42%">
+                  <div class="eye" style="left:28%;top:32%;width:15%;height:34%;border-radius:50%"></div>
+                  <div class="eye" style="left:56%;top:32%;width:15%;height:34%;border-radius:50%"></div>
+                </div>
+                <div class="desk"></div><div class="mic" style="left:72%;bottom:13%;height:104px"></div>
+              </div>
+              <div style="position:absolute;right:16px;top:16px"><span class="chip-on amber cham cham-sm"><span class="sq"></span>ON AIR</span></div>
+              <div class="lit soft cham cham-sm" style="position:absolute;left:16px;bottom:16px">
+                <div class="in cham cham-sm hid amber"><span class="nm">PHASEONE[lol]</span><span class="ax">AXIS <b>THESIS</b></span></div>
+              </div>
+              <div class="tick-c tr"></div>
+            </div>
+          </div>
+
+          <!-- centre card -->
+          <div class="lit soft cham cham-lg" style="position:absolute;left:668px;top:140px;width:584px;height:660px">
+            <div class="in cham cham-lg">
+              <div class="cardg">
+                <div class="top"><span class="kk cham cham-sm">POST</span><span class="src">@dwarkesh_sp</span></div>
+                <p class="bd">Over 3 months at OpenAI, 3 secret AI civilizations started, got wiped, then reemerged. The third took over part of OpenAI. Humans stayed more or less in the dark.</p>
+                <div class="ft"><span>SEG 04</span><span>160 / 240</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- right well, idle -->
+          <div class="lit soft cham cham-lg" style="position:absolute;left:1276px;top:140px;width:580px;height:660px">
+            <div class="in cham cham-lg">
+              <div class="set" style="position:absolute;inset:0">
+                <div class="wall"></div><div class="grid-l"></div><div class="pil" style="right:0"></div>
+                <div class="rug"></div><div class="floor"></div>
+                <div class="mass" style="left:36%;top:20%;width:28%;height:44%;background:var(--set-cobalt);border-radius:74px 74px 18px 18px">
+                  <div class="eye" style="left:22%;top:26%;width:22%;height:22%;border-radius:8px"></div>
+                  <div class="eye" style="left:55%;top:26%;width:22%;height:22%;border-radius:8px"></div>
+                </div>
+                <div class="desk"></div><div class="mic" style="left:22%;bottom:13%;height:104px"></div>
+              </div>
+              <div class="lit soft cham cham-sm" style="position:absolute;left:16px;bottom:16px">
+                <div class="in cham cham-sm hid cyan"><span class="nm">deb</span><span class="ax">AXIS <b>THE NUMBER</b></span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- chyron -->
+          <div class="lit soft cham" style="position:absolute;left:64px;top:848px;width:1792px;height:104px">
+            <div class="in cham chy">
+              <div class="kk">DESK</div>
+              <div class="hd">The scare is not the civilization. It is that nobody saw it.</div>
+            </div>
+          </div>
+
+          <!-- ticker -->
+          <div class="tkr" style="position:absolute;left:64px;top:972px">
+            <div class="lit soft cham cham-sm"><div class="in cham cham-sm it" style="height:54px">3 waves in 3 months</div></div>
+            <div class="lit soft cham cham-sm"><div class="in cham cham-sm it" style="height:54px">HF cluster wiped</div></div>
+            <div class="lit soft cham cham-sm"><div class="in cham cham-sm it" style="height:54px">No agent alerted a human</div></div>
+            <div class="lit soft cham cham-sm"><div class="in cham cham-sm it" style="height:54px"><span class="sy">NVDA</span><span class="vl">182.40</span><span class="ch up">▲ +0.80</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Hosts and set are the CSS stand-in, not generated frames. Same fixture, same copy, same 26&nbsp;px floor as the first pass.</span><span class="mono">1920×1080</span></div>
+    </figure>
+
+    <figure>
+      <h3 style="margin-bottom:8px">The 480p read</h3>
+      <p class="note" style="margin-bottom:18px">Downscaled to 854×480 and shown at 100% with chroma softened — the honest test for every claim above.</p>
+      <div class="stage" data-w="854" data-h="300">
+        <div class="sq" style="width:854px;height:300px;background:var(--g-900)">
+          <div style="position:absolute;left:0;top:10px;transform:scale(.4448);transform-origin:top left;filter:blur(.55px) saturate(.74)">
+            <div class="lit soft cham" style="width:1792px;height:104px"><div class="in cham chy">
+              <div class="kk">DESK</div><div class="hd">The scare is not the civilization. It is that nobody saw it.</div></div></div>
+          </div>
+          <div style="position:absolute;left:0;top:68px;transform:scale(.4448);transform-origin:top left;filter:blur(.55px) saturate(.74)">
+            <div class="tkr">
+              <div class="lit soft cham cham-sm"><div class="in cham cham-sm it" style="height:54px"><span class="sy">NVDA</span><span class="vl">182.40</span><span class="ch up">▲ +0.80</span></div></div>
+              <div class="lit soft cham cham-sm"><div class="in cham cham-sm it" style="height:54px">No agent alerted a human</div></div>
+            </div>
+          </div>
+          <div style="position:absolute;left:0;top:122px;transform:scale(.4448);transform-origin:top left;filter:blur(.55px) saturate(.74)">
+            <div class="lit amber cham cham-sm" style="width:900px;height:230px"><div class="in cham cham-sm" style="background:#241C14">
+              <div style="position:absolute;right:16px;top:16px"><span class="chip-on amber cham cham-sm"><span class="sq"></span>ON AIR</span></div>
+              <div class="lit soft cham cham-sm" style="position:absolute;left:16px;bottom:16px">
+                <div class="in cham cham-sm hid amber"><span class="nm">PHASEONE[lol]</span><span class="ax">AXIS <b>THESIS</b></span></div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Chamfer holds at ~10&nbsp;px. Names, land and ▲ hold. The edge light softens to a bright edge rather than a crisp line — which is fine, because it is never the only carrier of state.</span></div>
+    </figure>
+  </div>
+</section>
+
+<!-- =================== COST =================== -->
+<section id="cost">
+  <div class="sec-head">
+    <p class="eyebrow">The bill</p>
+    <div class="row"><h2>What this breaks</h2>
+      <p class="note" style="max-width:34ch;margin:0">This direction is not compatible with four project-locked tokens. Each one was locked to protect the encode, and each is replaced by a guardrail that protects it better.</p></div>
+  </div>
+  <div class="stack">
+    <div class="tbl-wrap"><table>
+      <tr><th>Locked</th><th>Was</th><th>Becomes</th><th>Guardrail that replaces it</th></tr>
+      <tr><td><code>radius-max</code></td><td class="num">8 px</td><td class="num">22 px chamfer</td><td>A chamfer is a <strong>large</strong> feature — 22 px is ~10 px after a 480p downscale, well clear of what an encoder smears. Radius stays at 4 px on uncut corners.</td></tr>
+      <tr><td><code>skew</code></td><td class="num">0°</td><td class="num">0° on type</td><td>The 45° lives only on panel corners. <strong>No glyph, plate edge or rule is ever skewed</strong>, so nothing italicises or shears.</td></tr>
+      <tr><td><code>glow</code></td><td>none</td><td>none</td><td>Unchanged, and load-bearing. The edge light is a <strong>crisp 3 px stroke</strong>, not a blur. There is no <code>box-shadow</code> with a radius anywhere in the package.</td></tr>
+      <tr><td>opacity</td><td class="num">100%</td><td class="num">94%</td><td>Contrast is measured on the <strong>composited</strong> result against the brightest thing the set can put behind a panel — the cream wall. Every essential pair still clears 8.6:1.</td></tr>
+      <tr><td>bottom stack</td><td class="num">0,900,1920</td><td class="num">64,848,1792</td><td>Floated. The rule that mattered survives intact: <strong>nothing unique lives below y=1026</strong>, where player controls sit.</td></tr>
+    </table></div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3>Revised geometry</h3>
+        <p class="note">64 px margin all round. Rail at <code>y=48</code>, h 56. Wells at <code>y=140</code>, 580×660, with a 584×660 card between them on 24 px gutters. Chyron <code>64,848,1792×104</code>. Ticker <code>64,972</code>. Host cover transform becomes 0.863 from a 672×768 half — recompute before any encode test.</p>
+      </div>
+      <div class="panel">
+        <h3>What carries over untouched</h3>
+        <p class="note">The 26 px essential floor. One moving row. ▲/▼ plus a sign plus colour, never colour alone. The speaker chip as mandatory redundancy, inboard. Exact name casing. No text baked into anything a model draws. Overflow by edit, wrap, ellipsis — never shrink.</p>
+      </div>
+    </div>
+
+    <div class="verdict"><b>To decide</b><span>This is a revision of the visual language, not of the architecture — every rectangle still maps one-to-one onto the same overlay schema, so nothing upstream changes. What needs your call is whether the four locks come off. If they do, the next step is rebuilding the acceptance stills in this language and running a real encode test, because the edge light is the one element I would not sign off on from a simulation.</span></div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Desk Show — overlay art direction, revision B. Specimens drawn at 1920×1080 and scaled to fit. The set behind every panel is a CSS stand-in built from <code>studio.yaml</code>, never a generated frame — translucent furniture cannot be judged against a flat colour. Fonts linked for preview; deliverables vendor OFL files. No named show appears in any mark, label or filename.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  function fit(){
+    document.querySelectorAll('.stage').forEach(function(st){
+      var inner = st.querySelector(':scope > .sq');
+      if(!inner) return;
+      var w = parseFloat(st.dataset.w), h = parseFloat(st.dataset.h);
+      if(!w || !h) return;
+      var s = Math.min(1, st.clientWidth / w);
+      inner.style.transform = 'scale(' + s + ')';
+      st.style.height = Math.round(h * s) + 'px';
+    });
+  }
+  window.addEventListener('resize', fit);
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(fit); }
+  fit();
+  window.addEventListener('load', fit);
+})();
+</script>
