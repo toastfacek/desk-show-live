@@ -99,7 +99,10 @@ def test_overlay_live_is_transparent_1080_cg_not_the_review_page() -> None:
     assert "background:transparent" in text
     assert "PHASEONE[lol]" in text
     assert ">deb<" in text
+    assert "RUNTIME" in text
     assert "Runtime mark" in text
+    assert "thesis" not in text.lower()
+    assert "the number" not in text.lower()
     assert 'class="set"' not in text
     assert "The overlay stops performing" not in text
 
