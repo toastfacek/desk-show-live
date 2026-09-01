@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Producer — Runtime</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand-block">
+        <p class="eyebrow" id="eyebrow">RUNTIME · LIVE SYSTEM</p>
+        <h1 class="wordmark">Producer</h1>
+      </div>
+      <div class="top-actions">
+        <span class="ghost" id="mode-pill">LOCAL CONTROL</span>
+        <a class="ghost link" id="open-program" href="/" target="_blank" rel="noreferrer">Open program ↗</a>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="feed" aria-label="Program feed">
+        <div class="feed-head">
+          <p class="kicker">PROGRAM FEED</p>
+          <button type="button" class="text-btn" id="btn-fullsize">FULL SIZE</button>
+        </div>
+        <div class="monitor" id="monitor">
+          <div class="program" id="program">
+            <div class="pg-rail">
+              <span class="pg-mark">RUNTIME</span>
+              <span class="pg-live" id="pg-live"><i></i> LIVE</span>
+              <span class="pg-clock" id="pg-clock">00:00</span>
+            </div>
+            <div class="pg-wells" id="pg-wells">
+              <div class="well well-l" id="well-l">
+                <div class="sprite sprite-l" aria-hidden="true"></div>
+                <p class="well-id" id="host-l-name">PHASEONE[lol]</p>
+              </div>
+              <article class="card" id="pg-card">
+                <p class="card-kicker" id="card-author"></p>
+                <p class="card-body" id="card-body"></p>
+              </article>
+              <div class="well well-r" id="well-r">
+                <div class="sprite sprite-r" aria-hidden="true"></div>
+                <p class="well-id" id="host-r-name">deb</p>
+              </div>
+            </div>
+            <p class="pg-line" id="pg-line"></p>
+            <div class="pg-chyron">
+              <span class="chyron-kicker" id="chyron-kicker">DESK</span>
+              <span class="chyron-head" id="chyron-head"></span>
+            </div>
+            <div class="pg-hold" id="pg-hold">
+              <p class="hold-brand">RUNTIME</p>
+              <p class="hold-label">STAND BY</p>
+            </div>
+            <button type="button" class="pause-run" id="btn-pause-run">PAUSE RUN</button>
+          </div>
+        </div>
+        <ul class="feed-status">
+          <li><i class="dot" id="dot-clock"></i> REAL CLOCK</li>
+          <li><i class="dot" id="dot-video"></i> LIVE VIDEO</li>
+          <li><i class="dot" id="dot-spend"></i> LIVE SPEND</li>
+        </ul>
+      </section>
+
+      <section class="board" aria-label="Producer controls">
+        <nav class="tabs" role="tablist">
+          <button type="button" class="tab is-on" data-tab="live" role="tab">LIVE</button>
+          <button type="button" class="tab" data-tab="writer" role="tab">WRITER</button>
+          <button type="button" class="tab" data-tab="story" role="tab">STORY</button>
+          <button type="button" class="tab" data-tab="queue" role="tab">QUEUE</button>
+        </nav>
+
+        <div class="panel is-on" data-panel="live">
+          <p class="live-state" id="live-state"></p>
+          <p class="meta" id="meta"></p>
+          <div class="stats" id="stats">
+            <div><span>LAYOUT</span><b id="stat-layout">—</b></div>
+            <div><span>SPEAKER</span><b id="stat-speaker">—</b></div>
+            <div><span>SPEND</span><b id="stat-spend">0.00</b></div>
+            <div><span>SECONDS</span><b id="stat-seconds">00:00</b></div>
+          </div>
+          <div class="lanes">
+            <div class="lane" id="lane-on-air">
+              <div class="lane-top">
+                <span class="lane-label">ON AIR</span>
+                <span class="lane-name" data-name>—</span>
+                <span class="lane-pct" data-pct>0%</span>
+              </div>
+              <div class="bar"><i data-bar></i></div>
+              <p class="lane-line" data-line></p>
+            </div>
+            <div class="lane" id="lane-next">
+              <div class="lane-top">
+                <span class="lane-label">NEXT</span>
+                <span class="lane-name" data-name>—</span>
+                <span class="lane-pct" data-pct>0%</span>
+              </div>
+              <div class="bar"><i data-bar></i></div>
+              <p class="lane-line" data-line></p>
+            </div>
+          </div>
+          <div class="rehearsal">
+            <div class="rehearsal-head">
+              <p class="kicker">HARNESS CLOCK</p>
+              <p class="rehearsal-copy" id="rehearsal-copy">
+                Generating the next take while this one airs.
+              </p>
+            </div>
+            <div class="pipe" id="pipe"></div>
+            <div class="actions">
+              <button type="button" class="action" data-action="preview" id="btn-preview">Preview next</button>
+              <button type="button" class="action is-armed" data-action="hold" id="btn-hold">Hold</button>
+              <button type="button" class="action" data-action="resume" id="btn-resume">Resume</button>
+              <button type="button" class="action" data-action="kill" id="btn-kill">Kill take</button>
+              <button type="button" class="action" data-action="next_segment" id="btn-next">Next segment</button>
+              <button type="button" class="action danger" data-action="panic" id="btn-panic">Panic</button>
+            </div>
+            <p class="note" id="note"></p>
+          </div>
+        </div>
+
+        <div class="panel" data-panel="writer">
+          <p class="panel-kicker">WRITER PHASE <span id="writer-phase">open</span></p>
+          <p class="live-state" id="writer-beat"></p>
+          <p class="meta" id="writer-meta"></p>
+          <div class="stack" id="writer-ready"></div>
+        </div>
+
+        <div class="panel" data-panel="story">
+          <p class="panel-kicker">PRODUCER PACKAGE <span id="story-id"></span></p>
+          <p class="live-state" id="story-question"></p>
+          <p class="story-framing" id="story-framing"></p>
+          <p class="meta" id="story-fight"></p>
+          <div class="stack" id="story-beats"></div>
+        </div>
+
+        <div class="panel" data-panel="queue">
+          <p class="panel-kicker">ONE PERFORMER · QUEUE DEPTH 1</p>
+          <div class="stack" id="queue-now"></div>
+          <div class="stack" id="queue-log"></div>
+        </div>
+
+        <footer class="manual">
+          <span>Manual phase controls</span>
+          <button type="button" class="text-btn" data-action="hold">hold</button>
+          <button type="button" class="text-btn" data-action="resume">resume</button>
+          <button type="button" class="text-btn" data-action="panic">panic</button>
+        </footer>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

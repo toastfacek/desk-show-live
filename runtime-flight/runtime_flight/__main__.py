@@ -38,6 +38,7 @@ from runtime_flight.preflight import (
     run_preflight,
 )
 from runtime_flight.signals import install_panic_handler
+from runtime_flight.producer import DEFAULT_PORT, run_board_cli
 from runtime_flight.verify import verify_bundle
 
 
@@ -127,6 +128,13 @@ def main(
     replay_parser = subparsers.add_parser("replay", help="Read a finished evidence bundle. No network.")
     _add_bundle_args(replay_parser)
 
+    board_parser = subparsers.add_parser(
+        "board",
+        help="Open the visual producer harness (demo clock, loopback only).",
+    )
+    board_parser.add_argument("--host", default="127.0.0.1")
+    board_parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+
     verify_parser = subparsers.add_parser("verify-flight", help="Verify a finished evidence bundle.")
     _add_bundle_args(verify_parser)
     mode = verify_parser.add_mutually_exclusive_group(required=True)
@@ -197,6 +205,10 @@ def main(
                 cleanup=cleanup or _cleanup,
                 panic_installer=panic_installer or install_panic_handler,
             )
+        if args.command == "board":
+            if args.host not in {"127.0.0.1", "localhost", "::1"}:
+                raise OperatorError("producer board must bind loopback only")
+            return run_board_cli(host="127.0.0.1" if args.host == "localhost" else args.host, port=args.port)
         if args.command == "replay":
             bundle = _resolve_bundle(args)
             payload = cmd_replay(bundle, network_call=network_call)
