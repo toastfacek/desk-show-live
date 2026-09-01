@@ -11,6 +11,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal
 
+from runtime_flight.anchor import persist_anchor
 from runtime_flight.baseline import BaselineContext
 from runtime_flight.config import RuntimeConfig
 from runtime_flight.evidence import FlightEvidence, write_evidence_bundle
@@ -103,6 +104,7 @@ async def _run_segment_async(
     requests: list[TakeRequest] = []
     log: list[dict[str, Any]] = []
     events: list[dict[str, Any]] = []
+    playhead = ConcatPlayhead()
     planned: list[Thought] = []
     pending: list[Thought] = []
     next_speaker: Literal["BOT1", "BOT2"] = "BOT1"
@@ -172,6 +174,7 @@ async def _run_segment_async(
         )
         if ready.status != "ready" or ready.clip_path is None:
             raise OperatorError(f"take {take} did not produce a ready clip")
+        playhead.play_clip(str(ready.clip_path))
         if thought.thought_open:
             next_speaker = thought.speaker
             thought_open = True
@@ -186,8 +189,7 @@ async def _run_segment_async(
         raise OperatorError("segment produced no takes")
 
     recording = work_dir / "segment.mp4"
-    clip_paths = [item.clip_path for item in completed if item.clip_path is not None]
-    await _concat_clips(clip_paths, recording)
+    await _concat_clips(playhead.clips, recording)
     write_evidence_bundle(
         Path(out_dir or "out/flights"),
             _evidence(
@@ -210,23 +212,33 @@ async def _run_segment_async(
     return 0
 
 
+class ConcatPlayhead:
+    """No-OBS playhead: the live loop's play_clip, then concat for review."""
+
+    def __init__(self) -> None:
+        self.clips: list[Path] = []
+
+    def play_clip(self, path: str) -> None:
+        if not path:
+            raise OperatorError("playhead received an empty clip path")
+        self.clips.append(Path(path))
+
+
 def _request_for(
     baseline: BaselineContext,
     thought: Thought,
     take: int,
     completed: list[ReadyTake],
 ) -> TakeRequest:
-    if take == 1:
-        anchor: Literal["hero", "chain"] = "hero"
-        image_url = HERO_IMAGE_PLACEHOLDER
-    else:
-        previous = completed[take - 2]
-        if previous.frame_url:
-            anchor = "chain"
-            image_url = previous.frame_url
-        else:
-            anchor = "hero"
-            image_url = HERO_IMAGE_PLACEHOLDER
+    previous = completed[take - 2] if take > 1 else None
+    anchor, image_url = persist_anchor(
+        take=take,
+        speaker=thought.speaker,
+        previous_speaker=previous.speaker if previous is not None else None,
+        previous_frame_url=previous.frame_url if previous is not None else None,
+        reanchor_every=baseline.reanchor_every,
+        hero_url=HERO_IMAGE_PLACEHOLDER,
+    )
     return TakeRequest(
         take=take,
         speaker=thought.speaker,

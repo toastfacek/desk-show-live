@@ -64,19 +64,21 @@ def _package() -> SegmentPackage:
 def _takes(count: int = 12) -> list[dict]:
     rows = []
     for take in range(1, count + 1):
+        speaker = "BOT1" if ((take - 1) // 2) % 2 == 0 else "BOT2"
+        cut = take == 1 or (take - 1) % 2 == 0
         rows.append(
             {
                 "take": take,
                 "line": f"BOT line {take}",
-                "speaker": "BOT1" if take % 2 else "BOT2",
+                "speaker": speaker,
                 "clip": f"{take:03d}.mp4",
                 "status": "ready",
                 "layout_on_air": "wide",
                 "t_submit": float((take - 1) * 5),
                 "t_ready": float((take - 1) * 5 + 4),
                 "t_on_air": float((take - 1) * 5),
-                "anchor": "hero" if take == 1 else "chain",
-                "image_url": "hero" if take == 1 else FRAME.format(take=take - 1),
+                "anchor": "hero" if cut else "chain",
+                "image_url": "hero" if cut else FRAME.format(take=take - 1),
                 "frame_url": FRAME.format(take=take),
                 "prompt": f"Active host voice: Low, measured.\nDialogue: line {take}",
                 "request_id": f"req-{take}",

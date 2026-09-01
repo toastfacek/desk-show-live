@@ -9,6 +9,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any, Literal, Protocol
 
 from obs_harness.director import decide
+from runtime_flight.anchor import persist_anchor
 from runtime_flight.baseline import BaselineContext
 from runtime_flight.models import SegmentPackage, Thought
 from runtime_flight.performer_fal import ReadyTake, TakeRequest
@@ -636,7 +637,7 @@ class LiveHarness:
         speaker: Literal["BOT1", "BOT2"] = submit["speaker"]
         line = submit["line"]
         take = int(submit["take"])
-        anchor, image_url = self._anchor_for(take)
+        anchor, image_url = self._anchor_for(take, speaker)
         return TakeRequest(
             take=take,
             speaker=speaker,
@@ -647,16 +648,18 @@ class LiveHarness:
             baseline_id=self.baseline_id,
         )
 
-    def _anchor_for(self, take: int) -> tuple[Literal["hero", "chain"], str]:
-        if take == 1:
-            return "hero", HERO_IMAGE_PLACEHOLDER
-        interval = self.baseline.reanchor_every
-        if interval and (take - 1) % interval == 0:
-            return "hero", HERO_IMAGE_PLACEHOLDER
+    def _anchor_for(
+        self, take: int, speaker: str
+    ) -> tuple[Literal["hero", "chain"], str]:
         previous = self._completed.get(take - 1)
-        if previous is not None and previous.frame_url:
-            return "chain", previous.frame_url
-        return "hero", HERO_IMAGE_PLACEHOLDER
+        return persist_anchor(
+            take=take,
+            speaker=speaker,
+            previous_speaker=previous.speaker if previous is not None else None,
+            previous_frame_url=previous.frame_url if previous is not None else None,
+            reanchor_every=self.baseline.reanchor_every,
+            hero_url=HERO_IMAGE_PLACEHOLDER,
+        )
 
     def _mapped_speaking(self, speaker: str | None) -> str | None:
         if speaker is None:

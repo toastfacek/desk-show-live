@@ -24,7 +24,7 @@ python3 -m runtime_flight verify-flight --automated --latest --out out/flights
 python3 -m runtime_flight verify-flight --final --latest --out out/flights
 ```
 
-No-OBS paid segment (planner + writer + two fal takes, hero then chain). Human-gated.
+No-OBS paid segment (planner + writer + fal takes). Hero on take 1 and on a speaker cut; same-host runs chain the last frame. Human-gated.
 Does not connect to OBS.
 
 ```bash
