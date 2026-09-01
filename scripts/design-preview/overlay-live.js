@@ -77,6 +77,29 @@ function applyProducerCard(card, nodes) {
   }
 }
 
+const EASTERN_TZ = "America/New_York";
+
+function formatEasternClock(date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: EASTERN_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date instanceof Date ? date : new Date());
+  const value = {};
+  parts.forEach(function (part) {
+    if (part.type !== "literal") {
+      value[part.type] = part.value;
+    }
+  });
+  return [value.hour, value.minute, value.second]
+    .map(function (item) {
+      return String(item || "00").padStart(2, "0");
+    })
+    .join(":");
+}
+
 function cardOriginFromSearch(search, fallback) {
   const params = new URLSearchParams(search || "");
   const raw = params.get("card_origin");
@@ -112,15 +135,11 @@ function bootProducerOverlay() {
     embedOrigin: typeof location !== "undefined" ? location.origin : origin,
   };
   const clock = document.getElementById("clock");
-  function pad(n) {
-    return String(n).padStart(2, "0");
-  }
   function tick() {
     if (!clock) {
       return;
     }
-    const d = new Date();
-    clock.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+    clock.textContent = formatEasternClock(new Date());
   }
   tick();
   setInterval(tick, 1000);
@@ -155,6 +174,8 @@ if (typeof module !== "undefined" && module.exports) {
     safeImageUrl,
     cardOriginFromSearch,
     officialEmbedPath,
+    formatEasternClock,
+    EASTERN_TZ,
   };
 }
 

@@ -101,6 +101,7 @@ def test_overlay_live_is_transparent_1080_cg_not_the_review_page() -> None:
     assert ">deb<" in text
     assert "RUNTIME" in text
     assert "Runtime mark" in text
+    assert '<div class="cell">SEG 04</div>' not in text
     assert "thesis" not in text.lower()
     assert "the number" not in text.lower()
     assert "overlay-live.js" in text
@@ -145,6 +146,8 @@ def test_overlay_live_polls_card_without_html_injection() -> None:
     assert "innerHTML" not in script
     assert "textContent" in script
     assert "tweet-embed.html?id=" in script
+    assert "America/New_York" in script
+    assert "formatEasternClock" in script
     embed = (
         Path(__file__).resolve().parents[2] / "scripts" / "design-preview" / "tweet-embed.html"
     ).read_text(encoding="utf-8")

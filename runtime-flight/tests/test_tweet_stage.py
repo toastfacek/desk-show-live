@@ -221,7 +221,9 @@ def test_overlay_live_js_uses_text_content_and_rejects_remote_images() -> None:
             "-e",
             f"""
 const assert = require("assert");
-const {{ applyProducerCard, safeImageUrl, cardOriginFromSearch, officialEmbedPath }} = require({json.dumps(str(OVERLAY_JS))});
+const {{ applyProducerCard, safeImageUrl, cardOriginFromSearch, officialEmbedPath, formatEasternClock }} = require({json.dumps(str(OVERLAY_JS))});
+assert.strictEqual(formatEasternClock(new Date("2026-09-01T21:17:59Z")), "17:17:59");
+assert.strictEqual(formatEasternClock(new Date("2026-01-15T21:17:59Z")), "16:17:59");
 assert.strictEqual(safeImageUrl("/tweet.png", "http://127.0.0.1:8765"), "http://127.0.0.1:8765/tweet.png");
 assert.strictEqual(safeImageUrl("https://evil.example/x.png", "http://127.0.0.1:8765"), "");
 assert.strictEqual(officialEmbedPath("2094640985116737882", "http://127.0.0.1:8765"), "http://127.0.0.1:8765/tweet-embed.html?id=2094640985116737882&theme=dark");
