@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Runtime — dither wash</title>
+<!--
+  DITHER WASH — a deterministic background layer for OBS.
+
+  Drop in as a Browser Source sized to your canvas (1920×1080) and place it
+  BELOW everything else. Nothing external is requested, so it works offline.
+
+  Ordered 8×8 Bayer dither on a slow-drifting field. Cells default to 8 px,
+  which is the floor that survives a 480p downscale — below that it stops
+  being a pattern and becomes noise the encoder has to pay for.
+
+  Deterministic: the field is a pure function of (x, y, elapsed-ms-since-load).
+  No randomness anywhere. Reloading the source restarts it identically.
+
+  ── Query parameters ──────────────────────────────────────────────────────
+    cell    8        Cell size in px. Do not go below 8.
+    cover   0.66     Peak coverage at the bottom row (0–1). Lower = subtler.
+    rise    3.0      Falloff exponent. LOWER reaches further up the frame.
+    floor   0.09     Hard cutoff; guarantees a clean band rather than specks.
+    speed   1        Drift rate. 0 freezes it.
+    fg      1E7A57   Dither colour (hex, no #).
+    bg      0B0A08   Ground colour (hex, no #).
+    alpha   0        1 = transparent ground, so layers below show through.
+    fps     30       Render cap.
+    static  0        1 = draw one frame and stop. Use this on air.
+    t       —        Freeze at a specific elapsed ms. For screenshots.
+
+  ── Examples ──────────────────────────────────────────────────────────────
+    dither-wash.html                       default drifting wash
+    dither-wash.html?static=1              frozen — the on-air setting
+    dither-wash.html?cover=0.4&rise=4      much quieter, hugs the bottom
+    dither-wash.html?alpha=1               transparent ground
+    dither-wash.html?rise=1.6&cover=0.8    rises most of the frame
+
+  ── A note on motion ──────────────────────────────────────────────────────
+  A static pattern encodes once into a reference frame and then costs almost
+  nothing. A moving one cannot be held in reference and pays again every
+  frame. Drift is cheap over a hold card where nothing else needs the
+  bitrate; behind live hosts, prefer ?static=1 until an encode test says
+  otherwise.
+-->
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0B0A08; }
+  body.alpha { background: transparent; }
+  canvas {
+    display: block; width: 100vw; height: 100vh;
+    image-rendering: pixelated;          /* keep cells hard, never resampled */
+    image-rendering: crisp-edges;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(function () {
+  "use strict";
+
+  var Q = new URLSearchParams(location.search);
+  function num(k, d) { var v = parseFloat(Q.get(k)); return isFinite(v) ? v : d; }
+  function hex(k, d) {
+    var h = (Q.get(k) || d).replace(/^#/, "");
+    if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) h = d;
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  }
+
+  var CELL   = Math.max(4, num("cell", 8)),
+      COVER  = num("cover", 0.66),
+      RISE   = num("rise", 3.0),
+      FLOOR  = num("floor", 0.09),
+      SPEED  = num("speed", 1),
+      FPS    = Math.max(1, num("fps", 30)),
+      ALPHA  = num("alpha", 0) === 1,
+      STATIC = num("static", 0) === 1,
+      FREEZE = Q.has("t") ? num("t", 0) : null,
+      FG     = hex("fg", "1E7A57"),
+      BG     = hex("bg", "0B0A08");
+
+  if (ALPHA) document.body.classList.add("alpha");
+
+  // Ordered 8×8 Bayer threshold matrix.
+  var BAYER = [ 0,32, 8,40, 2,34,10,42,  48,16,56,24,50,18,58,26,
+               12,44, 4,36,14,46, 6,38,  60,28,52,20,62,30,54,22,
+                3,35,11,43, 1,33, 9,41,  51,19,59,27,49,17,57,25,
+               15,47, 7,39,13,45, 5,37,  63,31,55,23,61,29,53,21];
+
+  var cv = document.getElementById("c"), ctx = cv.getContext("2d"), img, cols, rows;
+
+  function resize() {
+    // One canvas pixel per cell, scaled up by CSS. Far cheaper than one
+    // fillRect per cell, and pixel-exact when the canvas is a whole multiple.
+    cols = Math.max(1, Math.ceil(window.innerWidth  / CELL));
+    rows = Math.max(1, Math.ceil(window.innerHeight / CELL));
+    cv.width = cols; cv.height = rows;
+    img = ctx.createImageData(cols, rows);
+    draw(FREEZE !== null ? FREEZE : lastT);
+  }
+
+  var TAU = Math.PI * 2;
+
+  function draw(t) {
+    var d = img.data, i = 0, x, y, u, v, f, vv;
+    for (y = 0; y < rows; y++) {
+      v  = rows > 1 ? y / (rows - 1) : 0;
+      vv = Math.pow(v, 2.2);
+      var base = Math.pow(v, RISE) * COVER;
+      for (x = 0; x < cols; x++) {
+        u = cols > 1 ? x / (cols - 1) : 0;
+        // Drift is scaled by v so it cannot fire cells near the top; the
+        // floor then guarantees a clean band rather than a sparse one.
+        f = base + (0.05 * Math.sin(u * TAU * 1.4 + t * 0.00035 * SPEED)
+                  + 0.03 * Math.sin(u * TAU * 3.1 - t * 0.00021 * SPEED)) * vv;
+
+        var on = f >= FLOOR && (f >= 1 || f > (BAYER[(y & 7) * 8 + (x & 7)] + 0.5) / 64);
+        if (on) { d[i] = FG[0]; d[i+1] = FG[1]; d[i+2] = FG[2]; d[i+3] = 255; }
+        else if (ALPHA) { d[i] = d[i+1] = d[i+2] = d[i+3] = 0; }
+        else { d[i] = BG[0]; d[i+1] = BG[1]; d[i+2] = BG[2]; d[i+3] = 255; }
+        i += 4;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  var lastT = 0, lastPaint = -1e9, interval = 1000 / FPS;
+
+  function loop(ts) {
+    requestAnimationFrame(loop);
+    if (ts - lastPaint < interval) return;
+    lastPaint = ts; lastT = ts;
+    draw(ts);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+
+  if (!STATIC && FREEZE === null) requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
