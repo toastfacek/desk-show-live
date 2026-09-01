@@ -551,6 +551,73 @@ def test_early_land_is_coerced_to_poke():
     assert thought.beat_exhausted is False
 
 
+def test_unknown_move_is_coerced_to_poke():
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            _json_body(
+                _valid_turn(
+                    speaker="BOT2",
+                    text="Who can sit on that radio now?",
+                    move="riff",
+                    reply_to="Is this a thesis, or just weather around a crash?",
+                    angle_used="takeover",
+                )
+            ),
+        )
+
+    async def run():
+        return await HostMind(_client(http_post)).reply(
+            _package(),
+            speaker="BOT2",
+            last_line={
+                "speaker": "BOT1",
+                "text": "Is this a thesis, or just weather around a crash?",
+                "move": "frame",
+            },
+            own_lines=(),
+            coverage=CoverageState.initial(),
+            voices=_voices(),
+        )
+
+    _thought, turn = _run(run())
+    assert turn["move"] == "poke"
+
+
+def test_unknown_angle_falls_back_to_package_angle():
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            _json_body(
+                _valid_turn(
+                    speaker="BOT2",
+                    text="Who can sit on that radio now?",
+                    move="poke",
+                    reply_to="Is this a thesis, or just weather around a crash?",
+                    angle_used="not-an-angle",
+                )
+            ),
+        )
+
+    async def run():
+        return await HostMind(_client(http_post)).reply(
+            _package(),
+            speaker="BOT2",
+            last_line={
+                "speaker": "BOT1",
+                "text": "Is this a thesis, or just weather around a crash?",
+                "move": "frame",
+            },
+            own_lines=(),
+            coverage=CoverageState.initial(),
+            voices=_voices(),
+        )
+
+    thought, turn = _run(run())
+    assert thought.angle_used == "scope"
+    assert turn["angle_used"] == "scope"
+
+
 def test_discuss_source_has_no_forbidden_names():
     source = ast.parse(Path("runtime_flight/discuss.py").read_text(encoding="utf-8"))
     text = Path("runtime_flight/discuss.py").read_text(encoding="utf-8")

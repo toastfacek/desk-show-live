@@ -385,8 +385,10 @@ def _turn_from_model(
         raise DiscussError("line contains a control character")
     text = _fit_line(text)
     move = raw.get("move")
+    if isinstance(move, str):
+        move = move.strip().lower()
     if move not in MOVES:
-        raise DiscussError("move must be a known conversational move")
+        move = "frame" if last_line is None else "poke"
     reply_to = raw.get("reply_to")
     if last_line is None:
         if move != "frame":
@@ -410,7 +412,7 @@ def _turn_from_model(
             raise DiscussError("move is not allowed in this phase")
     angle_used = raw.get("angle_used")
     if angle_used not in package.angles:
-        raise DiscussError("angle_used is not a package angle")
+        angle_used = package.angles[0]
     landed_own_job = raw.get("landed_own_job", False)
     beat_exhausted = raw.get("beat_exhausted", False)
     if not isinstance(landed_own_job, bool) or not isinstance(beat_exhausted, bool):
