@@ -139,7 +139,8 @@ def test_render_tweet_card_keeps_cjk_glyphs() -> None:
     image = Image.open(BytesIO(png)).convert("L")
     assert image.size == (CARD_W, CARD_H)
     # CJK must paint more than the empty panel. Tofu-only fallback is a few dots.
-    ink = sum(1 for pixel in image.getdata() if pixel < 200)
+    pixels = image.get_flattened_data() if hasattr(image, "get_flattened_data") else image.getdata()
+    ink = sum(1 for pixel in pixels if pixel < 200)
     assert ink > 4000
 
 
