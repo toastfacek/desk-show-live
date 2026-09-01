@@ -318,6 +318,8 @@ def test_writer_prompt_targets_four_to_four_point_six_seconds():
     assert "not X, it's Y" in system
     assert "just a vibe" in system
     assert "The discussion teaches" in system
+    assert "the audience" in system
+    assert "points of view" in system
     assert captured["user"]["target_duration_s"] == 4.3
 
 

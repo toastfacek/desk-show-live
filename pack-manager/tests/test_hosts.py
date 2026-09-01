@@ -36,15 +36,18 @@ def test_canonical_copy_is_light_broadcast_sprites():
         "Tall cobalt software sprite."
     )
     assert BOT1_MANIFEST["voice_direction"] == (
-        "Low chest voice, slow and even, dry, almost bored, "
-        "no lift at the end of sentences."
+        "Low chest voice, dry and even, then a lift when something is "
+        "actually interesting. No lift at the end of a shrug."
     )
     assert BOT2_MANIFEST["voice_direction"] == (
         "Higher thinner voice, quick and clipped, bright, slightly nasal, "
-        "restless upward energy."
+        "restless upward energy. Gets into it when something is good."
     )
     assert "conversation teaches" in BOT1_MANIFEST["soul"]
     assert "learn in public" in BOT2_MANIFEST["soul"]
+    assert "point of view" in BOT1_MANIFEST["persona"]
+    assert "voice of the audience" in BOT1_MANIFEST["persona"]
+    assert "have a take" in BOT2_MANIFEST["persona"]
     assert BOT1_MANIFEST["opinions"]
     assert BOT2_MANIFEST["opinions"]
 

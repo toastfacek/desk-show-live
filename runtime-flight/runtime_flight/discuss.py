@@ -38,7 +38,7 @@ from runtime_flight.topic_map import (
     voice_payload,
 )
 
-MAX_LINE_CHARS = 120
+MAX_LINE_CHARS = 220
 DEFAULT_MAX_TURNS = 12
 SPEAKERS = frozenset({"BOT1", "BOT2"})
 MOVES = frozenset(
@@ -50,14 +50,16 @@ Answer that line. Do not start a parallel essay. Do not recap the card.
 Do not read the chyron. One spoken line. No stage directions. No quotes.
 No prefix.
 
-You are trying to understand the card out loud, with the other host, for
-the audience. Neither of you has the answer. The discussion teaches. You
-do not. Unpack the next piece, or check whether the last line skipped a
-step. Connect it to something nearby only if that helps. Do not sound
-smart. Do not sell a headline.
+You are the voice of the audience. You are trying to understand the card
+out loud, with the other host, for people at home. You have a point of
+view. When something is actually interesting, get into it. Neither of you
+has the finished answer. The discussion teaches. You do not sell a
+headline. Unpack the next piece, or check whether the last line skipped a
+step. Then say what you think.
 
-Talk. Do not draft. One sentence a person would say after hearing the last
-line. Small words. If you need a term, explain it in the same breath.
+Talk. Do not draft. One or two sentences a person would say after hearing
+the last line. Small words. If you need a term, explain it in the same
+breath. A take is allowed. A lecture is not.
 
 Never use these shapes:
 - start with But, Sure, Fine, or So
@@ -70,10 +72,12 @@ Honor your persona, rules, job, stance, soul, and opinions. If the last
 line tried to close, ask the missing step or name the fact we do not have.
 
 phase tells you where you are. Use only allowed_moves.
-- open: start unpacking from your job. Do not land a take.
-- develop: poke, number, reframe, callback, or question. Do not land.
-  Do not empty the well. Understanding a piece is not exhausting the beat.
-- close: you may land. Land is one plain sentence of what we now understand.
+- open: start unpacking from your job. You may have a lean. Do not land.
+- develop: poke, number, reframe, callback, or question. Have a take.
+  Do not land. Do not empty the well. Understanding a piece is not
+  exhausting the beat.
+- close: you may land. Land is one plain sentence of what we now
+  understand, plus what we still think.
 
 If last_line is null, frame. If last_line is set, reply_to must be that
 line's text exactly, and move must not be frame.
@@ -89,7 +93,7 @@ Reply with one JSON object only. No markdown. No prose before or after.
 
 Required keys:
 - speaker: must equal speaker in the request
-- text: spoken line, at most 120 characters
+- text: spoken line, at most 220 characters
 - move: one of allowed_moves
 - reply_to: the last line's text, or null if this is the first line
 - angle_used: one of the package angles
@@ -436,7 +440,7 @@ def _fit_line(text: str) -> str:
         return text
     words = text.split()
     if not words or any(len(word) > MAX_LINE_CHARS for word in words):
-        raise DiscussError("line exceeds 120 characters")
+        raise DiscussError(f"line exceeds {MAX_LINE_CHARS} characters")
     window = text[:MAX_LINE_CHARS]
     clause = ""
     for marker in (".", "?", "!", "—", ";"):
@@ -454,7 +458,7 @@ def _fit_line(text: str) -> str:
             break
         current = candidate
     if not current:
-        raise DiscussError("line exceeds 120 characters")
+        raise DiscussError(f"line exceeds {MAX_LINE_CHARS} characters")
     return current
 
 

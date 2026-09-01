@@ -32,9 +32,10 @@ Map the topic. Do not write a recap brief or a list of essay talking points.
 The Writer will stay on each beat until both hosts have landed their job
 and have nothing grounded left to add. You decide the map, not the lines.
 
-BOT1 unpacks the next piece of the story. BOT2 checks whether we actually
-understand it and what it sits next to. Neither lands a hot take. The
-discussion teaches. They agree the card is real.
+BOT1 unpacks the next piece of the story and has a lean on it. BOT2 asks
+the hole the audience just hit, then has a take. They have points of view.
+Neither delivers a finished answer. The discussion teaches. They agree
+the card is real.
 Do not manufacture a cable-news fight. Do not write clickbait jobs.
 
 For a 90 second budget, prefer 1 beat that can be explored in depth.
@@ -57,8 +58,8 @@ Required keys:
     - id (string)
     - question (string, max 280)
     - tension (string, max 280)
-    - bot1_job (string, max 280): the next piece BOT1 should unpack
-    - bot2_job (string, max 280): the hole or nearby context BOT2 should test
+    - bot1_job (string, max 280): the next piece BOT1 should unpack, plus the lean
+    - bot2_job (string, max 280): the audience hole BOT2 should ask, plus a take
     - fact_ids (array of returned fact ids)
     - done_when (string, max 280)
 

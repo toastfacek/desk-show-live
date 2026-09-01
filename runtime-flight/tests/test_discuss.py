@@ -12,6 +12,7 @@ import pytest
 
 from runtime_flight.discuss import (
     HOST_SYSTEM,
+    MAX_LINE_CHARS,
     DiscussError,
     HostMind,
     load_package,
@@ -445,12 +446,40 @@ def test_load_package_roundtrip(tmp_path: Path):
     assert package.topic_map.beats[0].id == "b1"
 
 
+def test_two_sentence_line_under_cap_is_kept():
+    line = (
+        "He sat one evening with a radio dongle and says every tire on the "
+        "street is broadcasting a unique ID, which is the part I actually want "
+        "to sit with."
+    )
+    assert 120 < len(line) <= MAX_LINE_CHARS
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(_valid_turn(text=line)))
+
+    async def run():
+        return await HostMind(_client(http_post)).reply(
+            _package(),
+            speaker="BOT1",
+            last_line=None,
+            own_lines=(),
+            coverage=CoverageState.initial(),
+            voices=_voices(),
+        )
+
+    thought, turn = _run(run())
+    assert thought.text == line
+    assert turn["text"] == line
+
+
 def test_overlong_line_is_wrapped_to_one_take():
     long_line = (
         "Name the cluster, the twelve hundred agents, the seven hundred attackers, "
-        "and the wiped research admin access before you call this weather."
+        "and the wiped research admin access before you call this weather, and then "
+        "tell me whether anyone in the room can still follow the story without the "
+        "pictures, because that is the part I keep getting stuck on."
     )
-    assert len(long_line) > 120
+    assert len(long_line) > MAX_LINE_CHARS
 
     async def http_post(url, *, headers, json, timeout):
         return FakeResponse(
@@ -481,7 +510,7 @@ def test_overlong_line_is_wrapped_to_one_take():
         )
 
     thought, turn = _run(run())
-    assert len(thought.text) <= 120
+    assert len(thought.text) <= MAX_LINE_CHARS
     assert thought.text.startswith("Name the cluster")
     assert thought.text.endswith((".", "?", "!", "—", ";")) or "cluster" in thought.text
     assert turn["text"] == thought.text
@@ -532,5 +561,8 @@ def test_discuss_source_has_no_forbidden_names():
     assert "not X, it's Y" in HOST_SYSTEM
     assert "just a vibe" in HOST_SYSTEM
     assert "The discussion teaches" in HOST_SYSTEM
-    assert "Neither of you has the answer" in HOST_SYSTEM
+    assert "finished answer" in HOST_SYSTEM
+    assert "voice of the audience" in HOST_SYSTEM
+    assert "get into it" in HOST_SYSTEM
+    assert "at most 220 characters" in HOST_SYSTEM
     assert isinstance(source, ast.Module)
