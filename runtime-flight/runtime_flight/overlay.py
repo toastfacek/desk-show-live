@@ -237,14 +237,6 @@ class OverlayServer:
                 self._write_card_locked()
         return urls
 
-    def set_card_mode(self, mode: str) -> str:
-        name = mode if mode in {"shot", "embed", ""} else ""
-        with self._lock:
-            self._card["card_mode"] = name
-            if self._card_path is not None:
-                self._write_card_locked()
-        return name
-
     def set_layout(self, layout: str) -> str:
         name = _normalize_overlay_layout(layout) or "split"
         with self._lock:

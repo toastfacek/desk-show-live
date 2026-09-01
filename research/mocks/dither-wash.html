@@ -23,7 +23,7 @@
     rise    3.0      Falloff exponent. LOWER reaches further up the frame.
     floor   0.09     Hard cutoff; guarantees a clean band rather than specks.
     speed   1        Drift rate. 0 freezes it.
-    fg      1E7A57   Dither colour (hex, no #).
+    fg      4A5218   Dither colour (hex, no #).
     bg      0B0A08   Ground colour (hex, no #).
     alpha   0        1 = transparent ground, so layers below show through.
     fps     30       Render cap.
@@ -78,7 +78,7 @@
       ALPHA  = num("alpha", 0) === 1,
       STATIC = num("static", 0) === 1,
       FREEZE = Q.has("t") ? num("t", 0) : null,
-      FG     = hex("fg", "1E7A57"),
+      FG     = hex("fg", "4A5218"),
       BG     = hex("bg", "0B0A08");
 
   if (ALPHA) document.body.classList.add("alpha");

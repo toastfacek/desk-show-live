@@ -1,6 +1,6 @@
 # Relock decision record — Package A token and geometry table
 
-**Status: accepted on 2026-09-01 for Package A.** Sections 1–5, the two-host desk mark, and the revised acceptance checklist are the production direction.
+**Status: accepted on 2026-09-01 for Package A.** Sections 1–5, the two-host desk mark, and the revised acceptance checklist are the production direction. Programme accent amended 2026-09-01 from `jade` `#14B87A` to `lemon` `#D4E04A` so the desk rule does not read as TBPN green.
 
 [ASSET_MANIFEST.md](ASSET_MANIFEST.md) puts *"relocking the graphics spec"* out of scope and asks instead that collisions be reported rather than silently forked. The design work in [../mocks/identity-bracket.html](../mocks/identity-bracket.html) has reached a coherent system that departs from the locked table in about fifteen places. Shipping it into `assets/broadcast/` without this document would be that silent fork.
 
@@ -10,7 +10,7 @@ Three things did **not** change and are not up for discussion here: the 26 px es
 
 ## Decision summary
 
-- **Accepted:** the warm espresso/jade colour system in §1.
+- **Accepted:** the warm espresso colour system in §1, with `lemon` `#D4E04A` as the programme accent.
 - **Accepted:** the floating 64 px geometry and unified top rail in §2.
 - **Accepted:** inverted host-name plates as the sole speaker-state signal in §3.
 - **Accepted:** Archivo for display, Inter for data, and JetBrains Mono 500 for system text in §4.
@@ -32,7 +32,7 @@ Three things did **not** change and are not up for discussion here: the 26 px es
 | `teal` | `#2FB7B2` | **removed as a speaker accent** | Same. This also retires the cobalt-versus-teal collision rather than settling it. |
 | `gain` | `#4FC58B` | `#A3BE9C` | Desaturated so it never competes with the one saturated colour. **8.5:1** on panel. Still always with `▲` and a sign. |
 | `loss` | `#E05D68` | `#D89A88` | Same. **7.2:1** on panel. |
-| — | — | `jade` `#14B87A` | **New.** The one saturated colour, in exactly two placements that mean the same thing: the desk rule in the mark, and the kicker chip in the chyron and centre card. Pulled from the set's forest-green pillars. Neither host owns green — amber would read as PHASEONE[lol], blue as deb — so it reads as the programme rather than a person. **7.7:1** on ground, **7.3:1** on panel, with ink type on the chip. |
+| — | — | `lemon` `#D4E04A` | **Amended.** Was `jade` `#14B87A`. Jade read as TBPN green on air. Acid lemon is the one saturated colour, in the desk rule and kicker chip. Amber would still read as PHASEONE[lol], blue as deb. Ink type on the chip. |
 | — | — | `live` `#E2543F` | **New.** A 10 px dot beside `LIVE`, and nothing else. Non-text, so its 4.5:1 is not a type contrast. |
 
 **Net:** one saturated colour on the furniture instead of four, and the room carries the rest.
@@ -124,7 +124,7 @@ The decisions are resolved. This table records which accepted section each deliv
 | --- | --- | --- |
 | `A1a–A1b` display/system fonts | **§4** | Vendor Archivo variable plus JetBrains Mono 500 and their OFL files. |
 | `A2`, `A3` Inter | **§4** | Retain Inter for data and tabular numerals. |
-| `A4` tokens.css | **§1** | Use the accepted warm-neutral table with jade and live tokens. |
+| `A4` tokens.css | **§1** | Use the accepted warm-neutral table with lemon and live tokens. |
 | `A5` show-bug.svg | **mark decision** | Promote the two-mass mark from [../mocks/mark/](../mocks/mark/). |
 | `A6` overlay/index.html | **§2** | Implement the floating 64 px grid and unified rail. |
 | `A7` app.js | **§3** | Drive exactly one inverted host-name plate when a speaker is known. |

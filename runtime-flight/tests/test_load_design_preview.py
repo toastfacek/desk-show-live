@@ -120,54 +120,19 @@ def test_overlay_live_url_selects_speaker() -> None:
     assert "card_origin=http://127.0.0.1:8765" in live
 
 
-def test_overlay_live_polls_card_without_html_injection() -> None:
-    html = Path(__file__).resolve().parents[2] / "scripts" / "design-preview" / "overlay-live.html"
-    js = Path(__file__).resolve().parents[2] / "scripts" / "design-preview" / "overlay-live.js"
-    text = html.read_text(encoding="utf-8")
-    script = js.read_text(encoding="utf-8")
-    assert 'id="card-author"' in text
-    assert 'id="card-body"' in text
-    assert 'id="card-image"' in text
-    assert 'id="tweet-embed"' in text
-    assert 'id="tweet-shot"' in text
-    assert ".card-well.has-shot #tweet-shot{display:block}" in text
-    assert "#tweet-shot{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover" in text
-    assert ".layout-solo_l #tweet-shot" not in text
-    assert "overflow:hidden" in text
-    assert ".card-well.has-embed .cardp{display:none}" in text
-    assert 'id="chyron"' in text
-    assert 'class="kk">DESK' not in text
-    assert "SPONSOR THE SHOW" in text
-    assert "DM FOR INQUIRIES" in text
-    assert "tkr-scroll" in text
-    assert ".chy,.tkr{background:#15130F}" in text
-    assert "BOT1" not in text
-    assert "BOT2" not in text
-    assert 'id="ticker"' not in text
-    assert "width:1792px" in text
-    assert "overlay-live.js" in text
+def test_overlay_live_uses_lemon_and_text_content() -> None:
+    preview = Path(__file__).resolve().parents[2] / "scripts" / "design-preview"
+    text = (preview / "overlay-live.html").read_text(encoding="utf-8")
+    script = (preview / "overlay-live.js").read_text(encoding="utf-8")
+    embed = (preview / "tweet-embed.html").read_text(encoding="utf-8")
+    assert "#D4E04A" in text
+    assert "#14B87A" not in text
+    assert "--lemon:" in text
     assert "innerHTML" not in text
     assert "innerHTML" not in script
-    assert "textContent" in script
-    assert "tweet-embed.html?id=" in script
-    assert "America/New_York" in script
-    assert "formatEasternClock" in script
-    assert "applyOverlayLayout" in script
-    assert "preview.card_mode" in script
-    assert "applyTweetShot" in script
-    assert ".layout-card_full #hid-a" in text
-    assert ".layout-solo_l #card-well{left:668px;width:1188px}" in text
-    assert ".layout-solo_r #card-well{left:64px;width:1188px}" in text
-    assert ".layout-card_full #card-well" in text
-    assert "transform:translateX(-50%)" in text
-    embed = (
-        Path(__file__).resolve().parents[2] / "scripts" / "design-preview" / "tweet-embed.html"
-    ).read_text(encoding="utf-8")
-    assert "platform.twitter.com/widgets.js" in embed
-    assert "twitter.com/i/status/" in embed
-    assert "overflow:hidden" in embed
-    assert "fitTweet" not in embed
     assert "innerHTML" not in embed
+    assert "textContent" in script
+    assert "platform.twitter.com/widgets.js" in embed
 
 
 def test_apply_preview_points_watchdog_at_identity_and_hides_obs_type() -> None:

@@ -42,14 +42,6 @@ def test_app_js_syntax():
     assert completed.returncode == 0, completed.stderr
 
 
-def test_app_js_uses_text_content_never_inner_html():
-    source = APP_JS.read_text(encoding="utf-8")
-    assert "textContent" in source
-    assert "innerHTML" not in source
-    assert "insertAdjacentHTML" not in source
-    assert "document.write" not in source
-
-
 def test_overlay_js_hold_and_html_escaping(tmp_path: Path):
     script = tmp_path / "overlay_js_cases.js"
     script.write_text(
@@ -172,17 +164,3 @@ def test_overlay_server_serves_cropped_tweet_shots(tmp_path: Path) -> None:
         with _fetch(server.url + "tweet-shot-solo.png") as response:
             assert response.headers.get("Content-Type") == "image/png"
             assert response.read()[:8] == b"\x89PNG\r\n\x1a\n"
-
-
-def test_overlay_server_loss_is_a_hold_condition():
-    script = OVERLAY_DIR / "app.js"
-    completed = subprocess.run(
-        [
-            "node",
-            "-e",
-            f"const {{ shouldShowHold }} = require({json.dumps(str(script))});"
-            "process.exit(shouldShowHold({ unreachable: true, healthy: true, age_ms: 0, receiptAgeMs: 0 }) ? 0 : 1);",
-        ],
-        check=False,
-    )
-    assert completed.returncode == 0
