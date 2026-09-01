@@ -109,9 +109,21 @@ Lines that survive unchanged from the manifest are marked ⟢. Lines that change
 
 ## What is blocked on this
 
-`A4 tokens.css` cannot be written against two different colour tables, and `A5`–`A8` all import it. So Package A is blocked on §1 and §2 specifically; §3–§5 can be argued separately without holding up the build.
+Per deliverable, rather than as a single claim. An earlier draft of this document said Package A was blocked on §1 and §2 only; that was wrong, and the table is the correction.
 
-The mark itself is not blocked — it uses `bone` and `jade` only, and preview cuts are in [../mocks/mark/](../mocks/mark/) pending sign-off.
+| Deliverable | Blocked on | Why |
+| --- | --- | --- |
+| `A1` BarlowCondensed-Bold.ttf | **§4** | §4 replaces this face outright. A1 names a file that would not be vendored. |
+| `A2`, `A3` Inter | — | Inter is retained for data in both columns. |
+| `A4` tokens.css | **§1** | Cannot be written against two colour tables. |
+| `A5` show-bug.svg | — | Uses `bone` and `jade` only. Preview cuts in [../mocks/mark/](../mocks/mark/). |
+| `A6` overlay/index.html | **§2** | Its root geometry is the rectangle table. |
+| `A7` app.js | **§3** | It drives speaker state, and §3 changes what state there is to drive. |
+| `A8` style.css | **§1 §2 §3 §4** | It implements every template, so it touches all four. |
+
+So the useful sequencing is: **§1 and §2 unblock the most (A4, A6), §4 unblocks the fonts, and §3 is required before any of A7 or A8 is written.** Only A2, A3 and A5 can be cut against the current text with nothing outstanding.
+
+Package B is unaffected — it is a motion and audio cadence, and nothing in it depends on the colour table.
 
 ## What is still open from the first pass
 

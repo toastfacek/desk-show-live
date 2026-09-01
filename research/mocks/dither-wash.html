@@ -17,7 +17,8 @@
   No randomness anywhere. Reloading the source restarts it identically.
 
   ── Query parameters ──────────────────────────────────────────────────────
-    cell    8        Cell size in px. Do not go below 8.
+    cell    8        Cell size in px. Clamped to 8 minimum — below that it
+                     stops being a pattern and becomes noise the encoder pays for.
     cover   0.66     Peak coverage at the bottom row (0–1). Lower = subtler.
     rise    3.0      Falloff exponent. LOWER reaches further up the frame.
     floor   0.09     Hard cutoff; guarantees a clean band rather than specks.
@@ -68,7 +69,7 @@
     return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
   }
 
-  var CELL   = Math.max(4, num("cell", 8)),
+  var CELL   = Math.max(8, num("cell", 8)),   // 8 is the floor, not a suggestion
       COVER  = num("cover", 0.66),
       RISE   = num("rise", 3.0),
       FLOOR  = num("floor", 0.09),
