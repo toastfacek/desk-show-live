@@ -143,6 +143,7 @@ def test_apply_preview_points_watchdog_at_identity_and_hides_obs_type() -> None:
         if call[0] == "set_input_settings" and call[1] == "HOST_WIDE"
     ]
     assert host_settings[-1][2]["looping"] is False
+    assert host_settings[-1][2]["restart_on_activate"] is False
     assert any(
         call[0] == "set_current_scene_transition" and call[1] == "Cut"
         for call in client.calls

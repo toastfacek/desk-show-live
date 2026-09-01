@@ -14,7 +14,7 @@ HIGHLIGHT_SOURCES = ("HL_A", "HL_B")
 HOST_WIDE_PLAYBACK = {
     "is_local_file": True,
     "looping": False,
-    "restart_on_activate": True,
+    "restart_on_activate": False,
     "close_when_inactive": False,
     "clear_on_media_end": False,
     "hw_decode": False,
@@ -167,7 +167,10 @@ class ObsPlayer:
     def set_layout(self, name: str) -> None:
         if name not in LAYOUTS:
             raise ValueError(f"unknown layout {name}")
-        self._req().set_current_program_scene(name)
+        client = self._req()
+        current = client.get_current_program_scene().current_program_scene_name
+        if current != name:
+            client.set_current_program_scene(name)
         self.layout = name
 
     def play_clip(self, path: str) -> None:

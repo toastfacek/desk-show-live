@@ -44,6 +44,10 @@ class FakeObsClient:
     def trigger_media_input_action(self, name: str, action: str):
         self.calls.append(("trigger_media_input_action", name, action))
 
+    def set_current_program_scene(self, name: str):
+        self.calls.append(("set_current_program_scene", name))
+        self.program_scene = name
+
     def get_current_program_scene(self):
         self.calls.append(("get_current_program_scene",))
         return type(
@@ -250,7 +254,27 @@ def test_play_clip_points_host_wide_at_obs_playable(tmp_path: Path):
     assert settings[-1][1] == "HOST_WIDE"
     assert settings[-1][2]["local_file"].endswith("003.obs.mp4")
     assert settings[-1][2]["looping"] is False
+    assert settings[-1][2]["restart_on_activate"] is False
     assert settings[-1][2]["clear_on_media_end"] is False
     mute = [call for call in client.calls if call[0] == "set_input_mute"]
     assert mute[-1][1] == "HOST_WIDE"
     assert mute[-1][2] is False
+
+
+def test_set_layout_skips_obs_when_already_on_that_scene():
+    client = FakeObsClient(program_scene="split")
+    player = _player_with_client(client)
+    client.calls.clear()
+    player.set_layout("split")
+    assert [
+        call for call in client.calls if call[0] == "set_current_program_scene"
+    ] == []
+    assert player.layout == "split"
+
+
+def test_set_layout_switches_when_the_scene_changes():
+    client = FakeObsClient(program_scene="card_full")
+    player = _player_with_client(client)
+    player.set_layout("split")
+    assert ("set_current_program_scene", "split") in client.calls
+    assert player.layout == "split"

@@ -64,7 +64,7 @@ HOST_R_X = 1092
 HOST_WIDE_PLAYBACK = {
     "is_local_file": True,
     "looping": False,
-    "restart_on_activate": True,
+    "restart_on_activate": False,
     "close_when_inactive": False,
     "clear_on_media_end": False,
     "hw_decode": False,

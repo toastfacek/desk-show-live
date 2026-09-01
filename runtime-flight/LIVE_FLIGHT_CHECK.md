@@ -103,6 +103,11 @@ Now:
 - While cooking with no ready clip, hold the **last host layout** (usually
   `split`). Cold start still uses `card_full`. Programme end still uses `hold`.
 - `looping` is false. Last frame holds until the next `play_clip`.
+- `restart_on_activate` is false. `play_clip` still issues an explicit
+  RESTART after pointing at a new file. The wait beat stays on `split`;
+  re-entering that scene used to replay the finished take — speech, then
+  silence, then the same line again, then silence.
+- `set_layout` is a no-op when the program scene is already the target.
 - Default `layout_plan` is `["split"]`. The overlay is always 3-column.
   `wide` (full 1920 canvas) and `solo_*` fight those wells. `wide → split →
   solo_l → solo_r` on the first flight was the rundown cycling, not a speaker
@@ -193,7 +198,8 @@ Before `live`:
 
 1. OBS not streaming. Record directory `out/obs-recordings`.
 2. Preview HTTP on :8766. `WATCHDOG` URL is overlay-live on **8766**, not 8765.
-3. Scene transition is **Cut**. `HOST_WIDE` `looping` is false.
+3. Scene transition is **Cut**. `HOST_WIDE` `looping` and
+   `restart_on_activate` are false.
 4. Split `HOST_WIDE` crops are the 500px sprite windows, not 672/672.
 5. `load-design-preview.py` has been run after the last `setup-obs`.
 6. `RUNTIME_ALLOW_PAID=1`, spend cap and `--confirm-spend` match. Live CLI has

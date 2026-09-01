@@ -35,6 +35,7 @@ def test_layout_uses_fixed_solo_aperture_and_distinct_host_colors() -> None:
 def test_host_wide_playback_does_not_loop() -> None:
     source = inspect.getsource(apply_obs_layout.apply_layout)
     assert '"looping": False' in source
+    assert '"restart_on_activate": False' in source
     assert 'set_current_scene_transition("Cut")' in source
     assert "set_current_scene_transition_duration" not in source
 
