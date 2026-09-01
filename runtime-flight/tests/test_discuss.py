@@ -556,7 +556,7 @@ def test_early_land_is_coerced_to_poke():
     assert thought.beat_exhausted is False
 
 
-def test_repeated_questions_drop_question_move_and_coerce_it():
+def test_already_asked_questions_are_visible_and_question_stays_allowed():
     captured: dict[str, Any] = {}
 
     async def http_post(url, *, headers, json, timeout):
@@ -592,13 +592,13 @@ def test_repeated_questions_drop_question_move_and_coerce_it():
         )
 
     thought, turn = _run(run())
-    assert "question" not in captured["user"]["allowed_moves"]
+    assert "question" in captured["user"]["allowed_moves"]
     assert "broaden" in captured["user"]["allowed_moves"]
     assert captured["user"]["you_already_asked"] == [
         "Who can actually do this?",
         "Who is allowed to listen in?",
     ]
-    assert turn["move"] == "poke"
+    assert turn["move"] == "question"
     assert thought.speaker == "BOT2"
 
 

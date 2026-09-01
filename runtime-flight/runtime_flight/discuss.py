@@ -283,7 +283,7 @@ class HostMind:
         if last_line is not None and phase == "open":
             phase = "develop"
         asked = _asked_questions(own_lines)
-        allowed = _allowed_moves(phase, own_lines)
+        allowed = moves_for_phase(phase)
         user = {
             "speaker": speaker,
             "you": {
@@ -407,15 +407,6 @@ def _voice_for(voices: tuple[HostVoice, ...], speaker: str) -> HostVoice:
 
 def _asked_questions(lines: tuple[str, ...]) -> list[str]:
     return [line for line in lines if "?" in line][-8:]
-
-
-def _allowed_moves(
-    phase: Literal["open", "develop", "close"], own_lines: tuple[str, ...]
-) -> frozenset[str]:
-    allowed = set(moves_for_phase(phase))
-    if sum(1 for line in own_lines[-3:] if "?" in line) >= 2:
-        allowed.discard("question")
-    return frozenset(allowed)
 
 
 def _turn_from_model(
