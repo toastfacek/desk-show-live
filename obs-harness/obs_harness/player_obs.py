@@ -76,10 +76,13 @@ class ObsPlayer:
         on_air = None
         try:
             status = client.get_media_input_status(name="HOST_WIDE")
-            remaining = getattr(status, "media_duration", 0) - getattr(
-                status, "media_cursor", 0
-            )
-            remaining_s = max(0.0, remaining / 1000.0) if remaining else 0.0
+            duration = getattr(status, "media_duration", None)
+            cursor = getattr(status, "media_cursor", None)
+            if duration is None or cursor is None:
+                remaining_s = 0.0
+            else:
+                remaining = duration - cursor
+                remaining_s = max(0.0, remaining / 1000.0) if remaining else 0.0
             on_air = {
                 "kind": "host" if scene in HOST_LAYOUTS else "card",
                 "path": None,

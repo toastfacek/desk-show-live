@@ -20,6 +20,11 @@ class FakeSceneItem:
 class FakeObsClient:
     calls: list[tuple] = field(default_factory=list)
     scene_items: dict[str, list[FakeSceneItem]] = field(default_factory=dict)
+    program_scene: str = "split"
+    media_duration: int | None = 5000
+    media_cursor: int | None = 0
+    media_state: str = "OBS_MEDIA_STATE_PLAYING"
+    media_error: Exception | None = None
 
     def get_scene_item_list(self, name: str):
         self.calls.append(("get_scene_item_list", name))
@@ -29,8 +34,27 @@ class FakeObsClient:
     def set_scene_item_enabled(self, scene_name: str, item_id: int, enabled: bool):
         self.calls.append(("set_scene_item_enabled", scene_name, item_id, enabled))
 
-    def set_input_mute(self, name: str, muted: bool):
-        self.calls.append(("set_input_mute", name, muted))
+    def get_current_program_scene(self):
+        self.calls.append(("get_current_program_scene",))
+        return type(
+            "ProgramScene",
+            (),
+            {"current_program_scene_name": self.program_scene},
+        )()
+
+    def get_media_input_status(self, name: str):
+        self.calls.append(("get_media_input_status", name))
+        if self.media_error is not None:
+            raise self.media_error
+        return type(
+            "MediaStatus",
+            (),
+            {
+                "media_duration": self.media_duration,
+                "media_cursor": self.media_cursor,
+                "media_state": self.media_state,
+            },
+        )()
 
 
 class ReconnectObsPlayer(ObsPlayer):
@@ -130,3 +154,34 @@ def test_reconnect_refreshes_scene_item_cache_with_replacement_client():
 
     assert player._client is client2
     assert player._scene_item_ids["wide"]["HL_A"] == 99
+
+
+def test_get_program_state_idle_media_is_still_connected():
+    client = FakeObsClient(
+        program_scene="card_full",
+        media_duration=None,
+        media_cursor=None,
+        media_state="OBS_MEDIA_STATE_ENDED",
+    )
+    player = _player_with_client(client)
+    player.t = 12.0
+
+    state = player.get_program_state()
+
+    assert state["connected"] is True
+    assert state["media_ok"] is True
+    assert state["layout"] == "card_full"
+    assert state["on_air"]["kind"] == "card"
+    assert state["on_air"]["ends_at"] == 12.0
+    assert state["on_air"]["media_ok"] is True
+
+
+def test_get_program_state_missing_source_is_not_ok():
+    client = FakeObsClient(media_error=RuntimeError("no such input"))
+    player = _player_with_client(client)
+
+    state = player.get_program_state()
+
+    assert state["connected"] is True
+    assert state["media_ok"] is False
+    assert state["on_air"]["media_ok"] is False

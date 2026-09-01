@@ -220,7 +220,7 @@ async def _run_paid_async(
     )
     writer = Writer(client)
     flight_id = f"{mode}-{_stamp()}"
-    work_dir = Path("out") / "flights" / flight_id / "work"
+    work_dir = Path("out") / "live-work" / flight_id
     work_dir.mkdir(parents=True, exist_ok=True)
     meter = SpendMeter(
         cap_usd=config.spend_cap_usd or Decimal("12.00"),
