@@ -297,6 +297,15 @@ class LiveHarness:
             self.overlay.mark_unhealthy()
         self.events.append({"t": self.t, "kind": "watchdog_unhealthy"})
 
+    def _push_overlay_layout(self, layout: str) -> None:
+        setter = getattr(self.overlay, "set_layout", None)
+        if setter is None:
+            return
+        try:
+            setter(layout)
+        except Exception:
+            return
+
     def _obs_command(self, method: str, *args: Any, **kwargs: Any) -> bool:
         try:
             getattr(self.player, method)(*args, **kwargs)
@@ -351,6 +360,7 @@ class LiveHarness:
             self.player.set_layout("hold")
         except Exception:
             self._mark_unhealthy()
+        self._push_overlay_layout("hold")
         self.events.append({"t": self.t, "kind": "stream_active_abort"})
 
     def _enter_programme_hold(self) -> None:
@@ -362,6 +372,7 @@ class LiveHarness:
         self.flags["hold"] = True
         self.events.append({"t": self.t, "kind": "programme_hold"})
         self._obs_command("set_layout", "hold")
+        self._push_overlay_layout("hold")
 
     async def _post_roll_recording(self) -> None:
         self._enter_programme_hold()
@@ -518,6 +529,7 @@ class LiveHarness:
         self.player.t = self.t
         if not self._obs_command("set_layout", beat["layout"]):
             return
+        self._push_overlay_layout(beat["layout"])
         if not self._obs_command("set_headline", beat.get("chyron") or ""):
             return
         center = beat.get("center") or {"kind": "none"}

@@ -108,13 +108,16 @@ Now:
   re-entering that scene used to replay the finished take — speech, then
   silence, then the same line again, then silence.
 - `set_layout` is a no-op when the program scene is already the target.
-- Default `layout_plan` is `["split"]`. The overlay is always 3-column.
-  `wide` (full 1920 canvas) and `solo_*` fight those wells. `wide → split →
-  solo_l → solo_r` on the first flight was the rundown cycling, not a speaker
-  cut.
+- Default `layout_plan` is `["split"]`. The overlay follows `card.json`
+  `layout` (and preview `layout.json`): nametags hide with the missing
+  host; solos widen the tweet well into the empty column; `card_full` /
+  `hold` drop both nametags and stretch the card across the well band.
+  `wide` is still a full-canvas two-shot under the 3-column CG.
+  `wide → split → solo_l → solo_r` on the first flight was the rundown
+  cycling, not a speaker cut.
 
-Name plates do not follow speaking yet. Overlay speaker query is static
-(`?speaker=a`).
+Name plates follow layout, not speaking. Overlay speaker query is static
+(`?speaker=a`) on split/wide.
 
 ### 3. Half-split crops pin the sprites to the outer edges
 

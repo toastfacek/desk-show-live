@@ -125,6 +125,13 @@ def test_overlay_headers_card_unhealthy_stale_and_recovery(tmp_path: Path):
         assert card["author"] == "<b>dwarkesh_sp</b>"
         assert card["text"] == "<script>alert(1)</script>"
         assert card["timestamp"] == "<i>now</i>"
+        assert card["layout"] == "split"
+        assert server.set_layout("card") == "card_full"
+        card, _ = _json(server.url + "card.json")
+        assert card["layout"] == "card_full"
+        server.set_card(author="keep", text="keep", timestamp="now")
+        card, _ = _json(server.url + "card.json")
+        assert card["layout"] == "card_full"
 
         first_sequence = heartbeat["sequence"]
         time.sleep(0.2)

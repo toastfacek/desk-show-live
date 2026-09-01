@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+OVERLAY_LAYOUTS = ("wide", "split", "solo_l", "solo_r", "card_full", "hold")
 DEFAULT_OVERLAY_DIR = Path(__file__).resolve().parent.parent / "overlay"
 DESIGN_PREVIEW_DIR = Path(__file__).resolve().parents[2] / "scripts" / "design-preview"
 DEFAULT_MAX_STATE_BYTES = 65_536
@@ -62,7 +63,12 @@ class OverlayServer:
         self._lock = threading.Lock()
         self._healthy = True
         self._sequence = 0
-        self._card: dict[str, Any] = {"author": "", "text": "", "timestamp": ""}
+        self._card: dict[str, Any] = {
+            "author": "",
+            "text": "",
+            "timestamp": "",
+            "layout": "split",
+        }
         self._image_bytes: bytes | None = None
         self._heartbeat_written_at = time.monotonic()
         self._httpd: ThreadingHTTPServer | None = None
@@ -159,10 +165,12 @@ class OverlayServer:
         tweet_id: str = "",
         speaker: str = "a",
         seg: str = "",
+        layout: str = "",
         image_bytes: bytes | None = None,
     ) -> None:
         items = [item for item in (ticker or ()) if isinstance(item, str) and item]
         with self._lock:
+            current_layout = str(self._card.get("layout") or "split")
             self._card = {
                 "author": author,
                 "text": text,
@@ -175,6 +183,7 @@ class OverlayServer:
                 "tweet_id": tweet_id if isinstance(tweet_id, str) and tweet_id.isdigit() else "",
                 "speaker": speaker if speaker in {"a", "b"} else "a",
                 "seg": seg,
+                "layout": _normalize_overlay_layout(layout) or current_layout,
             }
             if image_bytes is not None:
                 if len(image_bytes) > MAX_IMAGE_BYTES:
@@ -182,6 +191,14 @@ class OverlayServer:
                 self._image_bytes = image_bytes
             self._write_card_locked()
             self._write_image_locked()
+
+    def set_layout(self, layout: str) -> str:
+        name = _normalize_overlay_layout(layout) or "split"
+        with self._lock:
+            self._card["layout"] = name
+            if self._card_path is not None:
+                self._write_card_locked()
+        return name
 
     def set_healthy(self, healthy: bool) -> None:
         with self._lock:
@@ -270,6 +287,14 @@ class OverlayServer:
             self._image_bytes,
             max_bytes=MAX_IMAGE_BYTES,
         )
+
+
+def _normalize_overlay_layout(layout: str) -> str:
+    if layout == "card":
+        return "card_full"
+    if layout in OVERLAY_LAYOUTS:
+        return layout
+    return ""
 
 
 def _make_handler(overlay: OverlayServer) -> type[BaseHTTPRequestHandler]:

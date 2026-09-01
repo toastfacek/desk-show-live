@@ -221,7 +221,24 @@ def test_overlay_live_js_uses_text_content_and_rejects_remote_images() -> None:
             "-e",
             f"""
 const assert = require("assert");
-const {{ applyProducerCard, safeImageUrl, cardOriginFromSearch, officialEmbedPath, formatEasternClock }} = require({json.dumps(str(OVERLAY_JS))});
+const {{ applyProducerCard, applyOverlayLayout, normalizeLayout, safeImageUrl, cardOriginFromSearch, officialEmbedPath, formatEasternClock }} = require({json.dumps(str(OVERLAY_JS))});
+assert.strictEqual(normalizeLayout("card"), "card_full");
+assert.strictEqual(normalizeLayout("nope"), "split");
+const hidA = {{ hidden: false, className: "hid live" }};
+const hidB = {{ hidden: false, className: "hid idle" }};
+const root = {{ classList: {{ items: new Set(["layout-split"]), add(name) {{ this.items.add(name); }}, remove(name) {{ this.items.delete(name); }} }} }};
+assert.strictEqual(applyOverlayLayout("card_full", {{ hidA, hidB, root, speaker: "a" }}), "card_full");
+assert.strictEqual(hidA.hidden, true);
+assert.strictEqual(hidB.hidden, true);
+assert.ok(root.classList.items.has("layout-card_full"));
+applyOverlayLayout("solo_l", {{ hidA, hidB, root, speaker: "a" }});
+assert.strictEqual(hidA.hidden, false);
+assert.strictEqual(hidB.hidden, true);
+assert.strictEqual(hidA.className, "hid live");
+applyOverlayLayout("solo_r", {{ hidA, hidB, root, speaker: "b" }});
+assert.strictEqual(hidA.hidden, true);
+assert.strictEqual(hidB.hidden, false);
+assert.strictEqual(hidB.className, "hid live");
 assert.strictEqual(formatEasternClock(new Date("2026-09-01T21:17:59Z")), "17:17:59");
 assert.strictEqual(formatEasternClock(new Date("2026-01-15T21:17:59Z")), "16:17:59");
 assert.strictEqual(safeImageUrl("/tweet.png", "http://127.0.0.1:8765"), "http://127.0.0.1:8765/tweet.png");

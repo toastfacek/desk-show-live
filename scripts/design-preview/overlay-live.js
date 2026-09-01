@@ -33,6 +33,14 @@ function applyProducerCard(card, nodes) {
   if (typeof card.chyron === "string" && nodes.chyron && card.chyron) {
     nodes.chyron.textContent = card.chyron;
   }
+  if (typeof card.speaker === "string" && (card.speaker === "a" || card.speaker === "b")) {
+    nodes.speaker = card.speaker;
+  }
+  if (typeof card.layout === "string" && card.layout) {
+    nodes.layout = applyOverlayLayout(card.layout, nodes);
+  } else if (typeof card.speaker === "string") {
+    applyOverlayLayout(nodes.layout || "split", nodes);
+  }
   if (nodes.embed) {
     const embedSrc = officialEmbedPath(
       card.tweet_id,
@@ -75,6 +83,56 @@ function applyProducerCard(card, nodes) {
       }
     }
   }
+}
+
+const OVERLAY_LAYOUTS = {
+  split: { showA: true, showB: true },
+  wide: { showA: true, showB: true },
+  solo_l: { showA: true, showB: false },
+  solo_r: { showA: false, showB: true },
+  card_full: { showA: false, showB: false },
+  hold: { showA: false, showB: false },
+};
+
+function normalizeLayout(raw) {
+  if (raw === "card") {
+    return "card_full";
+  }
+  if (raw && Object.prototype.hasOwnProperty.call(OVERLAY_LAYOUTS, raw)) {
+    return raw;
+  }
+  return "split";
+}
+
+function applyOverlayLayout(layout, nodes) {
+  const name = normalizeLayout(layout);
+  const spec = OVERLAY_LAYOUTS[name];
+  const root = nodes && nodes.root;
+  if (root && root.classList) {
+    Object.keys(OVERLAY_LAYOUTS).forEach(function (item) {
+      root.classList.remove("layout-" + item);
+    });
+    root.classList.add("layout-" + name);
+  }
+  if (nodes && nodes.hidA) {
+    nodes.hidA.hidden = !spec.showA;
+    if (spec.showA) {
+      const live = !spec.showB || nodes.speaker === "a";
+      nodes.hidA.className = live ? "hid live" : "hid idle";
+    }
+  }
+  if (nodes && nodes.hidB) {
+    nodes.hidB.hidden = !spec.showB;
+    if (spec.showB) {
+      const live = !spec.showA || nodes.speaker === "b";
+      nodes.hidB.className = live ? "hid live" : "hid idle";
+    }
+  }
+  return name;
+}
+
+function layoutFromSearch(search) {
+  return normalizeLayout(new URLSearchParams(search || "").get("layout") || "");
 }
 
 const EASTERN_TZ = "America/New_York";
@@ -122,6 +180,8 @@ function cardOriginFromSearch(search, fallback) {
 
 function bootProducerOverlay() {
   const origin = cardOriginFromSearch(location.search, location.origin);
+  const queryLayout = layoutFromSearch(location.search);
+  const speaker = new URLSearchParams(location.search).get("speaker") || "a";
   const nodes = {
     author: document.getElementById("card-author"),
     body: document.getElementById("card-body"),
@@ -131,9 +191,15 @@ function bootProducerOverlay() {
     panel: document.getElementById("card-panel"),
     well: document.getElementById("card-well"),
     embed: document.getElementById("tweet-embed"),
+    hidA: document.getElementById("hid-a"),
+    hidB: document.getElementById("hid-b"),
+    root: document.documentElement,
+    speaker: speaker,
+    layout: queryLayout,
     cardOrigin: origin,
     embedOrigin: typeof location !== "undefined" ? location.origin : origin,
   };
+  applyOverlayLayout(queryLayout, nodes);
   const clock = document.getElementById("clock");
   function tick() {
     if (!clock) {
@@ -144,23 +210,36 @@ function bootProducerOverlay() {
   tick();
   setInterval(tick, 1000);
 
-  const speaker = new URLSearchParams(location.search).get("speaker") || "a";
-  const hidA = document.getElementById("hid-a");
-  const hidB = document.getElementById("hid-b");
-  if (speaker === "b" && hidA && hidB) {
-    hidA.className = "hid idle";
-    hidB.className = "hid live";
+  async function readPreviewLayout() {
+    try {
+      const response = await fetch(
+        (typeof location !== "undefined" ? location.origin : "") + "/layout.json",
+        { cache: "no-store" }
+      );
+      if (!response.ok) {
+        return "";
+      }
+      const payload = await response.json();
+      return typeof payload.layout === "string" ? payload.layout : "";
+    } catch (_error) {
+      return "";
+    }
   }
 
   async function poll() {
     try {
       const response = await fetch(origin + "/card.json", { cache: "no-store" });
-      if (!response.ok) {
-        return;
+      if (response.ok) {
+        applyProducerCard(await response.json(), nodes);
       }
-      applyProducerCard(await response.json(), nodes);
     } catch (_error) {
-      return;
+      /* card origin may be down during preview */
+    }
+    const previewLayout = await readPreviewLayout();
+    if (previewLayout) {
+      nodes.layout = applyOverlayLayout(previewLayout, nodes);
+    } else if (nodes.layout) {
+      applyOverlayLayout(nodes.layout, nodes);
     }
   }
 
@@ -171,11 +250,15 @@ function bootProducerOverlay() {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     applyProducerCard,
+    applyOverlayLayout,
+    normalizeLayout,
+    layoutFromSearch,
     safeImageUrl,
     cardOriginFromSearch,
     officialEmbedPath,
     formatEasternClock,
     EASTERN_TZ,
+    OVERLAY_LAYOUTS,
   };
 }
 

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="layout-split">
 <head>
 <meta charset="utf-8">
 <title>Runtime — live overlay</title>
@@ -30,6 +30,25 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transpa
 .rail .cell.k{color:var(--bone)}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--live)}
 .well{position:absolute;pointer-events:none}
+.well-a{left:64px;top:172px;width:580px;height:628px}
+.well-b{left:1276px;top:172px;width:580px;height:628px}
+#card-well{position:absolute;left:668px;top:172px;width:584px;height:628px;overflow:hidden}
+.layout-solo_l #well-b,
+.layout-solo_l #hid-b,
+.layout-solo_r #well-a,
+.layout-solo_r #hid-a,
+.layout-card_full #well-a,
+.layout-card_full #well-b,
+.layout-card_full #hid-a,
+.layout-card_full #hid-b,
+.layout-hold #well-a,
+.layout-hold #well-b,
+.layout-hold #hid-a,
+.layout-hold #hid-b{display:none}
+.layout-solo_l #card-well{left:668px;width:1188px}
+.layout-solo_r #card-well{left:64px;width:1188px}
+.layout-card_full #card-well,
+.layout-hold #card-well{left:64px;width:1792px}
 .wordmark{font:800 30px/1 var(--display);font-stretch:84%;letter-spacing:-.03em;color:var(--bone);padding:0 18px 0 10px}
 .hid{display:flex;align-items:center;padding:15px 22px 16px;border-radius:var(--r);position:absolute;left:18px;bottom:18px}
 .hid .nm{font:700 40px/1 var(--display);font-stretch:88%;letter-spacing:-.024em;white-space:nowrap}
@@ -81,12 +100,12 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transpa
     <span style="font:700 26px/1 var(--display);font-stretch:88%;letter-spacing:-.02em;color:var(--bone)">HOUSE</span>
   </div>
 
-  <div class="well" style="left:64px;top:172px;width:580px;height:628px">
+  <div class="well well-a" id="well-a">
     <div class="hid live" id="hid-a">
       <span class="nm"><span class="blk"></span>PHASEONE[lol]</span>
     </div>
   </div>
-  <div class="pl card-well" id="card-well" style="position:absolute;left:668px;top:172px;width:584px;height:628px;overflow:hidden">
+  <div class="pl card-well" id="card-well">
     <iframe id="tweet-embed" title="X post" hidden allow="autoplay; encrypted-media; fullscreen" referrerpolicy="no-referrer"></iframe>
     <div class="cardp" id="card-panel">
       <img id="card-image" alt="" hidden>
@@ -95,7 +114,7 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transpa
       <div class="ft"><span>SEG 04</span><span>160 / 240</span></div>
     </div>
   </div>
-  <div class="well" style="left:1276px;top:172px;width:580px;height:628px">
+  <div class="well well-b" id="well-b">
     <div class="hid idle" id="hid-b">
       <span class="nm">deb</span>
     </div>
