@@ -202,7 +202,8 @@ def test_overlay_serves_dynamic_card_and_tweet_image(tmp_path: Path) -> None:
         assert 'id="tweet-embed"' in html
         with urllib.request.urlopen(server.url + "tweet-embed.html?id=1234567890123456789", timeout=2) as response:
             embed = response.read().decode("utf-8")
-        assert "platform.twitter.com/embed/Tweet.html" in embed
+        assert "platform.twitter.com/widgets.js" in embed
+        assert "twitter.com/i/status/" in embed
         assert "innerHTML" not in embed
 
 

@@ -127,12 +127,14 @@ the aired remuxes were stable:
 | Cobalt lozenge | BOT2 / right | ~1092 (takes 1068–1096) |
 
 A hard half-split (`crop_right=672` / `crop_left=672`) plus
-`OBS_BOUNDS_SCALE_OUTER` into the 580×660 design wells put them at well-rel
+`OBS_BOUNDS_SCALE_OUTER` into the design wells put them at well-rel
 **0.37 / 0.62** — scrunched on the left and right sides of the programme.
 
 Design-preview crops (`scripts/load-design-preview.py`) now take a **500px**
 window on those centers, `crop_top=48`, `boundsAlignment` center (0). Position
-alignment stays top-left so the well sits at (64, 140) / (1276, 140).
+alignment stays top-left so the well sits at (64, 172) / (1276, 172), 32px
+under the original y=140 frame so the cameras clear the logo, sponsor, and
+timer. Well height is 628 so the chyron at y=838 stays clear.
 
 | | Left well-rel | Right well-rel |
 | :-- | :-- | :-- |
@@ -187,10 +189,10 @@ stays in the scenes and stays hidden. The overlay owns those plates.
   A staged lock (`binding: staged`) from `runtime_flight stage --tweet-url`
   is the other reviewed path. Live / discuss / segment accept it via
   `--source-dir`.
-- Overlay CG polls `card.json`. The centre well is the official X embed
-  (`platform.twitter.com/embed/Tweet.html`) via same-origin
-  `tweet-embed.html`, not a transcribed POST card. Desk chyron and ticker
-  stay ours. `/tweet.png` is fallback evidence only.
+- Overlay CG polls `card.json`. The centre well is the official X widget
+  (`platform.twitter.com/widgets.js`) via same-origin `tweet-embed.html`,
+  not a transcribed POST card. The transcribed card stays underneath if
+  the widget does not paint. Desk chyron and ticker stay ours.
   WATCHDOG on :8766 should pass `card_origin=http://127.0.0.1:8765`.
 - Discuss is text-only. `--confirm-text-requests` is required. With
   `--package`, confirm == max-turns. Cap 12 turns.

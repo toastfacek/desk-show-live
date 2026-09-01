@@ -137,7 +137,8 @@ def test_overlay_live_polls_card_without_html_injection() -> None:
     embed = (
         Path(__file__).resolve().parents[2] / "scripts" / "design-preview" / "tweet-embed.html"
     ).read_text(encoding="utf-8")
-    assert "platform.twitter.com/embed/Tweet.html" in embed
+    assert "platform.twitter.com/widgets.js" in embed
+    assert "twitter.com/i/status/" in embed
     assert "innerHTML" not in embed
 
 
@@ -159,6 +160,8 @@ def test_apply_preview_points_watchdog_at_identity_and_hides_obs_type() -> None:
     assert "split:HEADLINE" in hidden
     assert "split:CENTER" in hidden
     assert summary["wells"]["wells"]["left"]["x"] == 64
+    assert summary["wells"]["wells"]["left"]["y"] == 172
+    assert summary["wells"]["wells"]["left"]["h"] == 628
     assert summary["transition"] == "Cut"
     crops = summary["wells"]["crops"]
     assert crops["left"]["crop_right"] > load_design_preview.HALF_W
@@ -193,8 +196,9 @@ def test_host_crops_center_sprites_inside_each_well() -> None:
     assert 230 < load_design_preview.HOST_L_X < left_w
     visible_right = load_design_preview.HOST_R_X - right["crop_left"]
     assert abs(visible_right - load_design_preview.CROP_W / 2) <= 2
+    well = load_design_preview.DESIGN_WELLS["left"]
     transform = load_design_preview._bounds(
-        64, 140, 580, 660, **left
+        well["x"], well["y"], well["w"], well["h"], **left
     )
     assert transform["boundsAlignment"] == load_design_preview.ALIGN_CENTER
     assert transform["cropLeft"] == left["crop_left"]

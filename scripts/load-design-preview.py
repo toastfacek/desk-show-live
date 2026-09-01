@@ -73,11 +73,13 @@ HOST_WIDE_PLAYBACK = {
     "clear_on_media_end": False,
     "hw_decode": False,
 }
-# identity-bracket.html "The frame" — 64 px margin, wells at y=140.
+# identity-bracket.html "The frame" used y=140. The rail and sponsor sit at
+# y=48 (60px tall), so that left only 32px under the logo / timer. Nudge
+# the wells down 32px and shorten them so the chyron at y=838 stays clear.
 DESIGN_WELLS = {
-    "left": {"x": 64, "y": 140, "w": 580, "h": 660},
-    "right": {"x": 1276, "y": 140, "w": 580, "h": 660},
-    "center": {"x": 668, "y": 140, "w": 584, "h": 660},
+    "left": {"x": 64, "y": 172, "w": 580, "h": 628},
+    "right": {"x": 1276, "y": 172, "w": 580, "h": 628},
+    "center": {"x": 668, "y": 172, "w": 584, "h": 628},
 }
 # Overlay owns these. Leave the inputs; hide the scene items.
 CONTRACT_FURNITURE = (
