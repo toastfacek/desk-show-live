@@ -48,6 +48,8 @@ def test_canonical_copy_is_light_broadcast_sprites():
     assert "point of view" in BOT1_MANIFEST["persona"]
     assert "voice of the audience" in BOT1_MANIFEST["persona"]
     assert "have a take" in BOT2_MANIFEST["persona"]
+    assert "does to people" in BOT1_MANIFEST["persona"]
+    assert "missing screenshot is a caveat" in BOT2_MANIFEST["opinions"][1]
     assert BOT1_MANIFEST["opinions"]
     assert BOT2_MANIFEST["opinions"]
 

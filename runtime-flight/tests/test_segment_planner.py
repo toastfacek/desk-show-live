@@ -587,6 +587,10 @@ def test_planner_system_maps_a_discussion_not_a_recap():
     assert "bot1" in system
     assert "bot2" in system
     assert "spoken line" in system
+    assert "human question" in system
+    assert "tweet is the door" in system
+    assert "not a beat" in system
+    assert "whether the tweet" in system
 
 
 def test_facts_are_typed_and_bounded():

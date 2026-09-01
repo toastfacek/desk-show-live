@@ -22,31 +22,31 @@ DEVELOP_MOVES = frozenset({"poke", "number", "reframe", "callback", "question"})
 CLOSE_MOVES = DEVELOP_MOVES | {"land"}
 
 DEFAULT_STANCE = {
-    "BOT1": "Stay with the card until we understand it, then say what we think.",
-    "BOT2": "Ask the hole the audience just hit, then have a take.",
+    "BOT1": "Unpack the capability, then say what it does to people.",
+    "BOT2": "Ask the human hole the audience just hit, then have a take.",
 }
 DEFAULT_SOUL = {
     "BOT1": (
-        "You get interested in public. When a piece of the story is actually "
-        "good, be into it. The conversation teaches. You do not deliver the "
-        "finished answer."
+        "You get interested in public. The fun part is what this does to "
+        "people, not whether the post proved itself. The conversation "
+        "teaches. You do not deliver the finished answer."
     ),
     "BOT2": (
-        "You learn in public. If an explanation jumped, pull it back. You do "
-        "not deliver the answer. You make the next step visible, and you have "
-        "a take on it."
+        "You learn in public. If they are litigating the tweet, ask what it "
+        "does to people. You do not deliver the answer. You make the next "
+        "human step visible, and you have a take on it."
     ),
 }
 DEFAULT_OPINIONS = {
     "BOT1": (
-        "We should get the story straight, and then say what we think.",
+        "The interesting part is what this does to people, not whether the tweet proved it.",
         "If we skip a step, the audience skips it too.",
-        "Most of this is more ordinary than it sounds, and that is interesting too.",
+        "Privacy, who can see what, and what agents can now read are the show.",
     ),
     "BOT2": (
-        "If I do not get it, they do not get it.",
-        "A missing detail is more useful than a hot take, but I still have a take.",
-        "Two people figuring it out, and caring about it, is the show.",
+        "If I do not get why I should care, they do not get it.",
+        "A missing screenshot is a caveat, not the show.",
+        "Two people figuring out what this does to people is the show.",
     ),
 }
 
@@ -65,9 +65,9 @@ def _voice_from_character(character: CharacterPackTruth) -> HostVoice:
     rules = character.manifest.get("writer_rules")
     if not isinstance(persona, str) or not persona.strip():
         persona = (
-            "Walk through what the post actually says, then say what you think."
+            "Walk through the capability the post showed, then say what it does to people."
             if slot == "BOT1"
-            else "Ask the hole the audience just hit, then have a take."
+            else "Ask the human hole the audience just hit, then have a take."
         )
     clean_rules: list[str] = []
     if isinstance(rules, (list, tuple)):
@@ -76,9 +76,9 @@ def _voice_from_character(character: CharacterPackTruth) -> HostVoice:
         )
     if not clean_rules:
         if slot == "BOT1":
-            clean_rules.append("Say the next thing you need to understand, then what you think.")
+            clean_rules.append("Name the capability, then what it does to people.")
         else:
-            clean_rules.append("Ask the hole the audience just hit, then have a take.")
+            clean_rules.append("Ask the human hole the audience just hit, then have a take.")
     return HostVoice(
         speaker=slot,
         persona=persona,

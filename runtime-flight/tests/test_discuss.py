@@ -561,8 +561,10 @@ def test_discuss_source_has_no_forbidden_names():
     assert "not X, it's Y" in HOST_SYSTEM
     assert "just a vibe" in HOST_SYSTEM
     assert "The discussion teaches" in HOST_SYSTEM
-    assert "finished answer" in HOST_SYSTEM
+    assert "finished" in HOST_SYSTEM
     assert "voice of the audience" in HOST_SYSTEM
     assert "get into it" in HOST_SYSTEM
     assert "at most 220 characters" in HOST_SYSTEM
+    assert "tweet is the door" in HOST_SYSTEM
+    assert "litigating" in HOST_SYSTEM
     assert isinstance(source, ast.Module)
