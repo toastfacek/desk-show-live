@@ -128,6 +128,7 @@ def test_overlay_live_polls_card_without_html_injection() -> None:
     assert 'id="card-body"' in text
     assert 'id="card-image"' in text
     assert 'id="tweet-embed"' in text
+    assert "overflow:hidden" in text
     assert 'id="chyron"' in text
     assert "overlay-live.js" in text
     assert "innerHTML" not in text
@@ -139,6 +140,8 @@ def test_overlay_live_polls_card_without_html_injection() -> None:
     ).read_text(encoding="utf-8")
     assert "platform.twitter.com/widgets.js" in embed
     assert "twitter.com/i/status/" in embed
+    assert "overflow:hidden" in embed
+    assert "fitTweet" in embed
     assert "innerHTML" not in embed
 
 

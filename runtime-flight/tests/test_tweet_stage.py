@@ -204,6 +204,8 @@ def test_overlay_serves_dynamic_card_and_tweet_image(tmp_path: Path) -> None:
             embed = response.read().decode("utf-8")
         assert "platform.twitter.com/widgets.js" in embed
         assert "twitter.com/i/status/" in embed
+        assert "overflow:hidden" in embed
+        assert "fitTweet" in embed
         assert "innerHTML" not in embed
 
 
