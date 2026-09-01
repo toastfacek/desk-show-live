@@ -8,6 +8,7 @@ from runtime_flight.baseline import BaselineContext
 from runtime_flight.models import (
     MAX_BEAT_CHARS,
     MAX_BEATS,
+    MAX_FRAMING_CHARS,
     MAX_LIST_ITEMS,
     MIN_BEATS,
     MIN_LIST_ITEMS,
@@ -206,7 +207,7 @@ def _package_from_model(raw: dict[str, Any], source: SourcePacket) -> SegmentPac
         package = SegmentPackage(
             item_id=item_id,
             question=raw.get("question"),
-            framing=raw.get("framing"),
+            framing=_fit_chars(raw.get("framing"), MAX_FRAMING_CHARS),
             angles=tuple(angles_raw),
             facts=tuple(facts),
             chyron=raw.get("chyron"),

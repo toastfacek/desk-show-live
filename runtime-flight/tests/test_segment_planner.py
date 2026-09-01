@@ -489,30 +489,31 @@ def test_framing_rejects_1001_characters():
         _package_with_framing("f" * 1001)
 
 
-def test_planner_accepts_1000_char_framing_and_rejects_1001():
+def test_planner_accepts_1000_char_framing_and_clips_1001():
     accepted = _valid_plan_payload(framing="f" * 1000)
-    rejected = _valid_plan_payload(framing="f" * 1001)
+    overlong = _valid_plan_payload(framing=("Short clause. " + "f" * 1000))
 
     async def accept_post(url, *, headers, json, timeout):
         return FakeResponse(200, _json_body(accepted))
 
-    async def reject_post(url, *, headers, json, timeout):
-        return FakeResponse(200, _json_body(rejected))
+    async def clip_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(overlong))
 
     async def accept():
         return await SegmentPlanner(_client(accept_post)).plan(
             _source_packet(), _baseline()
         )
 
-    async def reject():
-        return await SegmentPlanner(_client(reject_post)).plan(
+    async def clip():
+        return await SegmentPlanner(_client(clip_post)).plan(
             _source_packet(), _baseline()
         )
 
     package = _run(accept())
     assert len(package.framing) == 1000
-    with pytest.raises(SegmentPlannerError, match="framing exceeds 1000 characters"):
-        _run(reject())
+    clipped = _run(clip())
+    assert clipped.framing == "Short clause."
+    assert len(clipped.framing) <= MAX_FRAMING_CHARS
 
 
 def _valid_topic_map() -> dict[str, Any]:
