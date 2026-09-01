@@ -16,7 +16,7 @@ from runtime_flight.overlay import OverlayServer
 from runtime_flight.source import load_source_packet
 from runtime_flight.stage import expected_text_requests, run_stage
 from runtime_flight.tweet_fetch import TweetFetchError, fetch_tweet
-from runtime_flight.tweet_image import CARD_H, CARD_W, render_tweet_card
+from runtime_flight.tweet_image import CARD_H, CARD_W, LEMON, render_tweet_card
 from runtime_flight.tweet_embed import TweetEmbedError, official_embed_url
 from runtime_flight.tweet_url import TweetUrlError, parse_tweet_url
 from test_preflight import _complete_env, _make_flight_setup, _write_flight_config
@@ -136,6 +136,7 @@ def test_render_tweet_card_is_center_well_png() -> None:
     image = Image.open(BytesIO(png))
     assert image.size == (CARD_W, CARD_H)
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
+    assert image.getpixel((36, 40)) == LEMON
 
 
 def test_render_tweet_card_keeps_cjk_glyphs() -> None:
