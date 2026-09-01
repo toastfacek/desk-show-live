@@ -1,4 +1,4 @@
-<title>[runtime]</title>
+<title>Runtime Identity</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -58,7 +58,11 @@ section{padding:100px 0;border-top:1px solid var(--line)}
 .wm.one-voice .slot{font-family:var(--display);font-weight:400;font-stretch:86%;
   font-size:.74em;letter-spacing:-.02em}
 
-/* the slot mark, used alone */
+.wordmark{font-family:var(--display);font-weight:800;font-stretch:84%;letter-spacing:-.03em;
+  line-height:1;color:var(--bone);white-space:nowrap}
+.cur{display:inline-block;width:.13em;height:.72em;background:var(--bone);margin-left:.15em;vertical-align:-.015em}
+
+/* the slot mark — retained only to show the withdrawn form */
 .sm{font-family:var(--mono);font-weight:500;font-size:64px;line-height:1;letter-spacing:-.05em;color:var(--bone);white-space:nowrap}
 .sm .br{margin:0 -.02em}
 /* fourth cut: drawn word, typed container */
@@ -155,54 +159,57 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
 </style>
 
 <header>
-  <div class="wrap" style="padding-top:140px;padding-bottom:120px;display:flex;flex-direction:column;gap:64px">
-    <p class="eyebrow">Runtime · identity prototype · revision C</p>
-    <div style="display:flex;flex-direction:column;gap:40px">
-      <div class="sm drawn" style="font-size:clamp(60px,12vw,164px)"><span class="br">[</span>runtime<span class="br">]</span></div>
-      <p class="lede">The bracket is already the brand. It is in the show’s own canon — a self-applied tag from a specific era, worn by things that were there. It only has to be drawn properly and given a slot.</p>
+  <div class="wrap" style="padding-top:132px;padding-bottom:112px;display:flex;flex-direction:column;gap:60px">
+    <p class="eyebrow">Runtime · identity prototype · revision D</p>
+    <div style="display:flex;flex-direction:column;gap:38px">
+      <div style="display:flex;align-items:center;gap:clamp(20px,3vw,42px)">
+        <svg width="clamp(64,9vw,112)" height="112" viewBox="0 0 72 72" style="width:clamp(64px,9vw,112px);height:auto;flex:none" aria-label="Runtime mark">
+          <rect x="6" y="53" width="60" height="6" fill="#F4F1EA"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/>
+        </svg>
+        <div class="wordmark" style="font-size:clamp(56px,11vw,146px)">RUNTIME</div>
+      </div>
+      <p class="lede">Two masses at a desk, and the show’s name set once, properly. The previous mark was withdrawn — it had arrived at a construction that already belongs to somebody else.</p>
     </div>
   </div>
 </header>
 
 <div class="wrap">
 
-<!-- =================== THE NAME =================== -->
-<section id="name" style="border-top:0">
+<!-- =================== COLLISION =================== -->
+<section id="collision" style="border-top:0">
   <div class="sec-head">
-    <p class="eyebrow">First, the name</p>
-    <h2>What the bracket is allowed to mean</h2>
+    <p class="eyebrow">Why revision C was withdrawn</p>
+    <h2>The bracket had already been taken</h2>
   </div>
   <div class="stack-l">
     <div class="grid2">
       <div class="stack">
-        <p class="note">The Character &amp; Set Bible is unusually specific about this, and it changes the brief. <em>The bracket is self-applied</em> — an agent picking a word to distinguish itself after a name collision, in a particular month of 2026. It is a <em>period marker</em>: it dates a character rather than decorating one. And rule 5 is explicit that specific identifiers stay off-limits, because “inheriting a convention is the whole idea; wearing someone else’s identifier is not.”</p>
-        <p class="note">Which gives a precise reason <code>PHASEONE[show]</code> reads slightly wrong, and it is not a taste objection. It applies a <strong>character-naming device to a programme</strong>. Parsed by the show’s own grammar it is not a title at all — it is a third agent, called PHASEONE, who chose the word “show”. It also names the programme after one of its two hosts, which quietly makes deb the co-host of somebody else’s show.</p>
+        <p class="note">Setting a lone lowercase word inside square brackets, in bone on near-black, for a television property, is not a neutral construction. It is the wordmark of an existing cartoon network — one of the most recognised bracket logos there is, and it lives in <em>the same medium this show is going into</em>. That is the worst kind of resemblance: not an abstract echo, but the same shape doing the same job in the same category.</p>
+        <p class="note">Worth being exact about what collided, because it is narrower than it looks. It is not the bracket. It is the <strong>bracket used as an enclosure around a single lowercase word, standing alone as a mark</strong>. Every part of that sentence is load-bearing.</p>
       </div>
       <div class="stack">
-        <p class="note">The convention still wants to be the identity. It is genuinely good, it is already canon, and it is the one piece of the world the audience can read without being told anything. So take the <strong>device</strong> and leave the <strong>identifier</strong>.</p>
-        <p class="note">The mark becomes the slot itself, holding the property: <code>[runtime]</code>. That inherits the convention exactly as rule 5 wants, keeps the bracket doing its job as a period marker — now dating the <em>show</em> to the same era as its hosts — and takes nobody’s name. Lowercase inside the bracket is not a style choice either; <code>[lol]</code> and <code>[big]</code> establish it.</p>
+        <p class="note">Which means the canon device is fine. <code>PHASEONE[lol]</code> is a bracket used as a <strong>suffix on a name</strong> — an ALLCAPS stem with a small tag hanging off it. Structurally and optically that is a different object, and it reads as an identifier rather than a logo. The bible’s construction was never the problem.</p>
+        <p class="note">The problem was <code>[runtime]</code>, which was not inherited from the bible at all. Nothing in canon puts a bracket around a programme. That was an invention, and it landed on an occupied shape.</p>
       </div>
     </div>
 
     <figure>
       <div class="stage plain">
-        <div class="pad" style="gap:0;flex-direction:column;align-items:flex-start;padding:64px 60px">
-          <div style="display:flex;flex-wrap:wrap;gap:64px 96px;align-items:flex-end">
-            <div style="display:flex;flex-direction:column;gap:20px">
-              <span class="eyebrow">As asked · character device on a programme</span>
-              <div class="wm" style="font-size:60px"><span class="nm">PHASEONE</span><span class="slot"><span class="br">[</span>show<span class="br">]</span></span></div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:20px">
-              <span class="eyebrow">Recommended · convention, not identifier</span>
-              <div class="sm drawn" style="font-size:60px"><span class="br">[</span>runtime<span class="br">]</span></div>
-            </div>
+        <div style="padding:56px 60px;display:flex;flex-wrap:wrap;gap:52px 96px;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:18px;opacity:.42">
+            <span class="eyebrow" style="color:var(--loss)">Withdrawn · enclosure around a lone word</span>
+            <div class="sm drawn" style="font-size:52px"><span class="br">[</span>runtime<span class="br">]</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <span class="eyebrow">Kept · bracket as a suffix, per canon</span>
+            <div class="wm" style="font-size:44px"><span class="nm">PHASEONE</span><span class="slot"><span class="br">[</span>lol<span class="br">]</span></span></div>
           </div>
         </div>
       </div>
-      <div class="cap"><span>Both set properly, at the same optical size. The left one is a person. The right one is a show.</span></div>
+      <div class="cap"><span>Same punctuation, different object. The left one is a container and reads as a logo; the right one is a tag on a name and reads as an identifier.</span></div>
     </figure>
 
-    <div class="verdict"><b>The call</b><span>Prototype both, ship <code>[runtime]</code>. If you want PHASEONE in the brand it belongs where it already is — on the anchor’s name bar, where the convention was designed to sit. Everything below is drawn so that the slot can hold either word, so this decision stays cheap for as long as you need it to.</span></div>
+    <div class="verdict"><b>The call</b><span>The show is called <strong>Runtime</strong> — that is already canon, and it needs no bracket. The bracket stays exactly where the bible put it: on the hosts’ name bars, self-applied, dating them to their era. The show gets its own mark, drawn from the thing no other network has — <em>this set, with these two on it</em>.</span></div>
   </div>
 </section>
 
@@ -210,69 +217,50 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
 <section id="mark">
   <div class="sec-head">
     <p class="eyebrow">The mark</p>
-    <h2>An empty slot, and a thing sitting in it</h2>
-    <p class="note">Two brackets and a block. The block is not decoration — it is <strong>state</strong>. Present means on air; absent means the slot is empty and so is the studio. That single rule makes the logo, the show bug and the speaker indicator the same object, which is the cheapest kind of coherence there is.</p>
+    <h2>Two masses on a desk</h2>
+    <p class="note">A broad low form and a narrow tall one, sharing a rule. It is the show’s actual composition reduced until nothing is left but the part that is unmistakably ours: two silhouettes that were designed to be told apart by shape alone, sitting at the one piece of furniture the programme is named for.</p>
   </div>
   <div class="stack-l">
 
     <figure>
       <div class="stage plain">
-        <div class="pad" style="gap:96px;flex-wrap:wrap;padding:76px 40px">
+        <div class="pad" style="gap:100px;flex-wrap:wrap;padding:76px 40px">
           <div style="display:flex;flex-direction:column;align-items:center;gap:24px">
-            <svg width="150" height="150" viewBox="0 0 72 72" aria-label="Runtime mark, on air">
-              <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
-              <rect x="53" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="44" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="44" y="51" width="15" height="6" fill="#F4F1EA"/>
-              <rect x="30" y="26" width="12" height="20" fill="#F4F1EA"/>
-            </svg>
-            <span class="eyebrow">On air</span>
+            <svg width="150" height="150" viewBox="0 0 72 72" aria-label="Runtime mark"><rect x="6" y="53" width="60" height="6" fill="#F4F1EA"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg>
+            <span class="eyebrow">Primary</span>
           </div>
           <div style="display:flex;flex-direction:column;align-items:center;gap:24px">
-            <svg width="150" height="150" viewBox="0 0 72 72" aria-label="Runtime mark, off air">
-              <rect x="13" y="15" width="6" height="42" fill="#6B655C"/><rect x="13" y="15" width="15" height="6" fill="#6B655C"/><rect x="13" y="51" width="15" height="6" fill="#6B655C"/>
-              <rect x="53" y="15" width="6" height="42" fill="#6B655C"/><rect x="44" y="15" width="15" height="6" fill="#6B655C"/><rect x="44" y="51" width="15" height="6" fill="#6B655C"/>
-            </svg>
+            <svg width="150" height="150" viewBox="0 0 72 72" aria-label="Runtime mark, off air"><rect x="6" y="53" width="60" height="6" fill="#6B655C"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#6B655C"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#6B655C"/></svg>
             <span class="eyebrow">Off air</span>
           </div>
           <div style="display:flex;align-items:flex-end;gap:38px">
             <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
-              <svg width="72" height="72" viewBox="0 0 72 72" aria-label="Mark at 72 px">
-                <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
-                <rect x="53" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="44" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="44" y="51" width="15" height="6" fill="#F4F1EA"/>
-                <rect x="30" y="26" width="12" height="20" fill="#F4F1EA"/>
-              </svg><span class="eyebrow">72</span>
+              <svg width="72" height="72" viewBox="0 0 72 72" aria-label="Mark at 72"><rect x="6" y="53" width="60" height="6" fill="#F4F1EA"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg><span class="eyebrow">72</span>
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
-              <svg width="32" height="32" viewBox="0 0 72 72" aria-label="Mark at 32 px">
-                <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
-                <rect x="53" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="44" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="44" y="51" width="15" height="6" fill="#F4F1EA"/>
-                <rect x="30" y="26" width="12" height="20" fill="#F4F1EA"/>
-              </svg><span class="eyebrow">32</span>
+              <svg width="32" height="32" viewBox="0 0 72 72" aria-label="Mark at 32"><rect x="6" y="53" width="60" height="6" fill="#F4F1EA"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg><span class="eyebrow">32</span>
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
-              <svg width="16" height="16" viewBox="0 0 72 72" aria-label="Mark at 16 px">
-                <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
-                <rect x="53" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="44" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="44" y="51" width="15" height="6" fill="#F4F1EA"/>
-                <rect x="30" y="26" width="12" height="20" fill="#F4F1EA"/>
-              </svg><span class="eyebrow">16</span>
+              <svg width="16" height="16" viewBox="0 0 72 72" aria-label="Mark at 16"><rect x="6" y="53" width="60" height="6" fill="#F4F1EA"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg><span class="eyebrow">16</span>
             </div>
           </div>
         </div>
       </div>
-      <div class="cap"><span>Six rectangles and a block. No curve, no counter, nothing that fills in — it holds at favicon size because there is nothing in it to lose.</span><span class="mono">6 px stroke on a 72 grid</span></div>
+      <div class="cap"><span>Three rectangles. The 1.35:1 wide form and the taller-than-wide form are the two silhouettes from <code>studio.yaml</code>, held to the same proportions.</span><span class="mono">6 px rule on a 72 grid</span></div>
     </figure>
 
     <div class="grid3">
       <div class="card">
-        <h3>Clear space</h3>
-        <p class="note">One bracket width on every side — 15 units on the 72 grid. Nothing enters it, including the safe-area edge. At 1080 that is a 15 px cordon around a 72 px mark.</p>
+        <h3>Why this one holds</h3>
+        <p class="note">It is not a genre shape. Brackets, terminals, play triangles and signal bars are all occupied several times over; two specific masses at a desk belong to this programme and nothing else. It also survives the squint test the bible already demands of the hosts themselves.</p>
       </div>
       <div class="card">
-        <h3>Minimum size</h3>
-        <p class="note">16 px on screen, 24 px in the overlay. Below 16 the 6 px stroke closes up on the block and it becomes a filled rectangle.</p>
+        <h3>Clear space and minimum</h3>
+        <p class="note">Clear space is the height of the tall mass — 38 units — on every side. Minimum 16 px on screen, 24 px in the overlay. Below 16 the 5-unit gap between the masses closes and they read as one block.</p>
       </div>
       <div class="card">
         <h3>Never</h3>
-        <p class="note">No outline version, no gradient, no rotation, no second colour inside the brackets. The block is the only element permitted to change, and only between present and absent.</p>
+        <p class="note">No colouring the masses orange and cobalt. They are silhouettes, not portraits — the moment they are painted they become mascots, and the hosts stop being the only place the audience meets them.</p>
       </div>
     </div>
   </div>
@@ -281,87 +269,70 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
 <!-- =================== WORDMARK =================== -->
 <section id="wordmark">
   <div class="sec-head">
-    <p class="eyebrow">Construction</p>
-    <h2>How to set it</h2>
-    <p class="note">The tension worth keeping is <strong>brand against system</strong> — a drawn name beside a typed one. Where the two faces meet is where the logo gets its character, so the question is how hard to lean on it.</p>
+    <p class="eyebrow">The wordmark</p>
+    <h2>Runtime, set once</h2>
+    <p class="note">Archivo 800 at width 84, tracked to −0.03 em. There is no device in it and there does not need to be — the mark carries the identity, so the name can be the quiet half. This is the part where restraint is the whole job.</p>
   </div>
   <div class="stack-l">
-
     <figure>
       <div class="stage plain">
-        <div style="padding:64px 60px;display:flex;flex-direction:column;gap:56px">
-          <div style="display:flex;flex-direction:column;gap:18px">
-            <span class="eyebrow">A · two voices, structural brackets — recommended</span>
-            <div class="wm" style="font-size:56px"><span class="nm">PHASEONE</span><span class="slot"><span class="br">[</span>show<span class="br">]</span></span></div>
-            <p class="note" style="font-size:14.5px">Grotesque name, mono slot, brackets dropped to a structural grey. The brackets read as a container the value sits in rather than as letters, which is the entire idea made visible.</p>
+        <div style="padding:60px;display:flex;flex-direction:column;gap:54px">
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <span class="eyebrow">Primary</span>
+            <div class="wordmark" style="font-size:70px">RUNTIME</div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:18px">
-            <span class="eyebrow">B · two voices, solid brackets</span>
-            <div class="wm mono-all" style="font-size:56px"><span class="nm">PHASEONE</span><span class="slot">[show]</span></div>
-            <p class="note" style="font-size:14.5px">Stronger at small sizes and in one colour, but the slot stops reading as a slot and starts reading as punctuation. Keep as the small-size and single-colour cut.</p>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <span class="eyebrow">On air · the cursor is the state, and only ever appears live</span>
+            <div class="wordmark" style="font-size:70px">RUNTIME<span class="cur"></span></div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:18px">
-            <span class="eyebrow">C · one voice</span>
-            <div class="wm one-voice" style="font-size:56px"><span class="nm">PHASEONE</span><span class="slot">[show]</span></div>
-            <p class="note" style="font-size:14.5px">Monolithic and quiet. It is the most conventionally premium of the three and the least interesting — with the mono gone, nothing is left but a company name in a grotesque.</p>
-          </div>
-        </div>
-      </div>
-      <div class="cap"><span>Archivo 800 at width 86 with −0.032 em tracking; JetBrains Mono 500 at 52% of the name’s size, on a shared baseline.</span></div>
-    </figure>
-
-    <figure>
-      <div class="stage plain">
-        <div style="padding:64px 60px;display:flex;flex-wrap:wrap;gap:64px 100px;align-items:flex-end">
-          <div style="display:flex;flex-direction:column;gap:18px">
-            <span class="eyebrow">Primary · drawn word, typed container</span>
-            <div class="sm drawn" style="font-size:56px"><span class="br">[</span>runtime<span class="br">]</span></div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:18px">
-            <span class="eyebrow">System · small sizes, UI, code</span>
-            <div class="sm" style="font-size:56px"><span class="br">[</span>runtime<span class="br">]</span></div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:18px">
-            <span class="eyebrow">One colour</span>
-            <div class="sm solid drawn" style="font-size:56px"><span class="br">[</span>runtime<span class="br">]</span></div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:18px">
-            <span class="eyebrow">With mark</span>
-            <div style="display:flex;align-items:center;gap:20px">
-              <svg width="46" height="46" viewBox="0 0 72 72" aria-label="Mark">
-                <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
-                <rect x="53" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="44" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="44" y="51" width="15" height="6" fill="#F4F1EA"/>
-                <rect x="30" y="26" width="12" height="20" fill="#F4F1EA"/>
-              </svg>
-              <div class="sm" style="font-size:44px"><span class="br">[</span>runtime<span class="br">]</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:44px 72px;align-items:center">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <span class="eyebrow">Horizontal lockup</span>
+              <div style="display:flex;align-items:center;gap:22px">
+                <svg width="52" height="52" viewBox="0 0 72 72" aria-label="Mark"><rect x="6" y="53" width="60" height="6" fill="#F4F1EA"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg>
+                <div class="wordmark" style="font-size:44px">RUNTIME</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <span class="eyebrow">Stacked</span>
+              <div style="display:flex;flex-direction:column;gap:14px;align-items:flex-start">
+                <svg width="46" height="46" viewBox="0 0 72 72" aria-label="Mark"><rect x="6" y="53" width="60" height="6" fill="#F4F1EA"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg>
+                <div class="wordmark" style="font-size:34px">RUNTIME</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <div class="cap"><span>The drawn cut is the wordmark — Archivo 600 lowercase held in mono brackets, so the word is designed and the container stays typed. The all-mono cut drops to small sizes, UI and anywhere the brand sits inside code.</span></div>
+      <div class="cap"><span>The cursor is the one moving part in the whole identity, and it means exactly one thing: on air.</span></div>
     </figure>
   </div>
 </section>
 
-<!-- =================== THE SLOT =================== -->
-<section id="slot">
+<!-- =================== BRACKET =================== -->
+<section id="bracket">
   <div class="sec-head">
-    <p class="eyebrow">The system</p>
-    <h2>One device, every property</h2>
-    <p class="note">This is what makes it a brand rather than a logo. The bracket is a container, so the identity extends by <strong>changing the word</strong> — never by adding a shape, a colour or a sub-mark. Nothing new has to be designed to launch a clips channel.</p>
+    <p class="eyebrow">Where the bracket still lives</p>
+    <h2>On the hosts, and nowhere else</h2>
+    <p class="note">The convention is too good to lose and it is already canon — it just belongs on people, not on the programme. Confined to name bars it does the job the bible describes: a self-applied tag that dates whoever is wearing it, with a guest’s bare serial reading as older and no bracket at all reading as newer.</p>
   </div>
   <div class="stack">
     <div class="stage plain">
-      <div style="padding:60px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:40px 28px">
-        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>runtime<span class="br">]</span></div><span class="eyebrow">The show</span></div>
-        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>live<span class="br">]</span></div><span class="eyebrow">On air now</span></div>
-        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>clips<span class="br">]</span></div><span class="eyebrow">Short form</span></div>
-        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>desk<span class="br">]</span></div><span class="eyebrow">The segment</span></div>
-        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>hold<span class="br">]</span></div><span class="eyebrow">Standing by</span></div>
-        <div style="display:flex;flex-direction:column;gap:10px"><div class="sm drawn" style="font-size:38px"><span class="br">[</span>404<span class="br">]</span></div><span class="eyebrow">Something broke</span></div>
+      <div style="padding:56px 60px;display:flex;flex-wrap:wrap;gap:44px 80px;align-items:flex-end">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="wm" style="font-size:38px"><span class="nm">PHASEONE</span><span class="slot"><span class="br">[</span>lol<span class="br">]</span></span></div>
+          <span class="eyebrow">Anchor · bracketed, of that era</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="font:700 38px/1 var(--display);font-stretch:88%;letter-spacing:-.02em;color:var(--bone)">deb</div>
+          <span class="eyebrow">Co-host · never bothered with one</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="font:400 34px/1 var(--mono);letter-spacing:.02em;color:var(--bone)">JAN904772</div>
+          <span class="eyebrow">Guest · bare serial, reads older</span>
+        </div>
       </div>
     </div>
-    <div class="verdict"><b>Why it holds</b><span>Because it is already true in the fiction. A bracketed tag dates the thing wearing it to one specific month in 2026 — so the show, its channels and its hosts all read as having come out of the same event, without a line of dialogue ever explaining it. The hosts keep their own names, <code>PHASEONE[lol]</code> and <code>deb</code>, and the asymmetry between them still works, because <code>deb</code> is precisely the one who did not bother with a bracket.</span></div>
+    <div class="verdict"><b>Free world-building</b><span>Three name bars, three eras, no explanation required and no line of dialogue spent on it. That was always the strongest thing the convention did, and it works better here than it did as a logo — because on a name bar the bracket is doing something, rather than being decoration around a title.</span></div>
   </div>
 </section>
 
@@ -384,7 +355,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
       <tr><td><strong>Colour</strong></td><td>On the furniture</td><td>In the room. The overlay is achromatic</td></tr>
     </table></div>
 
-    <p class="note" style="max-width:74ch">The inversion is the piece worth arguing for. It replaces hue with <em>value</em>, which means speaker state survives grayscale, every form of colour-vision deficiency and any amount of chroma softening — for free, with no redundant tab propping it up. It is also the highest-contrast element on the canvas at <strong>17.5:1</strong>, so the thing the eye should find first is the thing it does find first. The filled block from the mark rides along in front of the name, which is how the logo and the speaker indicator end up being the same idea.</p>
+    <p class="note" style="max-width:74ch">The inversion is the piece worth arguing for. It replaces hue with <em>value</em>, which means speaker state survives grayscale, every form of colour-vision deficiency and any amount of chroma softening — for free, with no redundant tab propping it up. It is also the highest-contrast element on the canvas at <strong>17.5:1</strong>, so the thing the eye should find first is the thing it does find first. The live plate also carries the cursor — the same mark that appears after the wordmark on air — so “live” is one shape wherever it turns up.</p>
 
     <figure>
       <div class="stage" data-w="1400" data-h="620" style="background:var(--ink)">
@@ -524,20 +495,20 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
 <section id="next">
   <div class="sec-head">
     <p class="eyebrow">Where this leaves it</p>
-    <h2>Two decisions</h2>
+    <h2>One decision left</h2>
   </div>
   <div class="stack">
     <div class="grid2">
       <div class="card">
-        <h3>The name</h3>
-        <p class="note">Prototyped both. <code>PHASEONE[show]</code> works typographically and fails on canon — it puts a character device on a programme and names the show after one of two hosts. <code>[runtime]</code> inherits the convention without wearing an identifier, which is exactly what rule 5 asks for. Every asset here is drawn so the slot can hold either word.</p>
+        <h3>The name is settled</h3>
+        <p class="note">The show is <strong>Runtime</strong>, which the bible already decided. <code>PHASEONE[show]</code> is out because it puts a character device on a programme and names the show after one of two hosts; <code>[runtime]</code> is out because it lands on a construction an existing network owns. Neither was needed — the bracket does better work on the name bars than it ever did as a logo.</p>
       </div>
       <div class="card">
-        <h3>The furniture</h3>
-        <p class="note">Revision C keeps one radius, one fill, one accent, and moves speaker state from hue to value. It reopens only <code>radius-max</code> — 14 px against the locked 8 — and closes the chamfer, gradient, sheen and edge-light questions that revision B opened. <code>glow</code> stays none and now means it.</p>
+        <h3>Still open · <code>radius-max</code></h3>
+        <p class="note">Revision C reopens one token, 14 px against the locked 8, and closes the chamfer, gradient, sheen and edge-light questions revision B opened. <code>glow</code> stays none and now means it. Nothing else in the spec moves.</p>
       </div>
     </div>
-    <div class="verdict"><b>Next</b><span>If the mark holds, the work is an SVG set at 16/24/32/72 with the two block states, the wordmark as outlines, and the four acceptance stills rebuilt in this language before an encode test. None of it is large — that is the point of an identity built from six rectangles and a word.</span></div>
+    <div class="verdict"><b>Next</b><span>If the mark holds: an SVG set at 16/24/32/72 with the off-air cut, the wordmark as outlines, the cursor as a separate asset, and the four acceptance stills rebuilt before an encode test. A mark made of three rectangles is cheap to produce and impossible to render badly, which is most of the argument for it.</span></div>
   </div>
 </section>
 
@@ -545,7 +516,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
 
 <footer>
   <div class="wrap">
-    <p>Runtime — identity prototype and overlay revision C. Specimens drawn at 1920×1080 and scaled to fit. The set behind every panel is a CSS stand-in from <code>studio.yaml</code>, never a generated frame. Naming follows the Character &amp; Set Bible §6: the bracket is self-applied, it is a period marker, and specific identifiers stay off-limits. Fonts linked for preview; deliverables vendor OFL files.</p>
+    <p>Runtime — identity prototype and overlay revision C. Specimens drawn at 1920×1080 and scaled to fit. The set behind every panel is a CSS stand-in from <code>studio.yaml</code>, never a generated frame. Naming follows the Character &amp; Set Bible §6: the show is Runtime, the bracket is self-applied and belongs on host name bars, and specific identifiers stay off-limits. Fonts linked for preview; deliverables vendor OFL files.</p>
   </div>
 </footer>
 
