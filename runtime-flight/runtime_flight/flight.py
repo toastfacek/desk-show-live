@@ -245,6 +245,7 @@ async def _run_paid_async(
             url=package.center.url,
             chyron=package.chyron,
             ticker=list(package.angles),
+            tweet_id=package.item_id,
             image_bytes=image_path.read_bytes() if image_path.is_file() else None,
         )
         live_clock = clock if clock is not None else WallClock()

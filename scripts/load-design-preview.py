@@ -45,8 +45,10 @@ WASH_REPO_PATH = "research/mocks/dither-wash.html"
 WASH_SOURCE = "WASH"
 OVERLAY_LIVE_NAME = "overlay-live.html"
 OVERLAY_LIVE_JS_NAME = "overlay-live.js"
+OVERLAY_EMBED_NAME = "tweet-embed.html"
 OVERLAY_LIVE_SRC = Path(__file__).resolve().parent / "design-preview" / OVERLAY_LIVE_NAME
 OVERLAY_LIVE_JS_SRC = Path(__file__).resolve().parent / "design-preview" / OVERLAY_LIVE_JS_NAME
+OVERLAY_EMBED_SRC = Path(__file__).resolve().parent / "design-preview" / OVERLAY_EMBED_NAME
 DEFAULT_PREVIEW_DIR = Path("/tmp/runtime-design-preview")
 DEFAULT_PORT = 8766
 CANVAS_W = 1920
@@ -104,6 +106,7 @@ PREVIEW_REPO_FILES = (
 assert WASH_SOURCE not in REQUIRED_INPUTS
 assert OVERLAY_LIVE_SRC.is_file()
 assert OVERLAY_LIVE_JS_SRC.is_file()
+assert OVERLAY_EMBED_SRC.is_file()
 
 
 def wash_query(*, static: bool = False, speed: float = 1.0) -> str:
@@ -143,9 +146,15 @@ def copy_overlay_live(dest: Path) -> dict[str, str]:
     dest.mkdir(parents=True, exist_ok=True)
     live = dest / OVERLAY_LIVE_NAME
     script = dest / OVERLAY_LIVE_JS_NAME
+    embed = dest / OVERLAY_EMBED_NAME
     shutil.copyfile(OVERLAY_LIVE_SRC, live)
     shutil.copyfile(OVERLAY_LIVE_JS_SRC, script)
-    return {OVERLAY_LIVE_NAME: str(live), OVERLAY_LIVE_JS_NAME: str(script)}
+    shutil.copyfile(OVERLAY_EMBED_SRC, embed)
+    return {
+        OVERLAY_LIVE_NAME: str(live),
+        OVERLAY_LIVE_JS_NAME: str(script),
+        OVERLAY_EMBED_NAME: str(embed),
+    }
 
 
 def wash_browser_settings(url: str) -> dict:

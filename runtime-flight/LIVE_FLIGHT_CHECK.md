@@ -187,9 +187,11 @@ stays in the scenes and stays hidden. The overlay owns those plates.
   A staged lock (`binding: staged`) from `runtime_flight stage --tweet-url`
   is the other reviewed path. Live / discuss / segment accept it via
   `--source-dir`.
-- Overlay CG now polls `card.json` and can show `/tweet.png` in the centre
-  well. WATCHDOG on :8766 should pass `card_origin=http://127.0.0.1:8765`
-  after stage, or point at `http://127.0.0.1:8765/overlay-live.html`.
+- Overlay CG polls `card.json`. The centre well is the official X embed
+  (`platform.twitter.com/embed/Tweet.html`) via same-origin
+  `tweet-embed.html`, not a transcribed POST card. Desk chyron and ticker
+  stay ours. `/tweet.png` is fallback evidence only.
+  WATCHDOG on :8766 should pass `card_origin=http://127.0.0.1:8765`.
 - Discuss is text-only. `--confirm-text-requests` is required. With
   `--package`, confirm == max-turns. Cap 12 turns.
 - Spoken Writer lines stay at 120 chars / ~4.3s. Discuss lines stay at 220.

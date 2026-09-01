@@ -118,6 +118,7 @@ async def _run_stage_async(
         chyron=ingested["card"]["chyron"],
         image_url=f"/{IMAGE_NAME}",
         photo_url=photo_url,
+        tweet_id=source.tweet.id,
     )
 
     overlay_server = overlay
@@ -133,6 +134,7 @@ async def _run_stage_async(
         chyron=card["chyron"],
         image_url=card["image_url"],
         photo_url=card.get("photo_url") or "",
+        tweet_id=card.get("tweet_id") or source.tweet.id,
         image_bytes=image_bytes,
     )
 
@@ -164,6 +166,7 @@ async def _run_stage_async(
             ticker=list(package.angles),
             image_url=f"/{IMAGE_NAME}",
             photo_url=photo_url,
+            tweet_id=source.tweet.id,
         )
         overlay_server.set_card(
             author=card["author"],
@@ -173,6 +176,7 @@ async def _run_stage_async(
             ticker=card["ticker"],
             image_url=card["image_url"],
             photo_url=card.get("photo_url") or "",
+            tweet_id=card.get("tweet_id") or source.tweet.id,
             image_bytes=image_bytes,
         )
         (dest / "package.json").write_text(

@@ -17,6 +17,7 @@ from runtime_flight.source import load_source_packet
 from runtime_flight.stage import expected_text_requests, run_stage
 from runtime_flight.tweet_fetch import TweetFetchError, fetch_tweet
 from runtime_flight.tweet_image import CARD_H, CARD_W, render_tweet_card
+from runtime_flight.tweet_embed import TweetEmbedError, official_embed_url
 from runtime_flight.tweet_url import TweetUrlError, parse_tweet_url
 from test_preflight import _complete_env, _make_flight_setup, _write_flight_config
 
@@ -98,6 +99,15 @@ async def _stage_text_post(url: str, *, headers: dict, json: dict, timeout: floa
     return Response()
 
 
+def test_official_embed_url_is_digits_only() -> None:
+    assert official_embed_url("2094640985116737882") == (
+        "https://platform.twitter.com/embed/Tweet.html"
+        "?dnt=true&hide_thread=true&theme=dark&id=2094640985116737882"
+    )
+    with pytest.raises(TweetEmbedError):
+        official_embed_url("https://evil.example")
+
+
 def test_parse_tweet_url_accepts_x_and_twitter() -> None:
     parsed = parse_tweet_url(
         "https://x.com/example_user/status/1234567890123456789?s=20"
@@ -158,6 +168,7 @@ def test_ingest_writes_reviewed_packet_lock_and_image(tmp_path: Path) -> None:
     card = json.loads((tmp_path / "staged" / "card.json").read_text(encoding="utf-8"))
     assert card["author"] == "example_user"
     assert card["image_url"] == "/tweet.png"
+    assert card["tweet_id"] == "1234567890123456789"
     assert card["text"].startswith("A public note")
 
 
@@ -169,6 +180,7 @@ def test_overlay_serves_dynamic_card_and_tweet_image(tmp_path: Path) -> None:
             text="Card body",
             chyron="Desk line from the planner",
             ticker=["unlock", "catch"],
+            tweet_id="1234567890123456789",
             image_bytes=png,
         )
         import urllib.request
@@ -178,6 +190,7 @@ def test_overlay_serves_dynamic_card_and_tweet_image(tmp_path: Path) -> None:
         assert card["author"] == "example_user"
         assert card["chyron"] == "Desk line from the planner"
         assert card["ticker"] == ["unlock", "catch"]
+        assert card["tweet_id"] == "1234567890123456789"
         with urllib.request.urlopen(server.url + "tweet.png", timeout=2) as response:
             image = response.read()
         assert image[:8] == b"\x89PNG\r\n\x1a\n"
@@ -186,6 +199,11 @@ def test_overlay_serves_dynamic_card_and_tweet_image(tmp_path: Path) -> None:
         assert "overlay-live.js" in html
         assert 'id="card-body"' in html
         assert 'id="card-image"' in html
+        assert 'id="tweet-embed"' in html
+        with urllib.request.urlopen(server.url + "tweet-embed.html?id=1234567890123456789", timeout=2) as response:
+            embed = response.read().decode("utf-8")
+        assert "platform.twitter.com/embed/Tweet.html" in embed
+        assert "innerHTML" not in embed
 
 
 def test_overlay_live_js_uses_text_content_and_rejects_remote_images() -> None:
@@ -200,9 +218,11 @@ def test_overlay_live_js_uses_text_content_and_rejects_remote_images() -> None:
             "-e",
             f"""
 const assert = require("assert");
-const {{ applyProducerCard, safeImageUrl, cardOriginFromSearch }} = require({json.dumps(str(OVERLAY_JS))});
+const {{ applyProducerCard, safeImageUrl, cardOriginFromSearch, officialEmbedPath }} = require({json.dumps(str(OVERLAY_JS))});
 assert.strictEqual(safeImageUrl("/tweet.png", "http://127.0.0.1:8765"), "http://127.0.0.1:8765/tweet.png");
 assert.strictEqual(safeImageUrl("https://evil.example/x.png", "http://127.0.0.1:8765"), "");
+assert.strictEqual(officialEmbedPath("2094640985116737882", "http://127.0.0.1:8765"), "http://127.0.0.1:8765/tweet-embed.html?id=2094640985116737882&theme=dark");
+assert.strictEqual(officialEmbedPath("https://evil.example", "http://127.0.0.1:8765"), "");
 assert.strictEqual(cardOriginFromSearch("?card_origin=http://127.0.0.1:8765", "http://127.0.0.1:8766"), "http://127.0.0.1:8765");
 assert.strictEqual(cardOriginFromSearch("?card_origin=https://evil.example", "http://127.0.0.1:8766"), "http://127.0.0.1:8766");
 const nodes = {{
@@ -210,6 +230,8 @@ const nodes = {{
   body: {{ textContent: "" }},
   chyron: {{ textContent: "old" }},
   image: {{ src: "", hidden: true }},
+  embed: {{ src: "", hidden: true }},
+  well: {{ classList: {{ added: null, add(name) {{ this.added = name; }} }} }},
   ticker: {{ textContent: "" }},
   panel: {{ classList: {{ added: null, add(name) {{ this.added = name; }} }} }},
   cardOrigin: "http://127.0.0.1:8765",
@@ -220,12 +242,15 @@ applyProducerCard({{
   chyron: "Ship the workflow",
   ticker: ["unlock", "catch"],
   photo_url: "/media.jpg",
+  tweet_id: "2094640985116737882",
 }}, nodes);
 assert.strictEqual(nodes.author.textContent, "@example_user");
 assert.strictEqual(nodes.body.textContent, "<script>alert(1)</script>");
 assert.strictEqual(nodes.chyron.textContent, "Ship the workflow");
 assert.strictEqual(nodes.image.src, "http://127.0.0.1:8765/media.jpg");
 assert.strictEqual(nodes.ticker.textContent, "unlock  ·  catch");
+assert.strictEqual(nodes.embed.src, "http://127.0.0.1:8765/tweet-embed.html?id=2094640985116737882&theme=dark");
+assert.strictEqual(nodes.well.classList.added, "has-embed");
 console.log("ok");
 """,
         ],
@@ -283,6 +308,7 @@ def test_stage_fixture_writes_card_package_and_writer_lines(
             card = json.loads(response.read().decode("utf-8"))
         assert card["chyron"] == "Ship the workflow, then name the catch"
         assert card["author"] == "example_user"
+        assert card["tweet_id"] == "1234567890123456789"
     finally:
         overlay.stop()
 

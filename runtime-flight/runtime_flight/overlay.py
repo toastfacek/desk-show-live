@@ -27,6 +27,7 @@ _STATIC_FILES = {
 _DESIGN_FILES = {
     "/overlay-live.html": ("overlay-live.html", "text/html; charset=utf-8"),
     "/overlay-live.js": ("overlay-live.js", "text/javascript; charset=utf-8"),
+    "/tweet-embed.html": ("tweet-embed.html", "text/html; charset=utf-8"),
 }
 
 
@@ -155,6 +156,7 @@ class OverlayServer:
         ticker: list[str] | tuple[str, ...] | None = None,
         image_url: str = "/tweet.png",
         photo_url: str = "",
+        tweet_id: str = "",
         speaker: str = "a",
         seg: str = "",
         image_bytes: bytes | None = None,
@@ -170,6 +172,7 @@ class OverlayServer:
                 "ticker": items[:6],
                 "image_url": image_url if image_url.startswith("/") else "/tweet.png",
                 "photo_url": photo_url if isinstance(photo_url, str) and photo_url.startswith("/") else "",
+                "tweet_id": tweet_id if isinstance(tweet_id, str) and tweet_id.isdigit() else "",
                 "speaker": speaker if speaker in {"a", "b"} else "a",
                 "seg": seg,
             }
@@ -213,7 +216,7 @@ class OverlayServer:
             return None
 
     def static_bytes(self, filename: str) -> bytes:
-        if filename in {"overlay-live.html", "overlay-live.js"}:
+        if filename in {"overlay-live.html", "overlay-live.js", "tweet-embed.html"}:
             path = (DESIGN_PREVIEW_DIR / filename).resolve()
             root = DESIGN_PREVIEW_DIR.resolve()
             if path.parent != root or not path.is_file():

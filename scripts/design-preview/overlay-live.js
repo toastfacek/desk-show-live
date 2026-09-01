@@ -1,5 +1,12 @@
 const CARD_POLL_MS = 250;
 
+function officialEmbedPath(tweetId, origin) {
+  if (typeof tweetId !== "string" || !/^\d{5,25}$/.test(tweetId)) {
+    return "";
+  }
+  return String(origin || "").replace(/\/$/, "") + "/tweet-embed.html?id=" + tweetId + "&theme=dark";
+}
+
 function safeImageUrl(raw, origin) {
   if (typeof raw !== "string" || raw === "") {
     return "";
@@ -25,6 +32,18 @@ function applyProducerCard(card, nodes) {
   }
   if (typeof card.chyron === "string" && nodes.chyron && card.chyron) {
     nodes.chyron.textContent = card.chyron;
+  }
+  if (nodes.embed) {
+    const embedSrc = officialEmbedPath(card.tweet_id, nodes.cardOrigin);
+    if (embedSrc) {
+      if (nodes.embed.src !== embedSrc) {
+        nodes.embed.src = embedSrc;
+      }
+      nodes.embed.hidden = false;
+      if (nodes.well && nodes.well.classList) {
+        nodes.well.classList.add("has-embed");
+      }
+    }
   }
   if (nodes.image) {
     const src = safeImageUrl(card.photo_url || "", nodes.cardOrigin);
@@ -75,6 +94,8 @@ function bootProducerOverlay() {
     image: document.getElementById("card-image"),
     ticker: document.getElementById("ticker"),
     panel: document.getElementById("card-panel"),
+    well: document.getElementById("card-well"),
+    embed: document.getElementById("tweet-embed"),
     cardOrigin: origin,
   };
   const clock = document.getElementById("clock");
@@ -116,7 +137,12 @@ function bootProducerOverlay() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { applyProducerCard, safeImageUrl, cardOriginFromSearch };
+  module.exports = {
+    applyProducerCard,
+    safeImageUrl,
+    cardOriginFromSearch,
+    officialEmbedPath,
+  };
 }
 
 if (typeof document !== "undefined") {

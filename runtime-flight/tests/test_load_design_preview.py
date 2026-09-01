@@ -127,11 +127,18 @@ def test_overlay_live_polls_card_without_html_injection() -> None:
     assert 'id="card-author"' in text
     assert 'id="card-body"' in text
     assert 'id="card-image"' in text
+    assert 'id="tweet-embed"' in text
     assert 'id="chyron"' in text
     assert "overlay-live.js" in text
     assert "innerHTML" not in text
     assert "innerHTML" not in script
     assert "textContent" in script
+    assert "tweet-embed.html?id=" in script
+    embed = (
+        Path(__file__).resolve().parents[2] / "scripts" / "design-preview" / "tweet-embed.html"
+    ).read_text(encoding="utf-8")
+    assert "platform.twitter.com/embed/Tweet.html" in embed
+    assert "innerHTML" not in embed
 
 
 def test_apply_preview_points_watchdog_at_identity_and_hides_obs_type() -> None:
