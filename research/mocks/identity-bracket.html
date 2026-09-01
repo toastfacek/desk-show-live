@@ -11,7 +11,7 @@
 :root{
   --ink:#0B0A08; --panel:#15130F; --panel-2:#1E1B16; --line:#26221C;
   --bone:#F4F1EA; --bone-2:#ADA69A; --bone-3:#6B655C;
-  --jade:#14B87A;   /* the desk. 7.7:1 on ground, 7.3:1 on panel */
+  --lemon:#D4E04A;   /* the desk. acid lemon; ink on the chip */
   --live:#E2543F; --gain:#A3BE9C; --loss:#D89A88;
   --r:0;   /* sharp — and 0 is inside the locked radius-max of 8 */
   --display:Archivo,"Helvetica Neue",sans-serif;
@@ -137,7 +137,7 @@ tr:last-child td{border-bottom:0}
 
 .cardp{display:flex;flex-direction:column;height:100%;padding:32px 30px}
 .cardp .kkrow{display:flex;align-items:center;gap:14px;margin-bottom:26px}
-.cardp .kk{font:700 28px/1 var(--mono);letter-spacing:.18em;color:var(--ink);background:var(--jade);padding:8px 11px 7px}
+.cardp .kk{font:700 28px/1 var(--mono);letter-spacing:.18em;color:var(--ink);background:var(--lemon);padding:8px 11px 7px}
 .cardp .src{font:500 26px/1 var(--mono);letter-spacing:.04em;color:var(--bone-3)}
 .cardp .bd{font:600 44px/1.26 var(--display);font-stretch:88%;letter-spacing:-.026em;color:var(--bone);
   display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden}
@@ -146,7 +146,7 @@ tr:last-child td{border-bottom:0}
 
 .chy{display:flex;flex-direction:column;justify-content:center;gap:8px;padding:16px 32px;height:118px}
 .chy .kk{align-self:flex-start;font:700 28px/1 var(--mono);letter-spacing:.18em;
-  color:var(--ink);background:var(--jade);padding:8px 12px 7px}
+  color:var(--ink);background:var(--lemon);padding:8px 12px 7px}
 .chy .hd{font:600 42px/1.06 var(--display);font-stretch:86%;letter-spacing:-.026em;color:var(--bone)}
 
 .tkr{display:flex;align-items:center;height:56px;padding:0 30px;gap:0}
@@ -165,7 +165,7 @@ tr:last-child td{border-bottom:0}
    ============================================================ */
 .ascii{font-family:var(--mono);font-weight:400;white-space:pre;letter-spacing:0;
   user-select:none;pointer-events:none;color:#2E2A24}
-.ascii.jade{color:#14503B}
+.ascii.lemon{color:#4A5218}
 .spark{font-family:var(--mono);font-weight:400;letter-spacing:.01em;color:var(--bone-3)}
 /* the one permitted mosaic: 8 px cells, static plates only */
 .mosaic{background-image:
@@ -179,7 +179,7 @@ tr:last-child td{border-bottom:0}
   background-size:2px 2px;background-position:0 0,1px 1px}
 .markascii{font-family:var(--mono);font-weight:700;white-space:pre;line-height:1.02;
   letter-spacing:.02em;color:var(--bone)}
-.markascii .r{color:var(--jade)}
+.markascii .r{color:var(--lemon)}
 
 footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px solid var(--line)}
 :focus-visible{outline:2px solid var(--bone);outline-offset:3px}
@@ -192,7 +192,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
     <div style="display:flex;flex-direction:column;gap:38px">
       <div style="display:flex;align-items:center;gap:clamp(20px,3vw,42px)">
         <svg width="clamp(64,9vw,112)" height="112" viewBox="0 0 72 72" style="width:clamp(64px,9vw,112px);height:auto;flex:none" aria-label="Runtime mark">
-          <rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/>
+          <rect x="6" y="53" width="60" height="6" fill="#D4E04A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/>
         </svg>
         <div class="wordmark" style="font-size:clamp(56px,11vw,146px)">RUNTIME</div>
       </div>
@@ -254,7 +254,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
       <div class="stage plain">
         <div class="pad" style="gap:100px;flex-wrap:wrap;padding:76px 40px">
           <div style="display:flex;flex-direction:column;align-items:center;gap:24px">
-            <svg width="150" height="150" viewBox="0 0 72 72" aria-label="Runtime mark"><rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg>
+            <svg width="150" height="150" viewBox="0 0 72 72" aria-label="Runtime mark"><rect x="6" y="53" width="60" height="6" fill="#D4E04A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg>
             <span class="eyebrow">Primary</span>
           </div>
           <div style="display:flex;flex-direction:column;align-items:center;gap:24px">
@@ -263,13 +263,13 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
           </div>
           <div style="display:flex;align-items:flex-end;gap:38px">
             <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
-              <svg width="72" height="72" viewBox="0 0 72 72" aria-label="Mark at 72"><rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg><span class="eyebrow">72</span>
+              <svg width="72" height="72" viewBox="0 0 72 72" aria-label="Mark at 72"><rect x="6" y="53" width="60" height="6" fill="#D4E04A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg><span class="eyebrow">72</span>
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
-              <svg width="32" height="32" viewBox="0 0 72 72" aria-label="Mark at 32"><rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg><span class="eyebrow">32</span>
+              <svg width="32" height="32" viewBox="0 0 72 72" aria-label="Mark at 32"><rect x="6" y="53" width="60" height="6" fill="#D4E04A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg><span class="eyebrow">32</span>
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
-              <svg width="16" height="16" viewBox="0 0 72 72" aria-label="Mark at 16"><rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg><span class="eyebrow">16</span>
+              <svg width="16" height="16" viewBox="0 0 72 72" aria-label="Mark at 16"><rect x="6" y="53" width="60" height="6" fill="#D4E04A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg><span class="eyebrow">16</span>
             </div>
           </div>
         </div>
@@ -306,7 +306,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
       <div class="stage plain">
         <div class="pad" style="gap:80px;flex-wrap:wrap;padding:68px 40px">
           <div style="display:flex;flex-direction:column;align-items:center;gap:22px">
-            <svg width="132" height="132" viewBox="0 0 72 72" aria-label="Mark with the desk rule in jade"><rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg>
+            <svg width="132" height="132" viewBox="0 0 72 72" aria-label="Mark with the desk rule in lemon"><rect x="6" y="53" width="60" height="6" fill="#D4E04A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg>
             <span class="eyebrow">In the mark</span>
           </div>
           <div style="display:flex;flex-direction:column;gap:22px;align-items:flex-start">
@@ -318,7 +318,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
           </div>
         </div>
       </div>
-      <div class="cap"><span>Two placements, one hue. Nowhere else in the package is saturated.</span><span class="mono">#14B87A</span></div>
+      <div class="cap"><span>Two placements, one hue. Nowhere else in the package is saturated.</span><span class="mono">#D4E04A</span></div>
     </figure>
 
     <div class="grid3">
@@ -332,7 +332,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
       </div>
       <div class="card">
         <h3>What stays uncoloured</h3>
-        <p class="note">Speaker state, which is value not hue. The ticker’s gain and loss, which stay low-saturation tints so the fully-saturated jade is never in competition. And <code>LIVE</code>, which keeps its own red dot — a state, not the brand.</p>
+        <p class="note">Speaker state, which is value not hue. The ticker’s gain and loss, which stay low-saturation tints so the fully-saturated lemon is never in competition. And <code>LIVE</code>, which keeps its own red dot — a state, not the brand.</p>
       </div>
     </div>
 
@@ -363,14 +363,14 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
             <div style="display:flex;flex-direction:column;gap:16px">
               <span class="eyebrow">Horizontal lockup</span>
               <div style="display:flex;align-items:center;gap:22px">
-                <svg width="52" height="52" viewBox="0 0 72 72" aria-label="Mark"><rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg>
+                <svg width="52" height="52" viewBox="0 0 72 72" aria-label="Mark"><rect x="6" y="53" width="60" height="6" fill="#D4E04A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg>
                 <div class="wordmark" style="font-size:44px">RUNTIME</div>
               </div>
             </div>
             <div style="display:flex;flex-direction:column;gap:16px">
               <span class="eyebrow">Stacked</span>
               <div style="display:flex;flex-direction:column;gap:14px;align-items:flex-start">
-                <svg width="46" height="46" viewBox="0 0 72 72" aria-label="Mark"><rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg>
+                <svg width="46" height="46" viewBox="0 0 72 72" aria-label="Mark"><rect x="6" y="53" width="60" height="6" fill="#D4E04A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/></svg>
                 <div class="wordmark" style="font-size:34px">RUNTIME</div>
               </div>
             </div>
@@ -483,7 +483,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
           <div style="position:absolute;left:0;right:0;top:432px;display:flex;flex-direction:column;align-items:center;gap:30px">
             <div style="display:flex;align-items:center;gap:26px">
               <svg width="76" height="76" viewBox="0 0 72 72" aria-label="Runtime mark">
-                <rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/>
+                <rect x="6" y="53" width="60" height="6" fill="#D4E04A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/>
               </svg>
               <div class="wordmark" style="font-size:82px">RUNTIME</div>
             </div>
@@ -528,7 +528,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
 <span class="r">  ======================  </span></div>
             <div style="display:flex;flex-direction:column;gap:10px">
               <span class="eyebrow">Terminal, loading, social, favicon fallback</span>
-              <p class="note" style="font-size:14px">Same three shapes, same grid, drawn in characters. The rule stays jade, so even the ASCII cut knows where the desk is.</p>
+              <p class="note" style="font-size:14px">Same three shapes, same grid, drawn in characters. The rule stays lemon, so even the ASCII cut knows where the desk is.</p>
             </div>
           </div>
         </div>
@@ -548,7 +548,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
         </div>
         <div class="card">
           <h3>How it is shaped</h3>
-          <p class="note">Density is weighted to the edges and the bottom, which is exactly where the wash is visible, so the pattern spends itself where it can be seen. Roughly 11% coverage in the gutters rising to 25% along the bottom band. Dark jade — the desk colour again, at a third of its strength, so it never reads as a second accent.</p>
+          <p class="note">Density is weighted to the edges and the bottom, which is exactly where the wash is visible, so the pattern spends itself where it can be seen. Roughly 11% coverage in the gutters rising to 25% along the bottom band. Dark lemon — the desk colour again, at a third of its strength, so it never reads as a second accent.</p>
         </div>
       </div>
     </figure>
@@ -558,7 +558,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
       <p class="note" style="margin-bottom:18px">A proper 8×8 Bayer threshold on a slow-drifting field, rendered at <strong>8 px cells</strong> — the floor. This is the same family as the shader demos that make this look good, and the thing that makes those read well is that their pixels are chunky. Fine them down and they die exactly the way the counterexample above does. It sits at the bottom edge and clears by mid-frame, so the type never lands on texture.</p>
       <div class="stage" data-w="1920" data-h="1080" style="background:var(--ink)">
         <div class="sq" style="width:1920px;height:1080px;background:var(--ink);overflow:hidden">
-          <canvas width="1920" height="1080" data-cell="8" data-shape="hold" data-c0="#0B0A08" data-c1="#1E7A57"
+          <canvas width="1920" height="1080" data-cell="8" data-shape="hold" data-c0="#0B0A08" data-c1="#4A5218"
                   style="position:absolute;inset:0;width:1920px;height:1080px" aria-label="Dithered hold field"></canvas>
           <div class="pl rail" style="position:absolute;left:64px;top:48px">
             <svg width="34" height="34" viewBox="0 0 72 72" aria-label="Mark, off air" style="flex:none">
@@ -571,7 +571,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
           <div style="position:absolute;left:0;right:0;top:352px;display:flex;flex-direction:column;align-items:center;gap:30px">
             <div style="display:flex;align-items:center;gap:26px">
               <svg width="76" height="76" viewBox="0 0 72 72" aria-label="Runtime mark">
-                <rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/>
+                <rect x="6" y="53" width="60" height="6" fill="#D4E04A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/>
               </svg>
               <div class="wordmark" style="font-size:82px">RUNTIME</div>
             </div>
@@ -579,7 +579,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
           </div>
         </div>
       </div>
-      <div class="cap"><span>Drifting slowly, and never reaching full coverage — it tops out at 66% on the very bottom row. Dark jade, so it reads as tinted texture rather than a second accent.</span><span class="mono">8 px cells · 240 × 135</span></div>
+      <div class="cap"><span>Drifting slowly, and never reaching full coverage — it tops out at 66% on the very bottom row. Dark lemon, so it reads as tinted texture rather than a second accent.</span><span class="mono">8 px cells · 240 × 135</span></div>
     </figure>
 
     <div class="grid2">
@@ -623,7 +623,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
       <tr><td><strong>Panel fill</strong></td><td>Gradient plus a top sheen</td><td>Flat, 93%</td></tr>
       <tr><td><strong>Panel edge</strong></td><td>2–3 px edge light</td><td>None. A dark panel on a bright room needs no border</td></tr>
       <tr><td><strong>Speaker state</strong></td><td>Amber or cyan lit ring</td><td><strong>Inversion</strong> — the live name plate goes bone on ink</td></tr>
-      <tr><td><strong>Accents</strong></td><td>Four</td><td>Two — the desk jade, and a 10 px live dot</td></tr>
+      <tr><td><strong>Accents</strong></td><td>Four</td><td>Two — the desk lemon, and a 10 px live dot</td></tr>
       <tr><td><strong>Colour</strong></td><td>Spread across the furniture</td><td>One hue, in two places, both meaning “the desk”</td></tr>
     </table></div>
 
@@ -870,7 +870,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
     var ctx=cv.getContext('2d'); if(!ctx) return;
     var cell=+cv.dataset.cell||8, w=cv.width, h=cv.height;
     var cols=Math.ceil(w/cell), rows=Math.ceil(h/cell);
-    var c0=cv.dataset.c0||'#0B0A08', c1=cv.dataset.c1||'#14B87A';
+    var c0=cv.dataset.c0||'#0B0A08', c1=cv.dataset.c1||'#D4E04A';
     var shape=DITHER_SHAPES[cv.dataset.shape] || DITHER_SHAPES.hold;
     var isStatic = cv.dataset.shape === 'wash' || cv.dataset.motion === 'static';
     var start=null;

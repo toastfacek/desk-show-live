@@ -16,7 +16,7 @@ All rectangles are 1920×1080, origin top-left. Values marked **lock** are proje
 | `plate` | `#15130F` at 93% | lock; essential type still meets ≥7:1 |
 | `text-primary` | `#F4F1EA` | lock |
 | `text-secondary` | `#ADA69A` | lock |
-| `jade` | `#14B87A` | programme accent; desk rule and kicker chip only |
+| `lemon` | `#D4E04A` | programme accent; desk rule and kicker chip only |
 | `live` | `#E2543F` | 10 px LIVE dot only |
 | `gain` | `#A3BE9C` | with `▲` and a numeric sign |
 | `loss` | `#D89A88` | with `▼` and a numeric sign |

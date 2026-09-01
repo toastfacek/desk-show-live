@@ -74,12 +74,12 @@ All geometry lands on whole canvas pixels after browser/OBS scaling. Avoid fract
 | `plate` | `#15130F` at 93% | Raised cards; essential text still meets ≥7:1 |
 | `text-primary` | `#F4F1EA` | Essential text |
 | `text-secondary` | `#ADA69A` | Metadata |
-| `jade` | `#14B87A` | Programme accent; desk rule and kicker chip only |
+| `lemon` | `#D4E04A` | Programme accent; desk rule and kicker chip only |
 | `live` | `#E2543F` | 10 px LIVE dot only |
 | `gain` | `#A3BE9C` | Positive state with sign/shape |
 | `loss` | `#D89A88` | Negative state with sign/shape |
 
-Furniture remains warm-dark/off-white. Jade is the only saturated furniture colour and never identifies a host. No gradients, transparency-based glass, RGB masks or fine textures.
+Furniture remains warm-dark/off-white. Lemon is the only saturated furniture colour and never identifies a host. No gradients, transparency-based glass, RGB masks or fine textures.
 
 ### Type
 

@@ -5,7 +5,7 @@ On sign-off these move to `assets/broadcast/bug/show-bug.svg` and the PNG export
 
 | File | Use |
 | --- | --- |
-| `runtime-mark.svg` | Primary. Bone masses, jade desk rule. |
+| `runtime-mark.svg` | Primary. Bone masses, lemon desk rule. |
 | `runtime-mark-offair.svg` | Off air. Single dim value. |
 | `runtime-mark-mono.svg` | One colour; inherits `currentColor`. |
 | `runtime-mark.txt` | ASCII cut for terminal, loading and social. |

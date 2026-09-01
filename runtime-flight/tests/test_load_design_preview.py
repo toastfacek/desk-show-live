@@ -141,6 +141,9 @@ def test_overlay_live_polls_card_without_html_injection() -> None:
     assert "DM FOR INQUIRIES" in text
     assert "tkr-scroll" in text
     assert ".chy,.tkr{background:#15130F}" in text
+    assert "#D4E04A" in text
+    assert "#14B87A" not in text
+    assert "--lemon:" in text
     assert "BOT1" not in text
     assert "BOT2" not in text
     assert 'id="ticker"' not in text
