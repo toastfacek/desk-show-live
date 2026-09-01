@@ -131,10 +131,12 @@ A hard half-split (`crop_right=672` / `crop_left=672`) plus
 **0.37 / 0.62** — scrunched on the left and right sides of the programme.
 
 Design-preview crops (`scripts/load-design-preview.py`) now take a **400px**
-window on those centers, `crop_top=64`, `boundsAlignment` center (0). That
-is a tighter zoom than the 500px window so the sprites fill more of each
-well. Position alignment stays top-left so the well sits at (64, 172) /
-(1276, 172). `cropToBounds` is on so `SCALE_OUTER` cannot paint into the
+window on those centers, `boundsAlignment` center (0). Left (PHASEONE) uses
+`crop_top=64`. Right (deb) uses `crop_top=12` and `crop_bottom=96` so the
+taller lozenge keeps her crown in frame and the extra comes off the desk.
+That is a tighter zoom than the 500px window so the sprites fill more of
+each well. Position alignment stays top-left so the well sits at (64, 172)
+/ (1276, 172). `cropToBounds` is on so `SCALE_OUTER` cannot paint into the
 logo, sponsor, or timer. Well height is 628 so the chyron at y=838 stays
 clear.
 

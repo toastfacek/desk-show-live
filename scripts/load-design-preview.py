@@ -63,6 +63,11 @@ HALF_W = SOURCE_W // 2
 # zooms them into the 580×628 wells without losing the desk mics.
 CROP_W = 400
 CROP_TOP = 64
+# deb is the tall lozenge. The shared top crop plus a centered cover
+# clipped the crown. Keep more source above her and take the extra
+# from the desk.
+CROP_TOP_R = 12
+CROP_BOTTOM_R = 96
 HOST_L_X = 240
 HOST_R_X = 1092
 HOST_WIDE_PLAYBACK = {
@@ -176,7 +181,13 @@ def canvas_transform() -> dict:
     return _bounds(0, 0, CANVAS_W, CANVAS_H)
 
 
-def host_crop(center_x: int, *, width: int = CROP_W, top: int = CROP_TOP) -> dict:
+def host_crop(
+    center_x: int,
+    *,
+    width: int = CROP_W,
+    top: int = CROP_TOP,
+    bottom: int = 0,
+) -> dict:
     width = min(int(width), SOURCE_W)
     left = int(center_x) - width // 2
     right = SOURCE_W - left - width
@@ -186,10 +197,13 @@ def host_crop(center_x: int, *, width: int = CROP_W, top: int = CROP_TOP) -> dic
     if right < 0:
         left += right
         right = 0
+    crop_top = max(0, min(int(top), SOURCE_H - 1))
+    crop_bottom = max(0, min(int(bottom), SOURCE_H - crop_top - 1))
     return {
         "crop_left": max(0, left),
         "crop_right": max(0, right),
-        "crop_top": max(0, min(int(top), SOURCE_H - 1)),
+        "crop_top": crop_top,
+        "crop_bottom": crop_bottom,
     }
 
 
@@ -202,6 +216,7 @@ def _bounds(
     crop_left: int = 0,
     crop_right: int = 0,
     crop_top: int = 0,
+    crop_bottom: int = 0,
     bounds_alignment: int = ALIGN_CENTER,
 ) -> dict:
     return {
@@ -219,7 +234,7 @@ def _bounds(
         "cropLeft": int(crop_left),
         "cropRight": int(crop_right),
         "cropTop": int(crop_top),
-        "cropBottom": 0,
+        "cropBottom": int(crop_bottom),
     }
 
 
@@ -429,7 +444,7 @@ def apply_design_wells(client: ReqClient) -> dict:
     left = DESIGN_WELLS["left"]
     right = DESIGN_WELLS["right"]
     left_crop = host_crop(HOST_L_X)
-    right_crop = host_crop(HOST_R_X)
+    right_crop = host_crop(HOST_R_X, top=CROP_TOP_R, bottom=CROP_BOTTOM_R)
     split_ids = _ids(client, "split", "HOST_WIDE")
     if len(split_ids) != 2:
         raise RuntimeError(f"split HOST_WIDE count {len(split_ids)} != 2")

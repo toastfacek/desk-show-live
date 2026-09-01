@@ -180,6 +180,9 @@ def test_apply_preview_points_watchdog_at_identity_and_hides_obs_type() -> None:
     assert crops["left"]["crop_right"] > load_design_preview.HALF_W
     assert crops["right"]["crop_left"] > load_design_preview.HALF_W
     assert crops["left"]["crop_top"] == load_design_preview.CROP_TOP
+    assert crops["left"]["crop_bottom"] == 0
+    assert crops["right"]["crop_top"] == load_design_preview.CROP_TOP_R
+    assert crops["right"]["crop_bottom"] == load_design_preview.CROP_BOTTOM_R
     host_settings = [
         call
         for call in client.calls
@@ -196,7 +199,11 @@ def test_apply_preview_points_watchdog_at_identity_and_hides_obs_type() -> None:
 
 def test_host_crops_center_sprites_inside_each_well() -> None:
     left = load_design_preview.host_crop(load_design_preview.HOST_L_X)
-    right = load_design_preview.host_crop(load_design_preview.HOST_R_X)
+    right = load_design_preview.host_crop(
+        load_design_preview.HOST_R_X,
+        top=load_design_preview.CROP_TOP_R,
+        bottom=load_design_preview.CROP_BOTTOM_R,
+    )
     left_w = (
         load_design_preview.SOURCE_W - left["crop_left"] - left["crop_right"]
     )
@@ -210,6 +217,12 @@ def test_host_crops_center_sprites_inside_each_well() -> None:
     visible_right = load_design_preview.HOST_R_X - right["crop_left"]
     assert abs(visible_left - load_design_preview.CROP_W / 2) <= 2
     assert abs(visible_right - load_design_preview.CROP_W / 2) <= 2
+    assert left["crop_top"] == load_design_preview.CROP_TOP
+    assert left["crop_bottom"] == 0
+    assert right["crop_top"] == load_design_preview.CROP_TOP_R
+    assert right["crop_bottom"] == load_design_preview.CROP_BOTTOM_R
+    assert right["crop_top"] < left["crop_top"]
+    assert right["crop_bottom"] > left["crop_bottom"]
     well = load_design_preview.DESIGN_WELLS["left"]
     transform = load_design_preview._bounds(
         well["x"], well["y"], well["w"], well["h"], **left
@@ -218,3 +231,14 @@ def test_host_crops_center_sprites_inside_each_well() -> None:
     assert transform["cropToBounds"] is True
     assert transform["cropLeft"] == left["crop_left"]
     assert transform["cropRight"] == left["crop_right"]
+    assert transform["cropBottom"] == left["crop_bottom"]
+    right_well = load_design_preview.DESIGN_WELLS["right"]
+    right_transform = load_design_preview._bounds(
+        right_well["x"],
+        right_well["y"],
+        right_well["w"],
+        right_well["h"],
+        **right,
+    )
+    assert right_transform["cropTop"] == load_design_preview.CROP_TOP_R
+    assert right_transform["cropBottom"] == load_design_preview.CROP_BOTTOM_R
