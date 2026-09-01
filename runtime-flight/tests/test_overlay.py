@@ -157,6 +157,23 @@ def test_overlay_headers_card_unhealthy_stale_and_recovery(tmp_path: Path):
         assert recovered["sequence"] > unhealthy["sequence"]
 
 
+def test_overlay_server_serves_cropped_tweet_shots(tmp_path: Path) -> None:
+    from PIL import Image
+
+    from runtime_flight.tweet_shot import write_shot_set
+
+    write_shot_set(Image.new("RGB", (584, 628), (30, 40, 50)), tmp_path)
+    with OverlayServer(state_dir=tmp_path, heartbeat_interval_s=0.05) as server:
+        urls = server.set_shots(tmp_path, card_mode="shot")
+        assert urls["shot_solo_url"] == "/tweet-shot-solo.png"
+        card, _ = _json(server.url + "card.json")
+        assert card["has_shot"] is True
+        assert card["card_mode"] == "shot"
+        with _fetch(server.url + "tweet-shot-solo.png") as response:
+            assert response.headers.get("Content-Type") == "image/png"
+            assert response.read()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
 def test_overlay_server_loss_is_a_hold_condition():
     script = OVERLAY_DIR / "app.js"
     completed = subprocess.run(

@@ -221,7 +221,13 @@ def test_overlay_live_js_uses_text_content_and_rejects_remote_images() -> None:
             "-e",
             f"""
 const assert = require("assert");
-const {{ applyProducerCard, applyOverlayLayout, normalizeLayout, safeImageUrl, cardOriginFromSearch, officialEmbedPath, formatEasternClock }} = require({json.dumps(str(OVERLAY_JS))});
+const {{ applyProducerCard, applyOverlayLayout, normalizeLayout, safeImageUrl, cardOriginFromSearch, officialEmbedPath, formatEasternClock, shouldUseShot, shotFallbackPath }} = require({json.dumps(str(OVERLAY_JS))});
+assert.strictEqual(shouldUseShot({{ has_shot: true }}, "solo_l", ""), true);
+assert.strictEqual(shouldUseShot({{ has_shot: true }}, "split", ""), false);
+assert.strictEqual(shouldUseShot({{ has_shot: true }}, "split", "shot"), true);
+assert.strictEqual(shouldUseShot({{ has_shot: true }}, "solo_l", "embed"), false);
+assert.strictEqual(shotFallbackPath("solo_r"), "/tweet-shot-solo.png");
+assert.strictEqual(shotFallbackPath("card_full"), "/tweet-shot-card.png");
 assert.strictEqual(normalizeLayout("card"), "card_full");
 assert.strictEqual(normalizeLayout("nope"), "split");
 const hidA = {{ hidden: false, className: "hid live" }};
@@ -253,7 +259,8 @@ const nodes = {{
   chyron: {{ textContent: "old" }},
   image: {{ src: "", hidden: true }},
   embed: {{ src: "", hidden: true }},
-  well: {{ classList: {{ added: null, add(name) {{ this.added = name; }} }} }},
+  shot: {{ src: "", hidden: true }},
+  well: {{ classList: {{ added: null, add(name) {{ this.added = name; }}, remove(name) {{ if (this.added === name) this.added = null; }} }} }},
   ticker: {{ textContent: "" }},
   panel: {{ classList: {{ added: null, add(name) {{ this.added = name; }} }} }},
   cardOrigin: "http://127.0.0.1:8765",

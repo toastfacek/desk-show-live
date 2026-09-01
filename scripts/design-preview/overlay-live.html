@@ -73,6 +73,10 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transpa
 .card-well.has-embed .cardp{display:none}
 #tweet-embed{display:none;position:absolute;inset:0;width:100%;height:100%;border:0;background:#15130F;pointer-events:auto;z-index:1;overflow:hidden}
 .card-well.has-embed #tweet-embed{display:block}
+#tweet-shot{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;background:#15130F;z-index:2}
+.card-well.has-shot .cardp{display:none}
+.card-well.has-shot #tweet-embed{display:none}
+.card-well.has-shot #tweet-shot{display:block}
 .chy,.tkr{background:#15130F}
 .chy{display:flex;align-items:center;padding:0 36px;height:118px;overflow:hidden}
 .chy .hd{font:700 52px/1.12 var(--display);font-stretch:86%;letter-spacing:-.03em;color:var(--bone);width:100%}
@@ -110,6 +114,7 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transpa
     </div>
   </div>
   <div class="pl card-well" id="card-well">
+    <img id="tweet-shot" alt="" hidden>
     <iframe id="tweet-embed" title="X post" hidden allow="autoplay; encrypted-media; fullscreen" referrerpolicy="no-referrer"></iframe>
     <div class="cardp" id="card-panel">
       <img id="card-image" alt="" hidden>

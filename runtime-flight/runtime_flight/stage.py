@@ -137,6 +137,14 @@ async def _run_stage_async(
         tweet_id=card.get("tweet_id") or source.tweet.id,
         image_bytes=image_bytes,
     )
+    try:
+        from runtime_flight.tweet_shot import capture_from_overlay
+
+        shot_dir = dest / "shots"
+        capture_from_overlay(overlay_server.url, source.tweet.id, shot_dir)
+        overlay_server.set_shots(shot_dir)
+    except Exception:
+        pass
 
     package = None
     thoughts: list[Thought] = []

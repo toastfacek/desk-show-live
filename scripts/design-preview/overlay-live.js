@@ -1,5 +1,71 @@
 const CARD_POLL_MS = 250;
 
+const WIDE_SHOT_LAYOUTS = {
+  solo_l: true,
+  solo_r: true,
+  card_full: true,
+  hold: true,
+};
+
+function shotFallbackPath(layout) {
+  const name = normalizeLayout(layout);
+  if (name === "solo_l" || name === "solo_r") {
+    return "/tweet-shot-solo.png";
+  }
+  if (name === "card_full" || name === "hold") {
+    return "/tweet-shot-card.png";
+  }
+  return "/tweet-shot-split.png";
+}
+
+function shotUrlKey(layout) {
+  const name = normalizeLayout(layout);
+  if (name === "solo_l" || name === "solo_r") {
+    return "shot_solo_url";
+  }
+  if (name === "card_full" || name === "hold") {
+    return "shot_card_url";
+  }
+  return "shot_split_url";
+}
+
+function shouldUseShot(card, layout, mode) {
+  const forced = mode || (card && card.card_mode) || "";
+  if (forced === "embed") {
+    return false;
+  }
+  if (forced === "shot") {
+    return true;
+  }
+  return Boolean(
+    WIDE_SHOT_LAYOUTS[normalizeLayout(layout)] && card && card.has_shot
+  );
+}
+
+function applyTweetShot(card, nodes) {
+  if (!nodes || !nodes.shot || !nodes.well || !nodes.well.classList) {
+    return false;
+  }
+  const layout = (nodes && nodes.layout) || "split";
+  const mode = (nodes && nodes.cardMode) || (card && card.card_mode) || "";
+  if (!shouldUseShot(card, layout, mode)) {
+    nodes.well.classList.remove("has-shot");
+    nodes.shot.hidden = true;
+    return false;
+  }
+  const origin = nodes.embedOrigin || nodes.cardOrigin;
+  const src = safeImageUrl(
+    (card && card[shotUrlKey(layout)]) || shotFallbackPath(layout),
+    origin
+  );
+  if (src && nodes.shot.src !== src) {
+    nodes.shot.src = src;
+  }
+  nodes.shot.hidden = false;
+  nodes.well.classList.add("has-shot");
+  return true;
+}
+
 function officialEmbedPath(tweetId, origin) {
   if (typeof tweetId !== "string" || !/^\d{5,25}$/.test(tweetId)) {
     return "";
@@ -36,6 +102,7 @@ function applyProducerCard(card, nodes) {
   if (typeof card.speaker === "string" && (card.speaker === "a" || card.speaker === "b")) {
     nodes.speaker = card.speaker;
   }
+  nodes.card = card;
   if (typeof card.layout === "string" && card.layout) {
     nodes.layout = applyOverlayLayout(card.layout, nodes);
   } else if (typeof card.speaker === "string") {
@@ -56,6 +123,7 @@ function applyProducerCard(card, nodes) {
       }
     }
   }
+  applyTweetShot(card, nodes);
   if (nodes.image) {
     const src = safeImageUrl(card.photo_url || "", nodes.cardOrigin);
     if (src) {
@@ -191,11 +259,13 @@ function bootProducerOverlay() {
     panel: document.getElementById("card-panel"),
     well: document.getElementById("card-well"),
     embed: document.getElementById("tweet-embed"),
+    shot: document.getElementById("tweet-shot"),
     hidA: document.getElementById("hid-a"),
     hidB: document.getElementById("hid-b"),
     root: document.documentElement,
     speaker: speaker,
     layout: queryLayout,
+    cardMode: new URLSearchParams(location.search).get("card") || "",
     cardOrigin: origin,
     embedOrigin: typeof location !== "undefined" ? location.origin : origin,
   };
@@ -241,6 +311,9 @@ function bootProducerOverlay() {
     } else if (nodes.layout) {
       applyOverlayLayout(nodes.layout, nodes);
     }
+    if (nodes.card) {
+      applyTweetShot(nodes.card, nodes);
+    }
   }
 
   poll();
@@ -250,6 +323,9 @@ function bootProducerOverlay() {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     applyProducerCard,
+    applyTweetShot,
+    shouldUseShot,
+    shotFallbackPath,
     applyOverlayLayout,
     normalizeLayout,
     layoutFromSearch,

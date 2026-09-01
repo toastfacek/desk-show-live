@@ -129,6 +129,8 @@ def test_overlay_live_polls_card_without_html_injection() -> None:
     assert 'id="card-body"' in text
     assert 'id="card-image"' in text
     assert 'id="tweet-embed"' in text
+    assert 'id="tweet-shot"' in text
+    assert ".card-well.has-shot #tweet-shot{display:block}" in text
     assert "overflow:hidden" in text
     assert ".card-well.has-embed .cardp{display:none}" in text
     assert 'id="chyron"' in text

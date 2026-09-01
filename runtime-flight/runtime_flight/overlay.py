@@ -30,6 +30,12 @@ _DESIGN_FILES = {
     "/overlay-live.js": ("overlay-live.js", "text/javascript; charset=utf-8"),
     "/tweet-embed.html": ("tweet-embed.html", "text/html; charset=utf-8"),
 }
+_SHOT_FILES = {
+    "/tweet-shot.png": "tweet-shot.png",
+    "/tweet-shot-split.png": "tweet-shot-split.png",
+    "/tweet-shot-solo.png": "tweet-shot-solo.png",
+    "/tweet-shot-card.png": "tweet-shot-card.png",
+}
 
 
 def atomic_write_bytes(path: Path, data: bytes, *, max_bytes: int) -> None:
@@ -68,6 +74,8 @@ class OverlayServer:
             "text": "",
             "timestamp": "",
             "layout": "split",
+            "has_shot": False,
+            "card_mode": "",
         }
         self._image_bytes: bytes | None = None
         self._heartbeat_written_at = time.monotonic()
@@ -184,6 +192,12 @@ class OverlayServer:
                 "speaker": speaker if speaker in {"a", "b"} else "a",
                 "seg": seg,
                 "layout": _normalize_overlay_layout(layout) or current_layout,
+                "has_shot": bool(self._card.get("has_shot")),
+                "card_mode": str(self._card.get("card_mode") or ""),
+                "shot_url": str(self._card.get("shot_url") or ""),
+                "shot_split_url": str(self._card.get("shot_split_url") or ""),
+                "shot_solo_url": str(self._card.get("shot_solo_url") or ""),
+                "shot_card_url": str(self._card.get("shot_card_url") or ""),
             }
             if image_bytes is not None:
                 if len(image_bytes) > MAX_IMAGE_BYTES:
@@ -191,6 +205,45 @@ class OverlayServer:
                 self._image_bytes = image_bytes
             self._write_card_locked()
             self._write_image_locked()
+
+    def set_shots(self, dest: Path, *, card_mode: str = "") -> dict[str, str]:
+        from runtime_flight.tweet_shot import (
+            SHOT_CARD_NAME,
+            SHOT_NAME,
+            SHOT_SOLO_NAME,
+            SHOT_SPLIT_NAME,
+        )
+
+        paths = {
+            "shot_url": dest / SHOT_NAME,
+            "shot_split_url": dest / SHOT_SPLIT_NAME,
+            "shot_solo_url": dest / SHOT_SOLO_NAME,
+            "shot_card_url": dest / SHOT_CARD_NAME,
+        }
+        urls = {key: f"/{path.name}" for key, path in paths.items() if path.is_file()}
+        if "shot_url" not in urls:
+            raise ValueError("missing tweet-shot.png")
+        if self._state_dir is not None:
+            for path in paths.values():
+                if path.is_file() and path.parent.resolve() != self._state_dir.resolve():
+                    target = self._state_dir / path.name
+                    target.write_bytes(path.read_bytes())
+        with self._lock:
+            self._card["has_shot"] = True
+            if card_mode in {"shot", "embed"}:
+                self._card["card_mode"] = card_mode
+            self._card.update(urls)
+            if self._card_path is not None:
+                self._write_card_locked()
+        return urls
+
+    def set_card_mode(self, mode: str) -> str:
+        name = mode if mode in {"shot", "embed", ""} else ""
+        with self._lock:
+            self._card["card_mode"] = name
+            if self._card_path is not None:
+                self._write_card_locked()
+        return name
 
     def set_layout(self, layout: str) -> str:
         name = _normalize_overlay_layout(layout) or "split"
@@ -223,6 +276,16 @@ class OverlayServer:
     def card_response(self) -> dict[str, Any]:
         with self._lock:
             return dict(self._card)
+
+    def shot_bytes(self, filename: str) -> bytes | None:
+        if filename not in _SHOT_FILES.values():
+            return None
+        if self._state_dir is None:
+            return None
+        path = self._state_dir / filename
+        if not path.is_file():
+            return None
+        return path.read_bytes()
 
     def tweet_image_bytes(self) -> bytes | None:
         with self._lock:
@@ -313,6 +376,14 @@ def _make_handler(overlay: OverlayServer) -> type[BaseHTTPRequestHandler]:
                     self.send_error(404)
                     return
                 self._send(200, image, "image/png")
+                return
+            shot_name = _SHOT_FILES.get(path)
+            if shot_name is not None:
+                shot = overlay.shot_bytes(shot_name)
+                if shot is None:
+                    self.send_error(404)
+                    return
+                self._send(200, shot, "image/png")
                 return
             static = _STATIC_FILES.get(path) or _DESIGN_FILES.get(path)
             if static is None:
