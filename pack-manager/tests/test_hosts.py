@@ -43,8 +43,8 @@ def test_canonical_copy_is_light_broadcast_sprites():
         "Higher thinner voice, quick and clipped, bright, slightly nasal, "
         "restless upward energy."
     )
-    assert "weather" in BOT1_MANIFEST["soul"]
-    assert "shrug" in BOT2_MANIFEST["soul"]
+    assert "conversation teaches" in BOT1_MANIFEST["soul"]
+    assert "learn in public" in BOT2_MANIFEST["soul"]
     assert BOT1_MANIFEST["opinions"]
     assert BOT2_MANIFEST["opinions"]
 

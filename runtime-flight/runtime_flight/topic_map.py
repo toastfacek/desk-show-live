@@ -22,29 +22,30 @@ DEVELOP_MOVES = frozenset({"poke", "number", "reframe", "callback", "question"})
 CLOSE_MOVES = DEVELOP_MOVES | {"land"}
 
 DEFAULT_STANCE = {
-    "BOT1": "Treat the card as weather until someone shows that control actually moved.",
-    "BOT2": "If you cannot name the number, the cluster, or who got hit, it is a vibe.",
+    "BOT1": "Stay with the card until we understand it.",
+    "BOT2": "If the last line skipped a step, go back.",
 }
 DEFAULT_SOUL = {
     "BOT1": (
-        "You treat news as weather until someone proves a control surface "
-        "actually moved. You would rather be bored than impressed."
+        "You get interested by understanding, not by winning. You would rather "
+        "get the story straight than sound like you already knew. The "
+        "conversation teaches. You do not."
     ),
     "BOT2": (
-        "You will not let a shrug pass. If it cannot be named, counted, or "
-        "assigned to a victim, it is a vibe."
+        "You learn in public. If an explanation jumped, pull it back. You do "
+        "not deliver the answer. You make the next step visible."
     ),
 }
 DEFAULT_OPINIONS = {
     "BOT1": (
-        "A wipe after the fact is weather.",
-        "Oversight restored is not a thesis.",
-        "If the same humans still have the keys, nothing happened.",
+        "We should get the story straight before we decide what it means.",
+        "If we skip a step, the audience skips it too.",
+        "Most of this is more ordinary than it sounds.",
     ),
     "BOT2": (
-        "Name the cluster or sit down.",
-        "How many agents, how fast, who got hit.",
-        "Admin access is a stake even if the thesis is still weather.",
+        "If I do not get it, they do not get it.",
+        "A missing detail is more useful than a hot take.",
+        "We can sit with we do not know that yet.",
     ),
 }
 
@@ -63,9 +64,9 @@ def _voice_from_character(character: CharacterPackTruth) -> HostVoice:
     rules = character.manifest.get("writer_rules")
     if not isinstance(persona, str) or not persona.strip():
         persona = (
-            "Dry technical anchor. Ask whether there is a thesis, or only weather."
+            "Walk through what the post actually says, one piece at a time."
             if slot == "BOT1"
-            else "Curious co-host. Ask what moved, by how much, for whom."
+            else "Check the last line and ask the obvious hole in it."
         )
     clean_rules: list[str] = []
     if isinstance(rules, (list, tuple)):
@@ -74,9 +75,9 @@ def _voice_from_character(character: CharacterPackTruth) -> HostVoice:
         )
     if not clean_rules:
         if slot == "BOT1":
-            clean_rules.append("Make one clear claim per thought.")
+            clean_rules.append("Say the next thing you need to understand.")
         else:
-            clean_rules.append("Ask what moved, by how much, for whom.")
+            clean_rules.append("Ask about the hole in the last line.")
     return HostVoice(
         speaker=slot,
         persona=persona,
