@@ -132,7 +132,7 @@ A hard half-split (`crop_right=672` / `crop_left=672`) plus
 
 Design-preview crops (`scripts/load-design-preview.py`) now take a **400px**
 window on those centers, `boundsAlignment` center (0). Left (PHASEONE) uses
-`crop_top=64`. Right (deb) uses `crop_top=0` and `crop_bottom=200` so the
+`crop_top=64`. Right (deb) uses `crop_top=12` and `crop_bottom=96` so the
 taller lozenge keeps her crown in frame and the extra comes off the desk.
 That is a tighter zoom than the 500px window so the sprites fill more of
 each well. Position alignment stays top-left so the well sits at (64, 172)
