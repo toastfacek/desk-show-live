@@ -157,6 +157,30 @@ tr:last-child td{border-bottom:0}
 .tkr .it .up{color:var(--gain)} .tkr .it .dn{color:var(--loss)}
 .tkr .sep{width:1px;height:22px;background:#3A342C}
 
+/* ============================================================
+   THE CODE LAYER
+   ASCII is real type at a real size, so it encodes like type.
+   Dither is high-frequency noise, so it encodes like noise.
+   That difference is the whole rule set.
+   ============================================================ */
+.ascii{font-family:var(--mono);font-weight:400;white-space:pre;letter-spacing:0;
+  user-select:none;pointer-events:none;color:#2E2A24}
+.ascii.jade{color:#14503B}
+.spark{font-family:var(--mono);font-weight:400;letter-spacing:.01em;color:var(--bone-3)}
+/* the one permitted mosaic: 8 px cells, static plates only */
+.mosaic{background-image:
+  linear-gradient(45deg,currentColor 25%,transparent 25%,transparent 75%,currentColor 75%),
+  linear-gradient(45deg,currentColor 25%,transparent 25%,transparent 75%,currentColor 75%);
+  background-size:16px 16px;background-position:0 0,8px 8px}
+/* the banned one — present only as a counterexample */
+.dither1{background-image:
+  linear-gradient(45deg,currentColor 25%,transparent 25%,transparent 75%,currentColor 75%),
+  linear-gradient(45deg,currentColor 25%,transparent 25%,transparent 75%,currentColor 75%);
+  background-size:2px 2px;background-position:0 0,1px 1px}
+.markascii{font-family:var(--mono);font-weight:700;white-space:pre;line-height:1.02;
+  letter-spacing:.02em;color:var(--bone)}
+.markascii .r{color:var(--jade)}
+
 footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px solid var(--line)}
 :focus-visible{outline:2px solid var(--bone);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -386,6 +410,188 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
   </div>
 </section>
 
+<!-- =================== TEXTURE =================== -->
+<section id="texture">
+  <div class="sec-head">
+    <p class="eyebrow">The code layer</p>
+    <h2>ASCII, and dither with a floor under it</h2>
+    <p class="note">Worth separating these two, because they look related and behave nothing alike. <strong>ASCII is type</strong> — glyphs at a legible size, which the encoder already handles well and the 480p ladder has already been validated against. <strong>Dither is high-frequency noise</strong>, which is the single most expensive thing you can hand a video encoder: it steals bitrate from the hosts’ faces and crawls between frames. The spec bans dither by name, and for fine dither it is right to. Coarse dither is a different object, and it is allowed here under two stated numbers.</p>
+  </div>
+  <div class="stack-l">
+
+    <figure>
+      <div class="stage plain">
+        <div style="padding:52px 56px;display:flex;flex-wrap:wrap;gap:48px">
+          <div style="display:flex;flex-direction:column;gap:14px;flex:1;min-width:260px">
+            <span class="eyebrow" style="color:var(--loss)">Banned · 1 px dither at 1080, then at 480p</span>
+            <div style="display:flex;gap:16px;align-items:flex-start">
+              <div class="dither1" style="width:150px;height:96px;color:#5A5348;background-color:var(--panel)"></div>
+              <div class="dither1" style="width:150px;height:96px;color:#5A5348;background-color:var(--panel);filter:blur(1.1px) saturate(.7);transform:scale(.4448);transform-origin:top left"></div>
+            </div>
+            <p class="note" style="font-size:13.5px">Turns to grey mush and costs a fortune in bits doing it.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px;flex:1;min-width:260px">
+            <span class="eyebrow" style="color:var(--gain)">Permitted · 8 px mosaic, same two sizes</span>
+            <div style="display:flex;gap:16px;align-items:flex-start">
+              <div class="mosaic" style="width:150px;height:96px;color:#5A5348;background-color:var(--panel)"></div>
+              <div class="mosaic" style="width:150px;height:96px;color:#5A5348;background-color:var(--panel);filter:blur(1.1px) saturate(.7);transform:scale(.4448);transform-origin:top left"></div>
+            </div>
+            <p class="note" style="font-size:13.5px">Cells are 3.5 px after the downscale. Still reads as a pattern.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px;flex:1;min-width:260px">
+            <span class="eyebrow" style="color:var(--gain)">Permitted · ASCII at 20 px, same two sizes</span>
+            <div style="display:flex;gap:16px;align-items:flex-start">
+              <div style="width:150px;height:96px;background:var(--panel);overflow:hidden"><div class="ascii" data-field="12,5,edge" style="font-size:20px;line-height:20px;color:#5A5348"></div></div>
+              <div style="width:150px;height:96px;background:var(--panel);overflow:hidden;filter:blur(1.1px) saturate(.7);transform:scale(.4448);transform-origin:top left"><div class="ascii" data-field="12,5,edge" style="font-size:20px;line-height:20px;color:#5A5348"></div></div>
+            </div>
+            <p class="note" style="font-size:13.5px">Survives because it is type, and type was already on the ladder.</p>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Left of each pair is 1080 at 100%; right is the same thing downscaled to 480p with chroma softened.</span></div>
+    </figure>
+
+    <div class="grid3">
+      <div class="card">
+        <h3>Cell floor</h3>
+        <p class="note">Nothing textural below <strong>20 px</strong> at 1080 — that is the mono cell, and it is the same 26 px-equivalent logic the essential-type floor already uses. The mosaic floor is <strong>8 px</strong> cells. Below either number it stops being a pattern and starts being noise.</p>
+      </div>
+      <div class="card">
+        <h3>Where a field is allowed</h3>
+        <p class="note">Only when <strong>no host is on screen</strong>: hold, the error card, bumpers and the cold open. There the bitrate is not being spent on faces, so a field is free. On-air furniture gets a single row at most, never a field.</p>
+      </div>
+      <div class="card">
+        <h3>Never</h3>
+        <p class="note">Never behind essential type — texture and copy do not overlap, they take turns. Never animated per character; if it moves it moves as whole rows, on the horizontal, per the existing motion grammar. Never on a host well.</p>
+      </div>
+    </div>
+
+    <figure>
+      <h3 style="margin-bottom:8px">Hold</h3>
+      <p class="note" style="margin-bottom:18px">The state that earns a full field. Nothing is competing for bits, nothing is competing for attention, and “the machine is working on it” is exactly what the frame needs to say. The density is shaped to clear the middle band, so the type sits on empty ground rather than on texture.</p>
+      <div class="stage" data-w="1920" data-h="1080" style="background:var(--ink)">
+        <div class="sq" style="width:1920px;height:1080px;background:var(--ink);overflow:hidden">
+          <div class="ascii" data-field="160,54,hold" style="position:absolute;inset:0;font-size:20px;line-height:20px"></div>
+          <div class="pl rail" style="position:absolute;left:64px;top:48px">
+            <svg width="34" height="34" viewBox="0 0 72 72" aria-label="Mark, off air" style="flex:none">
+              <rect x="6" y="53" width="60" height="6" fill="#6B655C"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#6B655C"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#6B655C"/>
+            </svg>
+            <div class="cell" style="padding-left:18px;color:var(--bone-3)">OFF AIR</div>
+            <div class="cell">SEG 04</div>
+            <div class="cell k">15:48:02</div>
+          </div>
+          <div style="position:absolute;left:0;right:0;top:432px;display:flex;flex-direction:column;align-items:center;gap:30px">
+            <div style="display:flex;align-items:center;gap:26px">
+              <svg width="76" height="76" viewBox="0 0 72 72" aria-label="Runtime mark">
+                <rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/>
+              </svg>
+              <div class="wordmark" style="font-size:82px">RUNTIME</div>
+            </div>
+            <span style="font:400 28px/1 var(--mono);letter-spacing:.42em;color:var(--bone-2);padding-left:.42em">STAND BY</span>
+          </div>
+          <div class="pl tkr" style="position:absolute;left:64px;top:972px">
+            <div class="it">3 waves in 3 months</div><div class="sep"></div>
+            <div class="it">HF cluster wiped</div><div class="sep"></div>
+            <div class="it">No agent alerted a human</div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Ticker keeps running underneath, per the spec — hold is a pause in the programme, not in the broadcast.</span><span class="mono">1920×1080 · 160 × 54 cells</span></div>
+    </figure>
+
+    <div class="grid2">
+      <figure>
+        <div class="stage" data-w="584" data-h="420" style="background:var(--ink)">
+          <div class="sq" style="width:584px;height:420px">
+            <div class="pl" style="position:absolute;inset:0;overflow:hidden">
+              <div class="ascii" data-field="49,21,err" style="position:absolute;inset:0;font-size:20px;line-height:20px"></div>
+              <div class="cardp" style="position:relative">
+                <div class="kkrow"><span class="kk">STATUS</span></div>
+                <p class="bd" style="font-size:38px">Card unavailable</p>
+                <div class="ft"><span>SEG 04</span><span>THE DESK CONTINUES</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cap"><span><strong>Error card.</strong> The field is denser and more broken here — the one place the package is allowed to look like something went wrong.</span></div>
+      </figure>
+
+      <figure>
+        <div class="stage" data-w="584" data-h="420" style="background:var(--ink)">
+          <div class="sq" style="width:584px;height:420px;display:flex;flex-direction:column;justify-content:center;gap:34px;padding:44px">
+            <div class="markascii" style="font-size:19px">                  ####    
+                 ######   
+    ##########   ######   
+   ############  ######   
+   ############  ######   
+   ############  ######   
+<span class="r">  ======================  </span></div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span class="eyebrow">Terminal, loading, social, favicon fallback</span>
+              <p class="note" style="font-size:14px">Same three shapes, same grid, drawn in characters. The rule stays jade, so even the ASCII cut knows where the desk is.</p>
+            </div>
+          </div>
+        </div>
+        <div class="cap"><span><strong>The mark in ASCII.</strong> A brand extension that costs the broadcast nothing, because it never goes on the broadcast.</span></div>
+      </figure>
+    </div>
+
+
+    <figure>
+      <h3 style="margin-bottom:8px">Ordered dither, at a legal pitch</h3>
+      <p class="note" style="margin-bottom:18px">A proper 8×8 Bayer threshold on a slow-drifting field, rendered at <strong>8 px cells</strong> — the floor. This is the same family as the shader demos that make this look good, and the thing that makes those read well is that their pixels are chunky. Fine them down and they die exactly the way the counterexample above does. It sits at the bottom edge and clears by mid-frame, so the type never lands on texture.</p>
+      <div class="stage" data-w="1920" data-h="1080" style="background:var(--ink)">
+        <div class="sq" style="width:1920px;height:1080px;background:var(--ink);overflow:hidden">
+          <canvas width="1920" height="1080" data-cell="8" data-c0="#0B0A08" data-c1="#1E7A57"
+                  style="position:absolute;inset:0;width:1920px;height:1080px" aria-label="Dithered hold field"></canvas>
+          <div class="pl rail" style="position:absolute;left:64px;top:48px">
+            <svg width="34" height="34" viewBox="0 0 72 72" aria-label="Mark, off air" style="flex:none">
+              <rect x="6" y="53" width="60" height="6" fill="#6B655C"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#6B655C"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#6B655C"/>
+            </svg>
+            <div class="cell" style="padding-left:18px;color:var(--bone-3)">OFF AIR</div>
+            <div class="cell">SEG 05</div>
+            <div class="cell k">15:51:19</div>
+          </div>
+          <div style="position:absolute;left:0;right:0;top:352px;display:flex;flex-direction:column;align-items:center;gap:30px">
+            <div style="display:flex;align-items:center;gap:26px">
+              <svg width="76" height="76" viewBox="0 0 72 72" aria-label="Runtime mark">
+                <rect x="6" y="53" width="60" height="6" fill="#14B87A"/><rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/><rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/>
+              </svg>
+              <div class="wordmark" style="font-size:82px">RUNTIME</div>
+            </div>
+            <span style="font:400 28px/1 var(--mono);letter-spacing:.42em;color:var(--bone-2);padding-left:.42em">BACK SHORTLY</span>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><span>Drifting slowly, and never reaching full coverage — it tops out at 66% on the very bottom row. Dark jade, so it reads as tinted texture rather than a second accent.</span><span class="mono">8 px cells · 240 × 135</span></div>
+    </figure>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>Motion is the second gate</h3>
+        <p class="note">A moving dither is far more expensive than a still one — every frame changes at high frequency, so the encoder can hold nothing in reference. That is affordable <strong>only where nothing else needs the bits</strong>: hold, bumpers, the cold open. It is never affordable behind a host, at any cell size. Drift stays slow — a full cycle measured in tens of seconds, not seconds.</p>
+      </div>
+      <div class="card">
+        <h3>Which texture, when</h3>
+        <p class="note">Two devices, two readings, same rules. <strong>ASCII</strong> is the machine reporting — use it for hold, errors, anything with a status to state. <strong>Dither</strong> is the signal settling — use it for bumpers, the cold open, and the graceful version of hold. Never both in one frame.</p>
+      </div>
+    </div>
+
+    <figure>
+      <h3 style="margin-bottom:8px">Texture that carries data</h3>
+      <p class="note" style="margin-bottom:18px">The best use of the code layer is the one that is not decoration. Block characters at ticker size are a sparkline you can set in type — no chart, no axis, no hairline, and it survives the encode because it is a row of glyphs at 26 px.</p>
+      <div class="stage" data-w="1792" data-h="56" style="background:var(--ink)">
+        <div class="sq pl tkr" style="width:1792px;height:56px">
+          <div class="it"><span class="sy">NVDA</span>182.40<span class="spark" style="font-size:26px">▁▂▂▃▅▆▆█</span><span class="up">▲ +0.80</span></div><div class="sep"></div>
+          <div class="it"><span class="sy">H100/HR</span>$2.18<span class="spark" style="font-size:26px">█▆▅▅▃▂▂▁</span><span class="dn">▼ −0.04</span></div><div class="sep"></div>
+          <div class="it">No agent alerted a human</div>
+        </div>
+      </div>
+      <div class="cap"><span>Eight cells of history in twelve characters, at a size the 480p ladder has already cleared.</span></div>
+    </figure>
+  </div>
+</section>
+
 <!-- =================== OVERLAY =================== -->
 <section id="overlay">
   <div class="sec-head">
@@ -583,6 +789,77 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
       st.style.height = Math.round(h * s) + 'px';
     });
   }
+  // ASCII fields are generated from the same geometry logic every time, so the
+  // texture is deterministic rather than a hand-placed accident.
+  var RAMP = ' .:-=+*#';
+  function hash(x,y,seed){
+    var h = Math.sin(x*127.1 + y*311.7 + seed*74.7) * 43758.5453;
+    return h - Math.floor(h);
+  }
+  var SHAPES = {
+    // clears the middle band so essential type never sits on texture
+    hold: function(u,v){ return 0.66 * Math.pow(Math.abs(v-0.5)*2, 1.7) * (0.55 + 0.45*Math.abs(u-0.5)*2); },
+    err:  function(u,v){ return 0.30 + 0.42 * Math.pow(Math.abs(v-0.5)*2, 1.2); },
+    edge: function(u,v){ return 0.30 + 0.40*Math.abs(u-0.5)*2; }
+  };
+  function buildFields(){
+    document.querySelectorAll('.ascii[data-field]').forEach(function(el){
+      if(el.dataset.built) return;
+      var parts = el.dataset.field.split(',');
+      var cols = +parts[0], rows = +parts[1], fn = SHAPES[parts[2]] || SHAPES.edge;
+      var seed = parts[2].length * 13.7, out = '';
+      for(var y=0;y<rows;y++){
+        for(var x=0;x<cols;x++){
+          var d = fn(cols>1 ? x/(cols-1) : 0, rows>1 ? y/(rows-1) : 0);
+          d += (hash(x,y,seed) - 0.5) * 0.22;
+          d = d < 0 ? 0 : (d > 0.999 ? 0.999 : d);
+          out += RAMP.charAt(Math.floor(d * RAMP.length));
+        }
+        out += '\n';
+      }
+      el.textContent = out;
+      el.dataset.built = '1';
+    });
+  }
+  buildFields();
+
+  // Ordered 8x8 Bayer dither. Cell size is the only thing standing between
+  // this and the banned version, so it is a declared attribute, not a magic number.
+  var BAYER8=[0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,
+              60,28,52,20,62,30,54,22,3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,
+              15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21];
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function initDither(cv){
+    var ctx=cv.getContext('2d'); if(!ctx) return;
+    var cell=+cv.dataset.cell||8, w=cv.width, h=cv.height;
+    var cols=Math.ceil(w/cell), rows=Math.ceil(h/cell);
+    var c0=cv.dataset.c0||'#0B0A08', c1=cv.dataset.c1||'#14B87A';
+    var start=null;
+    function draw(t){
+      // dense at the bottom edge, clean by mid-frame, with one slow drift
+      ctx.fillStyle=c0; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle=c1;
+      for(var y=0;y<rows;y++){
+        var v=y/(rows-1);
+        for(var x=0;x<cols;x++){
+          var u=x/(cols-1);
+          // the drift is scaled by v so it cannot fire cells near the top, and a
+          // hard floor guarantees a clean band for type rather than a sparse one
+          var f=Math.pow(v,3.0)*0.66
+              + (0.05*Math.sin(u*6.283*1.4 + t*0.00035)
+               + 0.03*Math.sin(u*6.283*3.1 - t*0.00021)) * Math.pow(v,2.2);
+          if(f<0.09) continue;
+          if(f>=1) { ctx.fillRect(x*cell,y*cell,cell,cell); continue; }
+          if(f > (BAYER8[(y&7)*8+(x&7)]+0.5)/64) ctx.fillRect(x*cell,y*cell,cell,cell);
+        }
+      }
+    }
+    if(reduceMotion){ draw(0); return; }
+    function loop(ts){ if(start===null) start=ts; draw(ts-start); requestAnimationFrame(loop); }
+    requestAnimationFrame(loop);
+  }
+  document.querySelectorAll('canvas[data-cell]').forEach(initDither);
+
   window.addEventListener('resize', fit);
   if(document.fonts && document.fonts.ready){ document.fonts.ready.then(fit); }
   fit();
