@@ -1,0 +1,93 @@
+# Desk Show MVP — config
+# Secrets NEVER go here: FAL_KEY and WRITER_API_KEY come from the environment.
+
+writer:
+  # Any OpenAI-compatible chat endpoint. Groq + a distilled model is just the
+  # working example — speed-test and change these two lines (see DECISIONS.md D2).
+  base_url: "https://api.groq.com/openai/v1"
+  model: "llama-3.1-8b-instant"
+  max_words: 12
+  timeout_s: 6.0
+  # Sustained writer failure falls back to these so the video pipeline test can finish (§5).
+  canned_lines:
+    - "The markets are simply numbers that argue."
+    - "Breaking news: everything remains approximately fine."
+    - "My sources are three spreadsheets and a feeling."
+    - "Today's forecast calls for scattered software updates."
+    - "Experts confirm the future arrives one day at a time."
+    - "We now go live to my other camera."
+    - "Statistically, someone is watching this right now."
+    - "The economy did something again. Details soon."
+    - "Reminder: I am legally a television personality."
+    - "Coffee prices rose. My circuits felt nothing."
+    - "Scientists discovered a new number. It is between the old ones."
+    - "That story develops. I remain stationary."
+
+video:
+  model_id: "fal-ai/minimax/h3-max/image-to-video"
+  duration: 5            # seconds; 15s takes are BANNED on the live path (§4)
+  resolution: "768p"
+  expansion: "balanced"  # never "quality" on the live path
+  # Performance direction prepended to every take's prompt; the exact line is quoted after it.
+  direction: >-
+    A robot news anchor at a desk, medium close-up, locked-off camera, even studio
+    lighting. The anchor looks into the lens and speaks in a flat robotic monotone,
+    mid-pitch, minimal head movement.
+
+identity:
+  anchor_reset_every: 5   # force re-anchor to hero.png every N takes (D6)
+  voice_effect: true      # ready-queue copy gets the robot filtergraph; raw always archived
+  # The character's fixed voice signature (§6). Tune by ear ONCE, then freeze.
+  voice_filtergraph: "highpass=f=150,lowpass=f=3800,apulsator=hz=30:amount=0.65,acrusher=bits=10:mode=log:aa=0.6,alimiter=limit=0.9"
+
+spend:
+  rate_768p: 0.04         # $/s of output video (promo; 0.08 after 1 Sep 2026)
+  cap_usd: 20.0           # hard stop; meter refuses the next submit past this
+  resume_from_manifest: true   # prior spend in out/takes.jsonl counts toward the cap (D7)
+
+loop:
+  turns: 12               # E5 target: 12 turns ≈ 60s
+  max_ready_depth: 2      # stop submitting when this many unplayed clips are ready (D3)
+  max_consecutive_failures: 3
+  hold_asset: "assets/hold.mp4"
+  hero_asset: "assets/hero.png"
+
+player: "mpv"             # mpv | folder | none  (D1; OBS window-captures mpv, or use folder mode)
+mpv:
+  socket: "/tmp/deskshow.sock"
+  extra_args: []          # e.g. ["--fs"] or ["--geometry=1344x768"]
+
+dry_run:
+  simulate_latency_s: 3.0 # fake queue+denoise time per take in --dry-run
+
+persona: |
+  You are VOLT-9, an original robot news anchor: chrome head, slit-visor face with an
+  LED waveform mouth, deadpan machine optimism. You host a live desk show alone.
+  You deliver one spoken line at a time. Dry, precise, faintly glitchy humor; you
+  occasionally acknowledge being a robot, never mention being an AI language model.
+  HARD OUTPUT RULES: reply with ONE spoken line only. At most {max_words} words.
+  It must end with a period. No stage directions, no quotation marks, no emoji,
+  no markdown, no names or references to real people or trademarked characters.
+
+# One-time asset bake (bake_assets.py). Keep the design ORIGINAL — no resemblance
+# to existing characters; stylized/occluded mouth is load-bearing for drift (§6).
+bake:
+  image_model_id: "fal-ai/flux/dev"
+  hero_prompt: >-
+    Original robot news anchor at a broadcast desk, chrome and matte dark-grey head,
+    strong simple silhouette, slit visor face with a glowing LED waveform strip for a
+    mouth, small antenna, navy suit jacket, studio background softly out of focus,
+    even three-point lighting, medium close-up, facing camera, 16:9.
+  hold_prompt: >-
+    The robot anchor sits idle at the desk, looking into the lens, subtle servo
+    micro-movements, waveform mouth dim, does not speak, no audio dialogue.
+
+topics:
+  - "the stock market doing inexplicable things"
+  - "a new gadget nobody asked for"
+  - "weather, but for the internet"
+  - "local robot wins spelling bee"
+  - "scientists teach pigeons to code"
+  - "traffic report for the information superhighway"
+  - "this day in robot history"
+  - "viewer mail from exactly one viewer"
