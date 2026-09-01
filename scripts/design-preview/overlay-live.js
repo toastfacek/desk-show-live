@@ -287,12 +287,12 @@ function bootProducerOverlay() {
         { cache: "no-store" }
       );
       if (!response.ok) {
-        return "";
+        return {};
       }
       const payload = await response.json();
-      return typeof payload.layout === "string" ? payload.layout : "";
+      return payload && typeof payload === "object" ? payload : {};
     } catch (_error) {
-      return "";
+      return {};
     }
   }
 
@@ -305,15 +305,16 @@ function bootProducerOverlay() {
     } catch (_error) {
       /* card origin may be down during preview */
     }
-    const previewLayout = await readPreviewLayout();
-    if (previewLayout) {
-      nodes.layout = applyOverlayLayout(previewLayout, nodes);
+    const preview = await readPreviewLayout();
+    if (typeof preview.layout === "string" && preview.layout) {
+      nodes.layout = applyOverlayLayout(preview.layout, nodes);
     } else if (nodes.layout) {
       applyOverlayLayout(nodes.layout, nodes);
     }
-    if (nodes.card) {
-      applyTweetShot(nodes.card, nodes);
+    if (preview.card_mode === "shot" || preview.card_mode === "embed") {
+      nodes.cardMode = preview.card_mode;
     }
+    applyTweetShot(nodes.card || { has_shot: preview.card_mode === "shot" }, nodes);
   }
 
   poll();
