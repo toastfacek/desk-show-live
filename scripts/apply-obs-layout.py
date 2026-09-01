@@ -222,10 +222,6 @@ def apply_layout(
         )
 
     client.set_current_scene_transition("Cut")
-    try:
-        client.set_current_scene_transition_duration(0)
-    except Exception:
-        pass
     client.set_input_settings(
         name="HOST_WIDE",
         settings={

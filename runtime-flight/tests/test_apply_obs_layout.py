@@ -36,6 +36,7 @@ def test_host_wide_playback_does_not_loop() -> None:
     source = inspect.getsource(apply_obs_layout.apply_layout)
     assert '"looping": False' in source
     assert 'set_current_scene_transition("Cut")' in source
+    assert "set_current_scene_transition_duration" not in source
 
 
 def test_apply_layout_refuses_streaming_before_any_mutation() -> None:

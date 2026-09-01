@@ -382,10 +382,6 @@ def apply_identity_overlay(client: ReqClient, *, url: str) -> dict:
 
 def apply_cut_transition(client: ReqClient) -> None:
     client.set_current_scene_transition("Cut")
-    try:
-        client.set_current_scene_transition_duration(0)
-    except Exception:
-        pass
 
 
 def apply_host_wide_playback(client: ReqClient) -> None:
