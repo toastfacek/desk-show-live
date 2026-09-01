@@ -3,7 +3,59 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import time
+from pathlib import Path
+
+
+LAYOUTS = ("wide", "split", "solo_l", "solo_r", "card_full", "hold")
+HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
+HIGHLIGHT_SOURCES = ("HL_A", "HL_B")
+
+
+def prepare_obs_clip(path: str | Path) -> Path:
+    """Remux H3 Constrained Baseline into High@3.2 so ffmpeg_source paints.
+
+    Fal's ready files are valid media; this box's OBS source goes black on
+    them. Evidence keeps the original. Playback uses a sibling `.obs.mp4`.
+    """
+    src = Path(path)
+    dest = src.with_name(f"{src.stem}.obs{src.suffix}")
+    if (
+        dest.is_file()
+        and dest.stat().st_size > 0
+        and dest.stat().st_mtime >= src.stat().st_mtime
+    ):
+        return dest
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(dest.name + ".tmp.mp4")
+    try:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(src),
+                "-c:v",
+                "libx264",
+                "-profile:v",
+                "high",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "aac",
+                "-movflags",
+                "+faststart",
+                str(tmp),
+            ],
+            check=True,
+            capture_output=True,
+        )
+        os.replace(tmp, dest)
+        return dest
+    except (OSError, subprocess.CalledProcessError):
+        tmp.unlink(missing_ok=True)
+        return src
 
 
 LAYOUTS = ("wide", "split", "solo_l", "solo_r", "card_full", "hold")
@@ -117,9 +169,10 @@ class ObsPlayer:
 
     def play_clip(self, path: str) -> None:
         client = self._req()
+        playable = str(prepare_obs_clip(path))
         client.set_input_settings(
             name="HOST_WIDE",
-            settings={"local_file": path},
+            settings={"local_file": playable},
             overlay=True,
         )
         try:

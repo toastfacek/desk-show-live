@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import pytest
 
-from obs_harness.player_obs import HOST_LAYOUTS, LAYOUTS, ObsPlayer
+from obs_harness.player_obs import HOST_LAYOUTS, LAYOUTS, ObsPlayer, prepare_obs_clip
 
 
 @dataclass
@@ -33,6 +34,12 @@ class FakeObsClient:
 
     def set_scene_item_enabled(self, scene_name: str, item_id: int, enabled: bool):
         self.calls.append(("set_scene_item_enabled", scene_name, item_id, enabled))
+
+    def set_input_settings(self, name: str, settings: dict, overlay: bool):
+        self.calls.append(("set_input_settings", name, settings, overlay))
+
+    def trigger_media_input_action(self, name: str, action: str):
+        self.calls.append(("trigger_media_input_action", name, action))
 
     def get_current_program_scene(self):
         self.calls.append(("get_current_program_scene",))
@@ -185,3 +192,57 @@ def test_get_program_state_missing_source_is_not_ok():
     assert state["connected"] is True
     assert state["media_ok"] is False
     assert state["on_air"]["media_ok"] is False
+
+
+def _tiny_clip(path: Path) -> Path:
+    import subprocess
+
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red:s=64x48:d=0.2:r=24",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=32000:cl=stereo",
+            "-shortest",
+            "-c:v",
+            "libx264",
+            "-profile:v",
+            "baseline",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            str(path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    return path
+
+
+def test_prepare_obs_clip_writes_high_profile_sibling(tmp_path: Path):
+    src = _tiny_clip(tmp_path / "001.mp4")
+    dest = prepare_obs_clip(src)
+    assert dest != src
+    assert dest.name == "001.obs.mp4"
+    assert dest.is_file()
+    again = prepare_obs_clip(src)
+    assert again == dest
+
+
+def test_play_clip_points_host_wide_at_obs_playable(tmp_path: Path):
+    src = _tiny_clip(tmp_path / "003.mp4")
+    client = FakeObsClient()
+    player = _player_with_client(client)
+    player.play_clip(str(src))
+    settings = [
+        call for call in client.calls if call[0] == "set_input_settings"
+    ]
+    assert settings[-1][1] == "HOST_WIDE"
+    assert settings[-1][2]["local_file"].endswith("003.obs.mp4")
