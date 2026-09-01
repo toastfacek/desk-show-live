@@ -215,6 +215,7 @@ def _bounds(
         "boundsAlignment": int(bounds_alignment),
         "boundsWidth": float(w),
         "boundsHeight": float(h),
+        "cropToBounds": True,
         "cropLeft": int(crop_left),
         "cropRight": int(crop_right),
         "cropTop": int(crop_top),

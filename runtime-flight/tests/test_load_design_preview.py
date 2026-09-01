@@ -201,5 +201,6 @@ def test_host_crops_center_sprites_inside_each_well() -> None:
         well["x"], well["y"], well["w"], well["h"], **left
     )
     assert transform["boundsAlignment"] == load_design_preview.ALIGN_CENTER
+    assert transform["cropToBounds"] is True
     assert transform["cropLeft"] == left["crop_left"]
     assert transform["cropRight"] == left["crop_right"]

@@ -133,8 +133,9 @@ A hard half-split (`crop_right=672` / `crop_left=672`) plus
 Design-preview crops (`scripts/load-design-preview.py`) now take a **500px**
 window on those centers, `crop_top=48`, `boundsAlignment` center (0). Position
 alignment stays top-left so the well sits at (64, 172) / (1276, 172), 32px
-under the original y=140 frame so the cameras clear the logo, sponsor, and
-timer. Well height is 628 so the chyron at y=838 stays clear.
+under the original y=140 frame. `cropToBounds` is on so `SCALE_OUTER` cannot
+paint into the logo, sponsor, or timer. Well height is 628 so the chyron at
+y=838 stays clear.
 
 | | Left well-rel | Right well-rel |
 | :-- | :-- | :-- |
