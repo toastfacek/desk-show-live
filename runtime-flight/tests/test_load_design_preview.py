@@ -22,11 +22,16 @@ def test_wash_is_not_a_contract_input() -> None:
     assert load_design_preview.WASH_SOURCE not in REQUIRED_INPUTS
 
 
-def test_on_air_url_freezes_the_wash() -> None:
+def test_wash_url_drifts_by_default_and_can_freeze() -> None:
     assert load_design_preview.wash_url(8766) == (
-        "http://127.0.0.1:8766/dither-wash.html?static=1"
+        "http://127.0.0.1:8766/dither-wash.html?static=0&speed=1"
     )
-    assert "static=0" in load_design_preview.wash_url(8766, static=False)
+    assert load_design_preview.wash_url(8766, speed=2.5).endswith(
+        "static=0&speed=2.5"
+    )
+    frozen = load_design_preview.wash_url(8766, static=True)
+    assert frozen.endswith("static=1")
+    assert "speed=" not in frozen
 
 
 def test_browser_settings_are_full_canvas_silent() -> None:

@@ -4,6 +4,11 @@ Extracts the identity overlay, mark cuts, and dither wash from
 research/mocks/. Does not write assets/broadcast/. WASH is not a
 contract input. Package A stays blocked on the relock.
 
+The wash is OBS furniture. H3 only sees the 1344×768 wide shot (hero or
+that take's last frame). Program-out never goes back into fal, so the
+wash can drift without touching generation. --static freezes it for an
+encode test.
+
 identity-bracket.html is the review page (scroll it in a browser).
 overlay-live.html is the 1920×1080 CG cut: transparent host wells,
 mark + rail + names + card + chyron + ticker. WATCHDOG points at that.
@@ -81,12 +86,24 @@ assert WASH_SOURCE not in REQUIRED_INPUTS
 assert OVERLAY_LIVE_SRC.is_file()
 
 
-def wash_query(*, static: bool = True) -> str:
-    return urlencode({"static": "1" if static else "0"})
+def wash_query(*, static: bool = False, speed: float = 1.0) -> str:
+    params: dict[str, str] = {"static": "1" if static else "0"}
+    if not static:
+        params["speed"] = f"{speed:g}"
+    return urlencode(params)
 
 
-def wash_url(port: int, *, static: bool = True, host: str = "127.0.0.1") -> str:
-    return f"http://{host}:{int(port)}/dither-wash.html?{wash_query(static=static)}"
+def wash_url(
+    port: int,
+    *,
+    static: bool = False,
+    speed: float = 1.0,
+    host: str = "127.0.0.1",
+) -> str:
+    return (
+        f"http://{host}:{int(port)}/dither-wash.html?"
+        f"{wash_query(static=static, speed=speed)}"
+    )
 
 
 def overlay_live_url(
@@ -409,9 +426,20 @@ def main() -> int:
     parser.add_argument("--ref", default=DESIGN_REF)
     parser.add_argument("--speaker", choices=("a", "b"), default="a")
     parser.add_argument(
+        "--static",
+        action="store_true",
+        help="Freeze the wash (encode-safe). Default is drift behind the desk.",
+    )
+    parser.add_argument(
+        "--speed",
+        type=float,
+        default=1.0,
+        help="Wash drift rate. Ignored with --static. HTML default is 1.",
+    )
+    parser.add_argument(
         "--drift",
         action="store_true",
-        help="Allow wash drift. Default is ?static=1 (on-air).",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--extract-only",
@@ -445,7 +473,9 @@ def main() -> int:
         return 0
 
     served = serve_preview(args.preview_dir, args.preview_port)
-    wash = wash_url(args.preview_port, static=not args.drift)
+    wash = wash_url(
+        args.preview_port, static=args.static, speed=args.speed
+    )
     overlay = overlay_live_url(args.preview_port, speaker=args.speaker)
     if args.serve_only:
         print(
