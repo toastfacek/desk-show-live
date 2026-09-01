@@ -58,3 +58,11 @@ def test_trim_panel_drops_empty_bottom() -> None:
     image.paste(Image.new("RGB", (100, 40), (9, 9, 9)), (0, 0))
     trimmed = trim_panel(image)
     assert trimmed.size == (100, 40)
+
+
+def test_trim_panel_drops_side_gutters() -> None:
+    image = Image.new("RGB", (120, 80), (21, 19, 15))
+    image.paste(Image.new("RGB", (60, 50), (21, 32, 43)), (12, 8))
+    trimmed = trim_panel(image)
+    assert trimmed.size == (60, 50)
+    assert trimmed.getpixel((0, 0)) == (21, 32, 43)

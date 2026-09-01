@@ -66,15 +66,45 @@ def is_blank_panel(image: Image.Image, *, panel: tuple[int, int, int] = PANEL) -
     return matches / total > 0.98
 
 
-def trim_panel(image: Image.Image, *, panel: tuple[int, int, int] = PANEL) -> Image.Image:
+def _is_panel(
+    pixel: tuple[int, int, int],
+    panel: tuple[int, int, int],
+    slop: int,
+) -> bool:
+    return all(abs(int(a) - int(b)) <= slop for a, b in zip(pixel, panel))
+
+
+def trim_panel(
+    image: Image.Image,
+    *,
+    panel: tuple[int, int, int] = PANEL,
+    slop: int = 6,
+) -> Image.Image:
     rgb = image.convert("RGB")
     pixels = rgb.load()
-    last = rgb.height - 1
-    for y in range(rgb.height - 1, -1, -1):
-        if any(pixels[x, y] != panel for x in range(rgb.width)):
-            last = y
-            break
-    return rgb.crop((0, 0, rgb.width, last + 1))
+    width, height = rgb.size
+
+    def row_empty(y: int) -> bool:
+        return all(_is_panel(pixels[x, y], panel, slop) for x in range(width))
+
+    def col_empty(x: int) -> bool:
+        return all(_is_panel(pixels[x, y], panel, slop) for y in range(height))
+
+    top = 0
+    while top < height and row_empty(top):
+        top += 1
+    bottom = height - 1
+    while bottom >= top and row_empty(bottom):
+        bottom -= 1
+    left = 0
+    while left < width and col_empty(left):
+        left += 1
+    right = width - 1
+    while right >= left and col_empty(right):
+        right -= 1
+    if top > bottom or left > right:
+        return rgb
+    return rgb.crop((left, top, right + 1, bottom + 1))
 
 
 def write_shot_set(image: Image.Image, dest: Path) -> dict[str, Path]:
