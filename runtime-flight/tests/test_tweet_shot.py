@@ -60,6 +60,15 @@ def test_trim_panel_drops_empty_bottom() -> None:
     assert trimmed.size == (100, 40)
 
 
+def test_write_shot_set_insets_rounded_corners(tmp_path: Path) -> None:
+    image = Image.new("RGB", (200, 200), (21, 19, 15))
+    image.paste(Image.new("RGB", (160, 160), (21, 32, 43)), (20, 20))
+    paths = write_shot_set(image, tmp_path)
+    solo = Image.open(paths["solo"]).convert("RGB")
+    assert solo.getpixel((4, 4)) == (21, 32, 43)
+    assert solo.getpixel((solo.width - 5, 4)) == (21, 32, 43)
+
+
 def test_trim_panel_drops_side_gutters() -> None:
     image = Image.new("RGB", (120, 80), (21, 19, 15))
     image.paste(Image.new("RGB", (60, 50), (21, 32, 43)), (12, 8))

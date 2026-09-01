@@ -27,6 +27,9 @@ SHOT_SPLIT_NAME = "tweet-shot-split.png"
 SHOT_SOLO_NAME = "tweet-shot-solo.png"
 SHOT_CARD_NAME = "tweet-shot-card.png"
 WELL_CROP = {"x": 668, "y": 172, "w": 584, "h": 628}
+# Eat the official card's rounded-corner panel wedges so cover-crop
+# starts on tweet fill, not #15130F.
+CARD_INSET = 10
 
 
 class TweetShotError(Exception):
@@ -114,6 +117,18 @@ def write_shot_set(image: Image.Image, dest: Path) -> dict[str, Path]:
     solo = dest / SHOT_SOLO_NAME
     card = dest / SHOT_CARD_NAME
     trimmed = trim_panel(image)
+    if (
+        trimmed.width > CARD_INSET * 2
+        and trimmed.height > CARD_INSET * 2
+    ):
+        trimmed = trimmed.crop(
+            (
+                CARD_INSET,
+                CARD_INSET,
+                trimmed.width - CARD_INSET,
+                trimmed.height - CARD_INSET,
+            )
+        )
     trimmed.save(full, format="PNG")
     cover_crop(trimmed, *SPLIT_SIZE).save(split, format="PNG")
     cover_crop(trimmed, *SOLO_SIZE).save(solo, format="PNG")
