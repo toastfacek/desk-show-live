@@ -142,7 +142,7 @@ def test_overlay_live_polls_card_without_html_injection() -> None:
     assert "platform.twitter.com/widgets.js" in embed
     assert "twitter.com/i/status/" in embed
     assert "overflow:hidden" in embed
-    assert "fitTweet" in embed
+    assert "fitTweet" not in embed
     assert "innerHTML" not in embed
 
 

@@ -192,8 +192,10 @@ stays in the scenes and stays hidden. The overlay owns those plates.
   `--source-dir`.
 - Overlay CG polls `card.json`. The centre well is the official X widget
   (`platform.twitter.com/widgets.js`) via same-origin `tweet-embed.html`,
-  not a transcribed POST card. The transcribed card stays underneath if
-  the widget does not paint. Desk chyron and ticker stay ours.
+  not a transcribed POST card. The well crops the widget at 628px; it
+  does not scale the whole post to fit. The transcribed card stays
+  underneath if the widget does not paint. Desk chyron and ticker stay
+  ours.
   `tweet-embed.html` loads from the overlay host (same origin) so OBS CEF
   can paint the widget. WATCHDOG on :8766 still passes
   `card_origin=http://127.0.0.1:8765` for `card.json`.

@@ -5,34 +5,15 @@
 <title>Tweet embed</title>
 <style>
 html,body{margin:0;width:100%;height:100%;background:#15130F;overflow:hidden}
-#fit{position:absolute;top:0;left:0;width:100%;transform-origin:top center}
 .twitter-tweet{margin:0 !important}
 </style>
 </head>
 <body>
-<div id="fit">
 <blockquote class="twitter-tweet" data-dnt="true" data-theme="dark" data-conversation="none">
 <a id="tweet-link" href="https://twitter.com/i/status/0"></a>
 </blockquote>
-</div>
 <script>
 (function () {
-  function fitTweet() {
-    var fit = document.getElementById("fit");
-    if (!fit) {
-      return;
-    }
-    var node = fit.querySelector("iframe") || fit.querySelector(".twitter-tweet-rendered") || fit;
-    var height = node.getBoundingClientRect().height / (Number(fit.dataset.scale) || 1);
-    var avail = Math.max(1, document.documentElement.clientHeight - 8);
-    if (!height || !avail) {
-      return;
-    }
-    var scale = height > avail ? avail / height : 1;
-    fit.dataset.scale = String(scale);
-    fit.style.transform = "scale(" + scale + ")";
-  }
-
   var params = new URLSearchParams(location.search);
   var id = params.get("id") || "";
   if (!/^\d{5,25}$/.test(id)) {
@@ -43,28 +24,12 @@ html,body{margin:0;width:100%;height:100%;background:#15130F;overflow:hidden}
   if (quote) {
     quote.setAttribute("data-theme", theme);
   }
-  document.getElementById("tweet-link").href = "https://twitter.com/i/status/" + id;
+  document.getElementById("tweet-link").href =
+    "https://twitter.com/i/status/" + id;
   var script = document.createElement("script");
   script.src = "https://platform.twitter.com/widgets.js";
   script.async = true;
-  script.onload = function () {
-    if (window.twttr && twttr.ready) {
-      twttr.ready(function (twttr) {
-        twttr.events.bind("rendered", fitTweet);
-      });
-    }
-    fitTweet();
-  };
   document.body.appendChild(script);
-  window.addEventListener("resize", fitTweet);
-  new MutationObserver(function () {
-    var iframe = document.querySelector("#fit iframe");
-    if (iframe && !iframe.dataset.fitWatched) {
-      iframe.dataset.fitWatched = "1";
-      new ResizeObserver(fitTweet).observe(iframe);
-    }
-    fitTweet();
-  }).observe(document.getElementById("fit"), { childList: true, subtree: true });
 })();
 </script>
 </body>
