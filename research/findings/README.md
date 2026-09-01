@@ -13,4 +13,4 @@ Editorial (not a visual lane):
 
 Operational (not a visual lane):
 
-- [../../runtime-flight/LIVE_FLIGHT_CHECK.md](../../runtime-flight/LIVE_FLIGHT_CHECK.md) — First paid OBS live: Constrained Baseline decode, silent mix, Fade + `card_full`, sprite-centered crops.
+- [../../runtime-flight/LIVE_FLIGHT_CHECK.md](../../runtime-flight/LIVE_FLIGHT_CHECK.md) — First paid OBS live: Constrained Baseline decode, silent mix, Fade + `card_full`, sprite-centered crops. Tweet URL → `tweet.png` + dynamic producer card is `runtime_flight stage`.

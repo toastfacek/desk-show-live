@@ -26,7 +26,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from obsws_python import ReqClient
 
@@ -44,7 +44,9 @@ DESIGN_REF = "claude/design-brief-search-i5q8vj"
 WASH_REPO_PATH = "research/mocks/dither-wash.html"
 WASH_SOURCE = "WASH"
 OVERLAY_LIVE_NAME = "overlay-live.html"
+OVERLAY_LIVE_JS_NAME = "overlay-live.js"
 OVERLAY_LIVE_SRC = Path(__file__).resolve().parent / "design-preview" / OVERLAY_LIVE_NAME
+OVERLAY_LIVE_JS_SRC = Path(__file__).resolve().parent / "design-preview" / OVERLAY_LIVE_JS_NAME
 DEFAULT_PREVIEW_DIR = Path("/tmp/runtime-design-preview")
 DEFAULT_PORT = 8766
 CANVAS_W = 1920
@@ -101,6 +103,7 @@ PREVIEW_REPO_FILES = (
 
 assert WASH_SOURCE not in REQUIRED_INPUTS
 assert OVERLAY_LIVE_SRC.is_file()
+assert OVERLAY_LIVE_JS_SRC.is_file()
 
 
 def wash_query(*, static: bool = False, speed: float = 1.0) -> str:
@@ -124,9 +127,25 @@ def wash_url(
 
 
 def overlay_live_url(
-    port: int, *, speaker: str = "a", host: str = "127.0.0.1"
+    port: int,
+    *,
+    speaker: str = "a",
+    host: str = "127.0.0.1",
+    card_origin: str | None = None,
 ) -> str:
-    return f"http://{host}:{int(port)}/{OVERLAY_LIVE_NAME}?speaker={speaker}"
+    url = f"http://{host}:{int(port)}/{OVERLAY_LIVE_NAME}?speaker={speaker}"
+    if card_origin:
+        url += f"&card_origin={quote(card_origin, safe=':/')}"
+    return url
+
+
+def copy_overlay_live(dest: Path) -> dict[str, str]:
+    dest.mkdir(parents=True, exist_ok=True)
+    live = dest / OVERLAY_LIVE_NAME
+    script = dest / OVERLAY_LIVE_JS_NAME
+    shutil.copyfile(OVERLAY_LIVE_SRC, live)
+    shutil.copyfile(OVERLAY_LIVE_JS_SRC, script)
+    return {OVERLAY_LIVE_NAME: str(live), OVERLAY_LIVE_JS_NAME: str(script)}
 
 
 def wash_browser_settings(url: str) -> dict:
@@ -278,9 +297,7 @@ def extract_preview(dest: Path, *, ref: str = DESIGN_REF) -> dict[str, str]:
         dest / "identity-bracket.html"
     ).read_bytes():
         raise RuntimeError("extracted file is not identity-bracket.html")
-    live = dest / OVERLAY_LIVE_NAME
-    shutil.copyfile(OVERLAY_LIVE_SRC, live)
-    written[OVERLAY_LIVE_NAME] = str(live)
+    written.update(copy_overlay_live(dest))
     return written
 
 
@@ -487,6 +504,16 @@ def main() -> int:
     parser.add_argument("--ref", default=DESIGN_REF)
     parser.add_argument("--speaker", choices=("a", "b"), default="a")
     parser.add_argument(
+        "--card-origin",
+        default="",
+        help="Loopback OverlayServer origin the live CG should poll for card.json.",
+    )
+    parser.add_argument(
+        "--overlay-url",
+        default="",
+        help="Full WATCHDOG URL. Overrides preview-port overlay-live URL.",
+    )
+    parser.add_argument(
         "--static",
         action="store_true",
         help="Freeze the wash (encode-safe). Default is drift behind the desk.",
@@ -519,7 +546,7 @@ def main() -> int:
     if not identity.is_file() or not live.is_file():
         extract_preview(args.preview_dir, ref=args.ref)
     else:
-        shutil.copyfile(OVERLAY_LIVE_SRC, live)
+        copy_overlay_live(args.preview_dir)
     if args.extract_only:
         print(
             json.dumps(
@@ -537,7 +564,11 @@ def main() -> int:
     wash = wash_url(
         args.preview_port, static=args.static, speed=args.speed
     )
-    overlay = overlay_live_url(args.preview_port, speaker=args.speaker)
+    overlay = args.overlay_url or overlay_live_url(
+        args.preview_port,
+        speaker=args.speaker,
+        card_origin=args.card_origin or None,
+    )
     if args.serve_only:
         print(
             json.dumps(

@@ -183,8 +183,13 @@ stays in the scenes and stays hidden. The overlay owns those plates.
   names.
 - `HOST_SYSTEM` must not contain the substring `deb`.
 - Live fal endpoint stays `minimax/h3-max/image-to-video`.
-- `load_source_packet` is locked to the Dwarkesh tweet. Other cards need
-  `--package`.
+- Default `load_source_packet` stays locked to the Dwarkesh tweet.
+  A staged lock (`binding: staged`) from `runtime_flight stage --tweet-url`
+  is the other reviewed path. Live / discuss / segment accept it via
+  `--source-dir`.
+- Overlay CG now polls `card.json` and can show `/tweet.png` in the centre
+  well. WATCHDOG on :8766 should pass `card_origin=http://127.0.0.1:8765`
+  after stage, or point at `http://127.0.0.1:8765/overlay-live.html`.
 - Discuss is text-only. `--confirm-text-requests` is required. With
   `--package`, confirm == max-turns. Cap 12 turns.
 - Spoken Writer lines stay at 120 chars / ~4.3s. Discuss lines stay at 220.
@@ -197,7 +202,9 @@ stays in the scenes and stays hidden. The overlay owns those plates.
 Before `live`:
 
 1. OBS not streaming. Record directory `out/obs-recordings`.
-2. Preview HTTP on :8766. `WATCHDOG` URL is overlay-live on **8766**, not 8765.
+2. Preview HTTP on :8766 for wash. After `stage`, WATCHDOG overlay-live
+   must poll the OverlayServer card (`?card_origin=http://127.0.0.1:8765`)
+   or load `http://127.0.0.1:8765/overlay-live.html`.
 3. Scene transition is **Cut**. `HOST_WIDE` `looping` and
    `restart_on_activate` are false.
 4. Split `HOST_WIDE` crops are the 500px sprite windows, not 672/672.

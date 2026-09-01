@@ -12,7 +12,9 @@ from typing import Any
 from urllib.parse import urlparse
 
 DEFAULT_OVERLAY_DIR = Path(__file__).resolve().parent.parent / "overlay"
+DESIGN_PREVIEW_DIR = Path(__file__).resolve().parents[2] / "scripts" / "design-preview"
 DEFAULT_MAX_STATE_BYTES = 65_536
+MAX_IMAGE_BYTES = 4_000_000
 HEARTBEAT_INTERVAL_S = 0.25
 STALE_MS = 1_200
 
@@ -21,6 +23,10 @@ _STATIC_FILES = {
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
+}
+_DESIGN_FILES = {
+    "/overlay-live.html": ("overlay-live.html", "text/html; charset=utf-8"),
+    "/overlay-live.js": ("overlay-live.js", "text/javascript; charset=utf-8"),
 }
 
 
@@ -55,7 +61,8 @@ class OverlayServer:
         self._lock = threading.Lock()
         self._healthy = True
         self._sequence = 0
-        self._card = {"author": "", "text": "", "timestamp": ""}
+        self._card: dict[str, Any] = {"author": "", "text": "", "timestamp": ""}
+        self._image_bytes: bytes | None = None
         self._heartbeat_written_at = time.monotonic()
         self._httpd: ThreadingHTTPServer | None = None
         self._http_thread: threading.Thread | None = None
@@ -63,6 +70,7 @@ class OverlayServer:
         self._heartbeat_thread: threading.Thread | None = None
         self._heartbeat_path: Path | None = None
         self._card_path: Path | None = None
+        self._image_path: Path | None = None
         self._paused = False
 
     @property
@@ -86,9 +94,11 @@ class OverlayServer:
             self._state_dir = self._overlay_dir / "state"
         self._heartbeat_path = self._state_dir / "heartbeat.json"
         self._card_path = self._state_dir / "card.json"
+        self._image_path = self._state_dir / "tweet.png"
         with self._lock:
             self._write_heartbeat_locked(increment=True)
             self._write_card_locked()
+            self._write_image_locked()
 
         handler = _make_handler(self)
         httpd = ThreadingHTTPServer((self._host, self._port), handler)
@@ -130,20 +140,43 @@ class OverlayServer:
     def __exit__(self, *exc: object) -> None:
         self.stop()
 
+    @property
+    def live_url(self) -> str:
+        return f"{self.url}overlay-live.html"
+
     def set_card(
         self,
         *,
         author: str,
         text: str,
         timestamp: str = "",
+        url: str = "",
+        chyron: str = "",
+        ticker: list[str] | tuple[str, ...] | None = None,
+        image_url: str = "/tweet.png",
+        speaker: str = "a",
+        seg: str = "",
+        image_bytes: bytes | None = None,
     ) -> None:
+        items = [item for item in (ticker or ()) if isinstance(item, str) and item]
         with self._lock:
             self._card = {
                 "author": author,
                 "text": text,
                 "timestamp": timestamp,
+                "url": url,
+                "chyron": chyron,
+                "ticker": items[:6],
+                "image_url": image_url if image_url.startswith("/") else "/tweet.png",
+                "speaker": speaker if speaker in {"a", "b"} else "a",
+                "seg": seg,
             }
+            if image_bytes is not None:
+                if len(image_bytes) > MAX_IMAGE_BYTES:
+                    raise ValueError("tweet image exceeds size limit")
+                self._image_bytes = image_bytes
             self._write_card_locked()
+            self._write_image_locked()
 
     def set_healthy(self, healthy: bool) -> None:
         with self._lock:
@@ -165,11 +198,25 @@ class OverlayServer:
                 "age_ms": self._age_ms_locked(),
             }
 
-    def card_response(self) -> dict[str, str]:
+    def card_response(self) -> dict[str, Any]:
         with self._lock:
             return dict(self._card)
 
+    def tweet_image_bytes(self) -> bytes | None:
+        with self._lock:
+            if self._image_bytes:
+                return self._image_bytes
+            if self._image_path is not None and self._image_path.is_file():
+                return self._image_path.read_bytes()
+            return None
+
     def static_bytes(self, filename: str) -> bytes:
+        if filename in {"overlay-live.html", "overlay-live.js"}:
+            path = (DESIGN_PREVIEW_DIR / filename).resolve()
+            root = DESIGN_PREVIEW_DIR.resolve()
+            if path.parent != root or not path.is_file():
+                raise FileNotFoundError(filename)
+            return path.read_bytes()
         path = (self._overlay_dir / filename).resolve()
         overlay_root = self._overlay_dir.resolve()
         if overlay_root not in path.parents and path != overlay_root:
@@ -210,6 +257,15 @@ class OverlayServer:
             max_bytes=self._max_state_bytes,
         )
 
+    def _write_image_locked(self) -> None:
+        if not self._image_bytes or self._image_path is None:
+            return
+        atomic_write_bytes(
+            self._image_path,
+            self._image_bytes,
+            max_bytes=MAX_IMAGE_BYTES,
+        )
+
 
 def _make_handler(overlay: OverlayServer) -> type[BaseHTTPRequestHandler]:
     class OverlayHandler(BaseHTTPRequestHandler):
@@ -221,7 +277,14 @@ def _make_handler(overlay: OverlayServer) -> type[BaseHTTPRequestHandler]:
             if path == "/card.json":
                 self._send_json(overlay.card_response())
                 return
-            static = _STATIC_FILES.get(path)
+            if path == "/tweet.png":
+                image = overlay.tweet_image_bytes()
+                if image is None:
+                    self.send_error(404)
+                    return
+                self._send(200, image, "image/png")
+                return
+            static = _STATIC_FILES.get(path) or _DESIGN_FILES.get(path)
             if static is None:
                 self.send_error(404)
                 return
@@ -248,6 +311,7 @@ def _make_handler(overlay: OverlayServer) -> type[BaseHTTPRequestHandler]:
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("Pragma", "no-cache")
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(body)
 

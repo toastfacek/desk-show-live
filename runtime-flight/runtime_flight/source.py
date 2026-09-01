@@ -19,6 +19,7 @@ EXPECTED_TWEET_ID = "2093833419377815719"
 EXPECTED_AUTHOR = "dwarkesh_sp"
 EXPECTED_TWEET_URL = "https://x.com/dwarkesh_sp/status/2093833419377815719"
 EXPECTED_LINKED_URL = "https://www.dwarkesh.com/p/openai-huggingface"
+STAGED_BINDING = "staged"
 
 
 class SourceError(Exception):
@@ -53,13 +54,6 @@ def load_source_packet(packet_path: Path, lock_path: Path) -> SourcePacket:
     tweet_id = tweet_raw.get("id")
     tweet_author = tweet_raw.get("author")
     tweet_url = tweet_raw.get("url")
-    if tweet_id != EXPECTED_TWEET_ID:
-        raise SourceError("tweet id does not match the reviewed source")
-    if tweet_author != EXPECTED_AUTHOR:
-        raise SourceError("tweet author does not match the reviewed source")
-    if tweet_url != EXPECTED_TWEET_URL:
-        raise SourceError("tweet url does not match the reviewed source")
-
     linked_raw = packet.get("linked_source")
     if not isinstance(linked_raw, dict):
         raise SourceError("source packet excerpt_path is missing")
@@ -67,8 +61,6 @@ def load_source_packet(packet_path: Path, lock_path: Path) -> SourcePacket:
     if not isinstance(excerpt_rel, str) or excerpt_rel == "":
         raise SourceError("source packet excerpt_path is missing")
     linked_url = linked_raw.get("url")
-    if linked_url != EXPECTED_LINKED_URL:
-        raise SourceError("linked source url does not match the reviewed source")
     title = linked_raw.get("title")
     subtitle = linked_raw.get("subtitle")
     if not isinstance(title, str) or title == "":
@@ -94,6 +86,13 @@ def load_source_packet(packet_path: Path, lock_path: Path) -> SourcePacket:
     reviewed_at = lock.get("reviewed_at")
     if not isinstance(reviewed_at, str) or not reviewed_at:
         raise SourceError("source lock missing reviewed_at")
+    _enforce_binding(
+        lock,
+        tweet_id=tweet_id,
+        tweet_author=tweet_author,
+        tweet_url=tweet_url,
+        linked_url=linked_url,
+    )
 
     actual = {
         "source_packet_sha256": _canonical_packet_digest(packet),
@@ -126,6 +125,32 @@ def load_source_packet(packet_path: Path, lock_path: Path) -> SourcePacket:
         )
     except ValueError as error:
         raise SourceError(str(error)) from error
+
+
+def _enforce_binding(
+    lock: dict[str, Any],
+    *,
+    tweet_id: object,
+    tweet_author: object,
+    tweet_url: object,
+    linked_url: object,
+) -> None:
+    if lock.get("binding") == STAGED_BINDING:
+        if lock.get("tweet_id") != tweet_id:
+            raise SourceError("tweet id does not match the reviewed source")
+        if lock.get("tweet_author") != tweet_author:
+            raise SourceError("tweet author does not match the reviewed source")
+        if lock.get("tweet_url") != tweet_url:
+            raise SourceError("tweet url does not match the reviewed source")
+        return
+    if tweet_id != EXPECTED_TWEET_ID:
+        raise SourceError("tweet id does not match the reviewed source")
+    if tweet_author != EXPECTED_AUTHOR:
+        raise SourceError("tweet author does not match the reviewed source")
+    if tweet_url != EXPECTED_TWEET_URL:
+        raise SourceError("tweet url does not match the reviewed source")
+    if linked_url != EXPECTED_LINKED_URL:
+        raise SourceError("linked source url does not match the reviewed source")
 
 
 def _canonical_packet_digest(packet: dict[str, Any]) -> str:

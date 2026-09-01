@@ -103,6 +103,7 @@ def test_overlay_live_is_transparent_1080_cg_not_the_review_page() -> None:
     assert "Runtime mark" in text
     assert "thesis" not in text.lower()
     assert "the number" not in text.lower()
+    assert "overlay-live.js" in text
     assert 'class="set"' not in text
     assert "The overlay stops performing" not in text
 
@@ -112,6 +113,25 @@ def test_overlay_live_url_selects_speaker() -> None:
         "http://127.0.0.1:8766/overlay-live.html?speaker=a"
     )
     assert "speaker=b" in load_design_preview.overlay_live_url(8766, speaker="b")
+    live = load_design_preview.overlay_live_url(
+        8766, card_origin="http://127.0.0.1:8765"
+    )
+    assert "card_origin=http://127.0.0.1:8765" in live
+
+
+def test_overlay_live_polls_card_without_html_injection() -> None:
+    html = Path(__file__).resolve().parents[2] / "scripts" / "design-preview" / "overlay-live.html"
+    js = Path(__file__).resolve().parents[2] / "scripts" / "design-preview" / "overlay-live.js"
+    text = html.read_text(encoding="utf-8")
+    script = js.read_text(encoding="utf-8")
+    assert 'id="card-author"' in text
+    assert 'id="card-body"' in text
+    assert 'id="card-image"' in text
+    assert 'id="chyron"' in text
+    assert "overlay-live.js" in text
+    assert "innerHTML" not in text
+    assert "innerHTML" not in script
+    assert "textContent" in script
 
 
 def test_apply_preview_points_watchdog_at_identity_and_hides_obs_type() -> None:

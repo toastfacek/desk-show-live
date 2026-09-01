@@ -1,0 +1,9 @@
+{
+  "id": "1234567890123456789",
+  "author": "example_user",
+  "author_name": "Example User",
+  "text": "A public note about a new workflow that ships without a human in the loop.",
+  "url": "https://x.com/example_user/status/1234567890123456789",
+  "media_urls": [],
+  "linked_urls": ["https://example.com/workflow-note"]
+}

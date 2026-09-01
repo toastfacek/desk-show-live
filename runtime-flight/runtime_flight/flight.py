@@ -238,9 +238,14 @@ async def _run_paid_async(
     if created_overlay:
         overlay_server.start()
     try:
+        image_path = Path(config.source_packet).parent / "tweet.png"
         overlay_server.set_card(
             author=package.center.author,
             text=package.center.text,
+            url=package.center.url,
+            chyron=package.chyron,
+            ticker=list(package.angles),
+            image_bytes=image_path.read_bytes() if image_path.is_file() else None,
         )
         live_clock = clock if clock is not None else WallClock()
         live_player = player
