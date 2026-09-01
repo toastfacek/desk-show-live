@@ -236,6 +236,7 @@ const nodes = {{
   ticker: {{ textContent: "" }},
   panel: {{ classList: {{ added: null, add(name) {{ this.added = name; }} }} }},
   cardOrigin: "http://127.0.0.1:8765",
+  embedOrigin: "http://127.0.0.1:8766",
 }};
 applyProducerCard({{
   author: "example_user",
@@ -250,7 +251,7 @@ assert.strictEqual(nodes.body.textContent, "<script>alert(1)</script>");
 assert.strictEqual(nodes.chyron.textContent, "Ship the workflow");
 assert.strictEqual(nodes.image.src, "http://127.0.0.1:8765/media.jpg");
 assert.strictEqual(nodes.ticker.textContent, "unlock  ·  catch");
-assert.strictEqual(nodes.embed.src, "http://127.0.0.1:8765/tweet-embed.html?id=2094640985116737882&theme=dark");
+assert.strictEqual(nodes.embed.src, "http://127.0.0.1:8766/tweet-embed.html?id=2094640985116737882&theme=dark");
 assert.strictEqual(nodes.well.classList.added, "has-embed");
 console.log("ok");
 """,

@@ -34,7 +34,10 @@ function applyProducerCard(card, nodes) {
     nodes.chyron.textContent = card.chyron;
   }
   if (nodes.embed) {
-    const embedSrc = officialEmbedPath(card.tweet_id, nodes.cardOrigin);
+    const embedSrc = officialEmbedPath(
+      card.tweet_id,
+      nodes.embedOrigin || nodes.cardOrigin
+    );
     if (embedSrc) {
       if (nodes.embed.src !== embedSrc) {
         nodes.embed.src = embedSrc;
@@ -97,6 +100,7 @@ function bootProducerOverlay() {
     well: document.getElementById("card-well"),
     embed: document.getElementById("tweet-embed"),
     cardOrigin: origin,
+    embedOrigin: typeof location !== "undefined" ? location.origin : origin,
   };
   const clock = document.getElementById("clock");
   function pad(n) {
