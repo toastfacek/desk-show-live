@@ -108,7 +108,7 @@ def ingest_tweet(
         text=fetched.text,
         url=fetched.url,
         image_url=f"/{IMAGE_NAME}",
-        photo_url="/media.png" if media_path is not None else "",
+        photo_url=f"/{media_path.name}" if media_path is not None else "",
         chyron=_standby_chyron(fetched.text),
     )
     (dest / CARD_NAME).write_text(

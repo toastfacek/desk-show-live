@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
 from pathlib import Path
 
 import yaml
@@ -223,6 +224,8 @@ def main(
                 http_post=http_post,
             )
             print(yaml.safe_dump(payload, sort_keys=False), end="")
+            if args.keep_overlay:
+                _hold_overlay()
             return 0
         if args.command == "segment":
             config = _config_with_source(
@@ -341,6 +344,14 @@ def _resolve_bundle(args) -> Path:
     if args.latest:
         return latest_bundle(args.out)
     raise OperatorError("pass --dir or --latest")
+
+
+def _hold_overlay() -> None:
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        return
 
 
 def _session(config, obs_session: ObsSession | None) -> ObsSession:

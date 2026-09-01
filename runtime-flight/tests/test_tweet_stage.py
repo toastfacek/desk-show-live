@@ -131,6 +131,18 @@ def test_render_tweet_card_is_center_well_png() -> None:
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
 
 
+def test_render_tweet_card_keeps_cjk_glyphs() -> None:
+    png = render_tweet_card(
+        author="HoodyLiu",
+        text="从弹幕遥控 AI，变成投票导演 AI",
+    )
+    image = Image.open(BytesIO(png)).convert("L")
+    assert image.size == (CARD_W, CARD_H)
+    # CJK must paint more than the empty panel. Tofu-only fallback is a few dots.
+    ink = sum(1 for pixel in image.getdata() if pixel < 200)
+    assert ink > 4000
+
+
 def test_ingest_writes_reviewed_packet_lock_and_image(tmp_path: Path) -> None:
     fixture = _fixture()
     result = ingest_tweet(
@@ -306,6 +318,27 @@ def test_stage_cli_ingest_only_and_writer_confirm_gate(
         def _runner(**kwargs):
             recorded.update(kwargs)
             return {"ok": True}
+
+        held: list[bool] = []
+        monkeypatch.setattr("runtime_flight.__main__._hold_overlay", lambda: held.append(True))
+        keep_code = main(
+            [
+                "stage",
+                "--config",
+                str(config_path),
+                "--tweet-url",
+                _fixture()["url"],
+                "--fixture",
+                str(FIXTURE),
+                "--out",
+                str(tmp_path / "staged-hold"),
+                "--ingest-only",
+                "--keep-overlay",
+            ],
+            stage_runner=lambda *args, **kwargs: {"ok": True},
+        )
+        assert keep_code == 0
+        assert held == [True]
 
         code = main(
             [

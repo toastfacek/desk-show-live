@@ -20,6 +20,10 @@ _FONT_DIR = Path("/usr/share/fonts/truetype/dejavu")
 _SANS = _FONT_DIR / "DejaVuSans.ttf"
 _SANS_BOLD = _FONT_DIR / "DejaVuSans-Bold.ttf"
 _MONO = _FONT_DIR / "DejaVuSansMono-Bold.ttf"
+_CJK_FONTS = (
+    Path("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"),
+    Path("/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"),
+)
 
 
 class TweetImageError(Exception):
@@ -58,7 +62,7 @@ def render_tweet_card(
         y += fitted.height + 20
         text_budget = CARD_H - y - 72
 
-    body_font = _font(_SANS_BOLD, 28)
+    body_font = _body_font(28, text)
     lines = _wrap(draw, text, body_font, CARD_W - pad * 2)
     line_h = 36
     max_lines = max(1, text_budget // line_h)
@@ -125,6 +129,22 @@ def _ellipsis(
 def _text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> int:
     box = draw.textbbox((0, 0), text, font=font)
     return box[2] - box[0]
+
+
+def _has_cjk(text: str) -> bool:
+    return any("\u4e00" <= char <= "\u9fff" for char in text)
+
+
+def _body_font(size: int, text: str) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    if _has_cjk(text):
+        for path in _CJK_FONTS:
+            if not path.is_file():
+                continue
+            try:
+                return ImageFont.truetype(str(path), size)
+            except OSError:
+                continue
+    return _font(_SANS_BOLD, size)
 
 
 def _font(path: Path, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:

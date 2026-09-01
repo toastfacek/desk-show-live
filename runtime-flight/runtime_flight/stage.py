@@ -110,12 +110,14 @@ async def _run_stage_async(
     _replace_dir(dest, ingested["source_dir"])
     source = load_source_packet(dest / "source_packet.local.json", dest / "source_packet.lock.json")
     image_bytes = (dest / IMAGE_NAME).read_bytes()
+    photo_url = str(ingested["card"].get("photo_url") or "")
     card = producer_card_payload(
         author=source.tweet.author,
         text=source.tweet.text,
         url=source.tweet.url,
         chyron=ingested["card"]["chyron"],
         image_url=f"/{IMAGE_NAME}",
+        photo_url=photo_url,
     )
 
     overlay_server = overlay
@@ -130,6 +132,7 @@ async def _run_stage_async(
         url=card["url"],
         chyron=card["chyron"],
         image_url=card["image_url"],
+        photo_url=card.get("photo_url") or "",
         image_bytes=image_bytes,
     )
 
@@ -160,6 +163,7 @@ async def _run_stage_async(
             chyron=package.chyron,
             ticker=list(package.angles),
             image_url=f"/{IMAGE_NAME}",
+            photo_url=photo_url,
         )
         overlay_server.set_card(
             author=card["author"],
@@ -168,6 +172,7 @@ async def _run_stage_async(
             chyron=card["chyron"],
             ticker=card["ticker"],
             image_url=card["image_url"],
+            photo_url=card.get("photo_url") or "",
             image_bytes=image_bytes,
         )
         (dest / "package.json").write_text(
