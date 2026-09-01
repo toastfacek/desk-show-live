@@ -6,6 +6,7 @@ from typing import Any
 
 from runtime_flight.baseline import BaselineContext
 from runtime_flight.models import (
+    MAX_BEAT_CHARS,
     MAX_BEATS,
     MAX_LIST_ITEMS,
     MIN_BEATS,
@@ -232,25 +233,47 @@ def _topic_map_from_model(raw: object, fact_ids: set[str]) -> TopicMap | None:
             beats.append(
                 Beat(
                     id=item.get("id"),
-                    question=item.get("question"),
-                    tension=item.get("tension"),
-                    bot1_job=item.get("bot1_job"),
-                    bot2_job=item.get("bot2_job"),
+                    question=_fit_chars(item.get("question"), MAX_BEAT_CHARS),
+                    tension=_fit_chars(item.get("tension"), MAX_BEAT_CHARS),
+                    bot1_job=_fit_chars(item.get("bot1_job"), MAX_BEAT_CHARS),
+                    bot2_job=_fit_chars(item.get("bot2_job"), MAX_BEAT_CHARS),
                     fact_ids=tuple(beat_fact_ids),
-                    done_when=item.get("done_when"),
+                    done_when=_fit_chars(item.get("done_when"), MAX_BEAT_CHARS),
                 )
             )
         except (TypeError, ValueError) as error:
             raise SegmentPlannerError(str(error)) from error
     try:
         return TopicMap(
-            throughline=raw.get("throughline"),
-            fight=raw.get("fight"),
+            throughline=_fit_chars(raw.get("throughline"), MAX_BEAT_CHARS),
+            fight=_fit_chars(raw.get("fight"), MAX_BEAT_CHARS),
             beats=tuple(beats),
-            done_when=raw.get("done_when"),
+            done_when=_fit_chars(raw.get("done_when"), MAX_BEAT_CHARS),
         )
     except (TypeError, ValueError) as error:
         raise SegmentPlannerError(str(error)) from error
+
+
+def _fit_chars(value: object, limit: int) -> object:
+    if not isinstance(value, str) or len(value) <= limit:
+        return value
+    window = value[:limit]
+    clause = ""
+    for marker in (".", "?", "!", ";", ","):
+        index = window.rfind(marker)
+        if index >= 48:
+            candidate = window[: index + 1].strip()
+            if len(candidate) > len(clause):
+                clause = candidate
+    if clause:
+        return clause
+    current = ""
+    for word in value.split():
+        candidate = word if not current else f"{current} {word}"
+        if len(candidate) > limit:
+            break
+        current = candidate
+    return current or window[:limit]
 
 
 def _angles_from_topic_map(topic_map: TopicMap) -> list[str]:

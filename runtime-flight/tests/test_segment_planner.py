@@ -534,6 +534,27 @@ def _valid_topic_map() -> dict[str, Any]:
     }
 
 
+def test_planner_clips_overlong_beat_jobs():
+    topic_map = _valid_topic_map()
+    topic_map["beats"][0]["bot1_job"] = (
+        "Unpack the capability the tweet shows and then sit with what it does "
+        "to people when a cheap radio can hear a unique tire ID and an agent "
+        "can turn that capture into a picture of who moved through the street "
+        "last night without anyone agreeing to be seen, and whether that is "
+        "already how agents start to see a neighborhood."
+    )
+    assert len(topic_map["beats"][0]["bot1_job"]) > 280
+    payload = _valid_plan_payload(topic_map=topic_map)
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(payload))
+
+    package = _run(SegmentPlanner(_client(http_post)).plan(_source_packet(), _baseline()))
+    assert package.topic_map is not None
+    assert len(package.topic_map.beats[0].bot1_job) <= 280
+    assert package.topic_map.beats[0].bot1_job.startswith("Unpack the capability")
+
+
 def test_planner_keeps_a_real_topic_map_and_does_not_invent_a_card():
     payload = _valid_plan_payload(topic_map=_valid_topic_map())
 
