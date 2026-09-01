@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 from pathlib import Path
 
 import pytest
@@ -29,6 +30,12 @@ def test_layout_uses_fixed_solo_aperture_and_distinct_host_colors() -> None:
     assert apply_obs_layout.DEFAULT_CLIP == (
         apply_obs_layout.REPO_ROOT / "assets" / "clips" / "sync_check.mp4"
     )
+
+
+def test_host_wide_playback_does_not_loop() -> None:
+    source = inspect.getsource(apply_obs_layout.apply_layout)
+    assert '"looping": False' in source
+    assert 'set_current_scene_transition("Cut")' in source
 
 
 def test_apply_layout_refuses_streaming_before_any_mutation() -> None:

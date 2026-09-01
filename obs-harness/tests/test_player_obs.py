@@ -38,6 +38,9 @@ class FakeObsClient:
     def set_input_settings(self, name: str, settings: dict, overlay: bool):
         self.calls.append(("set_input_settings", name, settings, overlay))
 
+    def set_input_mute(self, name: str, muted: bool):
+        self.calls.append(("set_input_mute", name, muted))
+
     def trigger_media_input_action(self, name: str, action: str):
         self.calls.append(("trigger_media_input_action", name, action))
 
@@ -246,3 +249,8 @@ def test_play_clip_points_host_wide_at_obs_playable(tmp_path: Path):
     ]
     assert settings[-1][1] == "HOST_WIDE"
     assert settings[-1][2]["local_file"].endswith("003.obs.mp4")
+    assert settings[-1][2]["looping"] is False
+    assert settings[-1][2]["clear_on_media_end"] is False
+    mute = [call for call in client.calls if call[0] == "set_input_mute"]
+    assert mute[-1][1] == "HOST_WIDE"
+    assert mute[-1][2] is False

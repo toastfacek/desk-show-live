@@ -139,6 +139,15 @@ class FakeObsClient:
     def set_scene_item_enabled(self, scene_name, item_id, enabled):
         self.calls.append(("set_scene_item_enabled", scene_name, item_id, enabled))
 
+    def set_current_scene_transition(self, name):
+        self.calls.append(("set_current_scene_transition", name))
+
+    def set_current_scene_transition_duration(self, duration):
+        self.calls.append(("set_current_scene_transition_duration", duration))
+
+    def set_input_mute(self, name, muted):
+        self.calls.append(("set_input_mute", name, muted))
+
     def _next_scene_item_id(self) -> int:
         item_id = self.next_scene_item_id
         self.next_scene_item_id += 1

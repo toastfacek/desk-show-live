@@ -11,6 +11,14 @@ from pathlib import Path
 LAYOUTS = ("wide", "split", "solo_l", "solo_r", "card_full", "hold")
 HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
 HIGHLIGHT_SOURCES = ("HL_A", "HL_B")
+HOST_WIDE_PLAYBACK = {
+    "is_local_file": True,
+    "looping": False,
+    "restart_on_activate": True,
+    "close_when_inactive": False,
+    "clear_on_media_end": False,
+    "hw_decode": False,
+}
 
 
 def prepare_obs_clip(path: str | Path) -> Path:
@@ -56,11 +64,6 @@ def prepare_obs_clip(path: str | Path) -> Path:
     except (OSError, subprocess.CalledProcessError):
         tmp.unlink(missing_ok=True)
         return src
-
-
-LAYOUTS = ("wide", "split", "solo_l", "solo_r", "card_full", "hold")
-HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
-HIGHLIGHT_SOURCES = ("HL_A", "HL_B")
 
 
 class ObsPlayer:
@@ -172,9 +175,13 @@ class ObsPlayer:
         playable = str(prepare_obs_clip(path))
         client.set_input_settings(
             name="HOST_WIDE",
-            settings={"local_file": playable},
+            settings={"local_file": playable, **HOST_WIDE_PLAYBACK},
             overlay=True,
         )
+        try:
+            client.set_input_mute(name="HOST_WIDE", muted=False)
+        except Exception:
+            pass
         try:
             client.trigger_media_input_action(
                 name="HOST_WIDE",

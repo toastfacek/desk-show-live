@@ -23,6 +23,7 @@ POLL_INTERVAL_S = 0.2
 STREAM_POLL_INTERVAL_S = 1.0
 HERO_IMAGE_PLACEHOLDER = "hero"
 HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
+DEFAULT_LAYOUT_PLAN = ("split",)
 
 
 def remaining_submit_slots(target_duration_s: float, elapsed_s: float) -> int:
@@ -106,7 +107,7 @@ class LiveHarness:
         self.package = package
         self.target_duration_s = target_duration_s
         self.clip_duration_s = clip_duration_s
-        self.layout_plan = list(layout_plan or HOST_LAYOUTS)
+        self.layout_plan = list(layout_plan or DEFAULT_LAYOUT_PLAN)
         self.overlay = overlay
         self.obs_session = obs_session
         self.max_attempts = max_attempts
@@ -193,6 +194,8 @@ class LiveHarness:
             ),
             "flags": dict(self.flags),
             "next_take": self.next_take,
+            "layout": getattr(self.player, "layout", None)
+            or (self.on_air or {}).get("layout"),
             "layout_i": self.layout_i,
             "segment": {
                 "layout_plan": self.layout_plan,
