@@ -457,12 +457,12 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
         <p class="note">Nothing textural below <strong>20 px</strong> at 1080 — that is the mono cell, and it is the same 26 px-equivalent logic the essential-type floor already uses. The mosaic floor is <strong>8 px</strong> cells. Below either number it stops being a pattern and starts being noise.</p>
       </div>
       <div class="card">
-        <h3>Where a field is allowed</h3>
-        <p class="note">Only when <strong>no host is on screen</strong>: hold, the error card, bumpers and the cold open. There the bitrate is not being spent on faces, so a field is free. On-air furniture gets a single row at most, never a field.</p>
+        <h3>Where texture lives</h3>
+        <p class="note">Two places, and they follow different rules. The <strong>ground wash</strong> sits at z=0 under everything and runs permanently, including on air. A <strong>field</strong> is texture as the subject of the frame, and stays in host-free states: hold, the error card, bumpers, the cold open.</p>
       </div>
       <div class="card">
-        <h3>Never</h3>
-        <p class="note">Never behind essential type — texture and copy do not overlap, they take turns. Never animated per character; if it moves it moves as whole rows, on the horizontal, per the existing motion grammar. Never on a host well.</p>
+        <h3>Motion is the gate, not detail</h3>
+        <p class="note">A <em>static</em> pattern encodes once into a reference frame and then costs almost nothing. A <em>moving</em> one cannot be held in reference, so every frame pays again. That is the real line: the wash is static whenever a host is on screen, and drift is reserved for the states where nothing else needs the bits.</p>
       </div>
     </div>
 
@@ -537,12 +537,28 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
     </div>
 
 
+
+    <figure>
+      <h3 style="margin-bottom:8px">The wash</h3>
+      <p class="note" style="margin-bottom:18px">A permanent ground layer under the composed frame. It reads as texture in the margins and gutters and nowhere else — the host wells are opaque picture and the panels are 93%, so <strong>the wash is never behind a face and never behind type</strong>. That is z-order doing the work rather than a rule anyone has to remember.</p>
+      <div class="grid2">
+        <div class="card">
+          <h3>Why it is affordable</h3>
+          <p class="note">It is visible across about <strong>27%</strong> of the canvas, all of it in regions that would otherwise be flat ground. Because it is static on air, the encoder writes it once and then reports it unchanged. The blanket “no fields while a host is on screen” rule was written for a full-bleed field that competes with faces for bitrate; a static ground layer under opaque panels is a different object and the rule does not reach it.</p>
+        </div>
+        <div class="card">
+          <h3>How it is shaped</h3>
+          <p class="note">Density is weighted to the edges and the bottom, which is exactly where the wash is visible, so the pattern spends itself where it can be seen. Roughly 11% coverage in the gutters rising to 25% along the bottom band. Dark jade — the desk colour again, at a third of its strength, so it never reads as a second accent.</p>
+        </div>
+      </div>
+    </figure>
+
     <figure>
       <h3 style="margin-bottom:8px">Ordered dither, at a legal pitch</h3>
       <p class="note" style="margin-bottom:18px">A proper 8×8 Bayer threshold on a slow-drifting field, rendered at <strong>8 px cells</strong> — the floor. This is the same family as the shader demos that make this look good, and the thing that makes those read well is that their pixels are chunky. Fine them down and they die exactly the way the counterexample above does. It sits at the bottom edge and clears by mid-frame, so the type never lands on texture.</p>
       <div class="stage" data-w="1920" data-h="1080" style="background:var(--ink)">
         <div class="sq" style="width:1920px;height:1080px;background:var(--ink);overflow:hidden">
-          <canvas width="1920" height="1080" data-cell="8" data-c0="#0B0A08" data-c1="#1E7A57"
+          <canvas width="1920" height="1080" data-cell="8" data-shape="hold" data-c0="#0B0A08" data-c1="#1E7A57"
                   style="position:absolute;inset:0;width:1920px;height:1080px" aria-label="Dithered hold field"></canvas>
           <div class="pl rail" style="position:absolute;left:64px;top:48px">
             <svg width="34" height="34" viewBox="0 0 72 72" aria-label="Mark, off air" style="flex:none">
@@ -654,6 +670,10 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
       <div class="stage" data-w="1920" data-h="1080" style="background:var(--ink)">
         <div class="sq" style="width:1920px;height:1080px;background:var(--ink)">
 
+          <canvas width="1920" height="1080" data-cell="8" data-shape="wash"
+                  data-c0="#0B0A08" data-c1="#1B5C44"
+                  style="position:absolute;inset:0;width:1920px;height:1080px" aria-hidden="true"></canvas>
+
           <div class="pl rail" style="position:absolute;left:64px;top:48px">
             <svg width="34" height="34" viewBox="0 0 72 72" aria-label="Runtime mark, on air" style="flex:none">
               <rect x="13" y="15" width="6" height="42" fill="#F4F1EA"/><rect x="13" y="15" width="15" height="6" fill="#F4F1EA"/><rect x="13" y="51" width="15" height="6" fill="#F4F1EA"/>
@@ -720,7 +740,7 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
           </div>
         </div>
       </div>
-      <div class="cap"><span>Six panels, no radius, one fill, one colour. Hosts and set are the CSS stand-in.</span><span class="mono">1920×1080</span></div>
+      <div class="cap"><span>Six panels over a static ground wash. Hosts and set are the CSS stand-in.</span><span class="mono">1920×1080</span></div>
     </figure>
 
     <figure>
@@ -829,32 +849,45 @@ footer{padding:72px 0 110px;color:var(--bone-3);font-size:14.5px;border-top:1px 
               60,28,52,20,62,30,54,22,3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,
               15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21];
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var DITHER_SHAPES = {
+    // HOLD — the field is the subject. Dense at the bottom, clean by mid-frame so
+    // the type sits on empty ground. Drifts, because nothing else needs the bits.
+    hold: function(u,v,t){
+      var f = Math.pow(v,3.0)*0.66
+            + (0.05*Math.sin(u*6.283*1.4 + t*0.00035)
+             + 0.03*Math.sin(u*6.283*3.1 - t*0.00021)) * Math.pow(v,2.2);
+      return f < 0.09 ? 0 : f;
+    },
+    // WASH — the ground layer under a live composed frame. Only ever visible in
+    // margins and gutters, so density is weighted to the edges. Never drifts:
+    // a static pattern costs one frame and then nothing.
+    wash: function(u,v){
+      var edge = Math.max(Math.abs(u-0.5), Math.abs(v-0.5)) * 2;
+      return 0.11 + 0.11*Math.pow(edge,2.0) + 0.05*Math.pow(v,3.0);
+    }
+  };
   function initDither(cv){
     var ctx=cv.getContext('2d'); if(!ctx) return;
     var cell=+cv.dataset.cell||8, w=cv.width, h=cv.height;
     var cols=Math.ceil(w/cell), rows=Math.ceil(h/cell);
     var c0=cv.dataset.c0||'#0B0A08', c1=cv.dataset.c1||'#14B87A';
+    var shape=DITHER_SHAPES[cv.dataset.shape] || DITHER_SHAPES.hold;
+    var isStatic = cv.dataset.shape === 'wash' || cv.dataset.motion === 'static';
     var start=null;
     function draw(t){
-      // dense at the bottom edge, clean by mid-frame, with one slow drift
       ctx.fillStyle=c0; ctx.fillRect(0,0,w,h);
       ctx.fillStyle=c1;
       for(var y=0;y<rows;y++){
-        var v=y/(rows-1);
+        var v=rows>1 ? y/(rows-1) : 0;
         for(var x=0;x<cols;x++){
-          var u=x/(cols-1);
-          // the drift is scaled by v so it cannot fire cells near the top, and a
-          // hard floor guarantees a clean band for type rather than a sparse one
-          var f=Math.pow(v,3.0)*0.66
-              + (0.05*Math.sin(u*6.283*1.4 + t*0.00035)
-               + 0.03*Math.sin(u*6.283*3.1 - t*0.00021)) * Math.pow(v,2.2);
-          if(f<0.09) continue;
+          var f=shape(cols>1 ? x/(cols-1) : 0, v, t);
+          if(f<=0) continue;
           if(f>=1) { ctx.fillRect(x*cell,y*cell,cell,cell); continue; }
           if(f > (BAYER8[(y&7)*8+(x&7)]+0.5)/64) ctx.fillRect(x*cell,y*cell,cell,cell);
         }
       }
     }
-    if(reduceMotion){ draw(0); return; }
+    if(isStatic || reduceMotion){ draw(0); return; }
     function loop(ts){ if(start===null) start=ts; draw(ts-start); requestAnimationFrame(loop); }
     requestAnimationFrame(loop);
   }

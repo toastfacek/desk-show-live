@@ -80,9 +80,10 @@ Mono never takes a headline, a card body or a host name — at 44 px it is a ter
 Not in the locked spec at all, so this is an addition rather than a departure. The graphics spec bans dither by name and is **right for fine dither**: high-frequency noise is the most expensive thing you can hand a video encoder, stealing bitrate from the hosts' faces and crawling between frames. Coarse dither is a different object. Proposed rules:
 
 - **Cell floors.** Nothing textural below **20 px** at 1080 (the mono cell). No mosaic or Bayer cell below **8 px**.
-- **Fields only where no host is on screen** — hold, error card, bumpers, cold open — because that is where bitrate is not being spent on faces. On-air furniture gets a single row at most.
-- **Never behind essential type.** Texture and copy take turns.
-- **Motion is a second gate.** A moving field cannot be held in reference, so drift is confined to the same host-free states, with a cycle measured in tens of seconds.
+- **Two placements.** A **ground wash** at z=0 runs permanently, including on air; it is visible only in margins and gutters (about 27% of the canvas) because the host wells are opaque picture and the panels are 93%. A **field**, where texture is the subject of the frame, stays in host-free states: hold, error card, bumpers, cold open.
+- **Never behind essential type.** On the ground layer this is guaranteed by z-order rather than by discipline.
+- **Motion is the real gate, not detail.** A static pattern encodes once into a reference frame and then costs almost nothing; a moving one cannot be held in reference and pays every frame. So the wash is **static whenever a host is on screen**, and drift is reserved for host-free states with a cycle measured in tens of seconds.
+- Whether a slow drift is affordable on air is a question for the encode ladder, not for a simulation. Ship static; test drift behind a flag.
 
 ASCII is treated as type, not texture, which is why it rides the encode ladder essential type already passed.
 
