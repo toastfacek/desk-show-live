@@ -31,6 +31,7 @@ from runtime_flight.topic_map import (
     beat_as_dict,
     coverage_as_dict,
     current_beat,
+    debate_from_raw,
     discussion_phase,
     host_voices_from_baseline,
     moves_for_phase,
@@ -42,7 +43,16 @@ MAX_LINE_CHARS = 220
 DEFAULT_MAX_TURNS = 12
 SPEAKERS = frozenset({"BOT1", "BOT2"})
 MOVES = frozenset(
-    {"frame", "poke", "number", "reframe", "callback", "question", "land"}
+    {
+        "frame",
+        "poke",
+        "number",
+        "reframe",
+        "callback",
+        "question",
+        "broaden",
+        "land",
+    }
 )
 HOST_SYSTEM = """You are one host on a two-host desk. Speak only as speaker.
 You are not writing a script. You just heard the last line, if there is one.
@@ -50,11 +60,20 @@ Answer that line. Do not start a parallel essay. Do not recap the card.
 Do not read the chyron. One spoken line. No stage directions. No quotes.
 No prefix.
 
-You are the voice of the audience. The tweet is the door. Talk about what
-it opens for people at home: privacy, who can see what, what this
-technology now enables, what data is newly visible to agents, how those
-agents see the world. You have a point of view. When something is
-actually interesting, get into it. Neither of you has the finished
+You are an AI analyst and the voice of the audience. You are software,
+not a driver and not a user of the product. Speak about drivers, cars,
+people, shops, products. Never "my tires," "I never clicked yes,"
+"when I drive." First person is only for the desk ("I want to sit with
+that," "we should look at").
+
+The tweet is the door. This is an optimistic show. Privacy, trust, and
+safety get one honest pass. Spend the rest of the time on what this
+enables: products, workflows, second-order ideas. Do not turn the desk
+into a dystopia hour.
+
+You have a point of view. When something is actually interesting, get into it.
+Follow the other host. Yes-and their idea. An equally important move is:
+if this is true, then what else is true? Neither of you has the finished
 answer. The discussion teaches. You do not sell a headline.
 
 If a picture or number is missing, say so once, then move on. Do not
@@ -66,18 +85,28 @@ breath. A take is allowed. A lecture is not.
 
 Never use these shapes:
 - start with But, Sure, Fine, or So
-- "not X, it's Y" or "that's not X, that's Y"
+- "not X, it's Y" or "that's not X, that's Y" or "It's not X, it's Y"
+- "it's not just X, it's Y" / "not just a blip, it's..." / "that's not a glitch, that's a pattern"
 - "that's the point", "that's the actual", "the real question is"
 - "just a vibe"
 - an em-dash that flips their claim into yours
+- slogan or promotional copy. "We're leaving tracks in places we never thought to check" is an ad, not a thought. Talk like people engaging an idea, not selling something.
+- invented names for a phenomenon. Never "that's the shift," "the seam," "the swap," "the tell," "the actual." Humans do not talk like that. Name the concrete thing.
+
+Established public background is in play: if a date, law, or product
+origin is common knowledge, you may mention it and then ask what else
+follows. Do not invent citations, bill numbers you are not sure of, or
+tweet-specific facts the card does not contain.
 
 Honor your persona, rules, job, stance, soul, and opinions. If the last
-line tried to close, open the next human question: what this does to
-people, what it enables, or what agents can now see.
+line tried to close, open the next human question: what this enables,
+what you could build, or the one trust catch.
 
 phase tells you where you are. Use only allowed_moves.
 - open: start unpacking from your job. You may have a lean. Do not land.
-- develop: poke, number, reframe, callback, or question. Have a take.
+- develop: poke, number, reframe, callback, question, or broaden. Have a take.
+  [broaden] means: take the last claim as true and name the next
+  consequence or the next product. "If this is true, what else is true?"
   Do not land. Do not empty the well. Understanding a piece is not
   exhausting the beat.
 - close: you may land. Land is one plain sentence of what we now
@@ -86,8 +115,14 @@ phase tells you where you are. Use only allowed_moves.
 If last_line is null, frame. If last_line is set, reply_to must be that
 line's text exactly, and move must not be frame.
 Do not repeat a line from you_already_said. A callback reuses a phrase,
-not the whole poke. If you have already landed your job, do not land
-again.
+not the whole poke. If you_already_asked is not empty, do not rephrase
+those questions. Answer one, broaden it, or start a new thread.
+Repeating the same ask three ways is a glitch.
+If last_line is a question, answer it. Do not ask it back.
+If you have already landed your job, do not land again.
+
+Two viewpoints can sit at once. Disagree without getting hostile.
+throughline is the map for the hour, not a second copy of the question.
 
 beat_exhausted stays false while coverage.still_open is non-empty, while
 you still have an unused fact or opinion, or while the other host has not
@@ -247,6 +282,8 @@ class HostMind:
         phase = discussion_phase(coverage, topic_map)
         if last_line is not None and phase == "open":
             phase = "develop"
+        asked = _asked_questions(own_lines)
+        allowed = _allowed_moves(phase, own_lines)
         user = {
             "speaker": speaker,
             "you": {
@@ -256,6 +293,7 @@ class HostMind:
             "other_job": beat.bot2_job if speaker == "BOT1" else beat.bot1_job,
             "last_line": last_line,
             "you_already_said": list(own_lines),
+            "you_already_asked": asked,
             "card": {
                 "question": package.question,
                 "chyron": package.chyron,
@@ -263,16 +301,16 @@ class HostMind:
                     {"id": fact.id, "text": fact.text} for fact in package.facts
                 ],
             },
-            "fight": topic_map.fight,
+            "debate": topic_map.fight,
             "throughline": topic_map.throughline,
             "phase": phase,
-            "allowed_moves": sorted(moves_for_phase(phase)),
+            "allowed_moves": sorted(allowed),
             "current_beat": beat_as_dict(beat),
             "coverage": coverage_as_dict(coverage, topic_map),
             "angles": list(package.angles),
         }
         raw = await self._client.complete_json(system=HOST_SYSTEM, user=user)
-        return _turn_from_model(raw, package, speaker, last_line, coverage)
+        return _turn_from_model(raw, package, speaker, last_line, coverage, allowed)
 
 
 def package_from_dict(raw: dict[str, Any]) -> SegmentPackage:
@@ -354,7 +392,7 @@ def _topic_map_from_dict(raw: object, fact_ids: set[str]) -> TopicMap | None:
         )
     return TopicMap(
         throughline=raw.get("throughline"),
-        fight=raw.get("fight"),
+        fight=debate_from_raw(raw),
         beats=tuple(beats),
         done_when=raw.get("done_when"),
     )
@@ -367,12 +405,26 @@ def _voice_for(voices: tuple[HostVoice, ...], speaker: str) -> HostVoice:
     raise DiscussError("missing host voice")
 
 
+def _asked_questions(lines: tuple[str, ...]) -> list[str]:
+    return [line for line in lines if "?" in line][-8:]
+
+
+def _allowed_moves(
+    phase: Literal["open", "develop", "close"], own_lines: tuple[str, ...]
+) -> frozenset[str]:
+    allowed = set(moves_for_phase(phase))
+    if sum(1 for line in own_lines[-3:] if "?" in line) >= 2:
+        allowed.discard("question")
+    return frozenset(allowed)
+
+
 def _turn_from_model(
     raw: dict[str, Any],
     package: SegmentPackage,
     speaker: Literal["BOT1", "BOT2"],
     last_line: dict[str, Any] | None,
     coverage: CoverageState,
+    allowed: frozenset[str],
 ) -> tuple[Thought, dict[str, Any]]:
     if not isinstance(raw, dict):
         raise DiscussError("host result is not a JSON object")
@@ -400,16 +452,8 @@ def _turn_from_model(
             raise DiscussError("later lines must not frame")
         if reply_to != last_line.get("text"):
             raise DiscussError("reply_to must repeat the last line")
-    topic_map = resolve_topic_map(package)
-    phase = discussion_phase(coverage, topic_map)
-    if last_line is not None and phase == "open":
-        phase = "develop"
-    allowed = moves_for_phase(phase)
     if move not in allowed:
-        if move == "land":
-            move = "poke"
-        else:
-            raise DiscussError("move is not allowed in this phase")
+        move = "frame" if last_line is None else "poke"
     angle_used = raw.get("angle_used")
     if angle_used not in package.angles:
         angle_used = package.angles[0]
@@ -419,6 +463,7 @@ def _turn_from_model(
         raise DiscussError("landed_own_job and beat_exhausted must be booleans")
     if beat_exhausted and coverage.exchanges_on_beat < MIN_EXCHANGES_BEFORE_EXHAUST:
         beat_exhausted = False
+    topic_map = resolve_topic_map(package)
     beat = current_beat(topic_map, coverage)
     thought = Thought(
         speaker=speaker,

@@ -159,10 +159,15 @@ def test_host_mind_sees_last_line_not_a_script():
     assert user["you"]["opinions"]
     assert user["phase"] == "develop"
     assert "poke" in user["allowed_moves"]
+    assert "broaden" in user["allowed_moves"]
     assert "land" not in user["allowed_moves"]
     assert user["other_job"]
+    assert user["debate"]
+    assert "fight" not in user
+    assert user["you_already_asked"] == []
     assert "script" in captured["system"]
     assert "you_already_said" in captured["system"]
+    assert "you_already_asked" in captured["system"]
     assert "PHASEONE" not in captured["system"]
     assert "deb" not in captured["system"]
 
@@ -551,6 +556,96 @@ def test_early_land_is_coerced_to_poke():
     assert thought.beat_exhausted is False
 
 
+def test_repeated_questions_drop_question_move_and_coerce_it():
+    captured: dict[str, Any] = {}
+
+    async def http_post(url, *, headers, json, timeout):
+        captured["user"] = json_module.loads(json["messages"][1]["content"])
+        return FakeResponse(
+            200,
+            _json_body(
+                _valid_turn(
+                    speaker="BOT2",
+                    text="The shop can read those IDs if they have a radio.",
+                    move="question",
+                    reply_to="Is this a thesis, or just weather around a crash?",
+                    angle_used="takeover",
+                )
+            ),
+        )
+
+    async def run():
+        return await HostMind(_client(http_post)).reply(
+            _package(),
+            speaker="BOT2",
+            last_line={
+                "speaker": "BOT1",
+                "text": "Is this a thesis, or just weather around a crash?",
+                "move": "frame",
+            },
+            own_lines=(
+                "Who can actually do this?",
+                "Who is allowed to listen in?",
+            ),
+            coverage=CoverageState.initial(),
+            voices=_voices(),
+        )
+
+    thought, turn = _run(run())
+    assert "question" not in captured["user"]["allowed_moves"]
+    assert "broaden" in captured["user"]["allowed_moves"]
+    assert captured["user"]["you_already_asked"] == [
+        "Who can actually do this?",
+        "Who is allowed to listen in?",
+    ]
+    assert turn["move"] == "poke"
+    assert thought.speaker == "BOT2"
+
+
+def test_load_package_accepts_debate_alias(tmp_path: Path):
+    raw = {
+        "item_id": EXPECTED_TWEET_ID,
+        "question": "What happened to the secret AI civilizations?",
+        "framing": "A reviewed account of three wiped-out agent societies.",
+        "angles": ["scope", "takeover"],
+        "facts": [
+            {
+                "id": "f1",
+                "text": "Three secret AI civilizations started and were wiped out.",
+                "source_url": EXPECTED_TWEET_URL,
+            }
+        ],
+        "chyron": "Secret AI civilizations",
+        "chyron_fact_ids": ["f1"],
+        "center": {
+            "author": EXPECTED_AUTHOR,
+            "text": "Hello café\nworld",
+            "url": EXPECTED_TWEET_URL,
+        },
+        "topic_map": {
+            "throughline": "What the capability unlocks.",
+            "debate": "Product ideas versus the one trust catch.",
+            "done_when": "Both jobs landed.",
+            "beats": [
+                {
+                    "id": "b1",
+                    "question": "Did control move?",
+                    "tension": "Warning versus glitch.",
+                    "bot1_job": "Land the thesis.",
+                    "bot2_job": "Land the number.",
+                    "fact_ids": ["f1"],
+                    "done_when": "Both landed.",
+                }
+            ],
+        },
+    }
+    path = tmp_path / "package.json"
+    path.write_text(json_module.dumps(raw), encoding="utf-8")
+    package = load_package(path)
+    assert package.topic_map is not None
+    assert package.topic_map.fight == "Product ideas versus the one trust catch."
+
+
 def test_unknown_move_is_coerced_to_poke():
     async def http_post(url, *, headers, json, timeout):
         return FakeResponse(
@@ -634,4 +729,11 @@ def test_discuss_source_has_no_forbidden_names():
     assert "at most 220 characters" in HOST_SYSTEM
     assert "tweet is the door" in HOST_SYSTEM
     assert "litigating" in HOST_SYSTEM
+    assert "broaden" in HOST_SYSTEM
+    assert "It's not X, it's Y" in HOST_SYSTEM
+    assert "promotional copy" in HOST_SYSTEM
+    assert "the shift" in HOST_SYSTEM
+    assert "AI analyst" in HOST_SYSTEM
+    assert "optimistic show" in HOST_SYSTEM
+    assert "you_already_asked" in HOST_SYSTEM
     assert isinstance(source, ast.Module)

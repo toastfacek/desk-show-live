@@ -569,6 +569,19 @@ def test_planner_keeps_a_real_topic_map_and_does_not_invent_a_card():
     assert package.center.author == EXPECTED_AUTHOR
 
 
+def test_planner_accepts_debate_alias_for_fight():
+    topic_map = _valid_topic_map()
+    topic_map["debate"] = topic_map.pop("fight")
+    payload = _valid_plan_payload(topic_map=topic_map)
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(payload))
+
+    package = _run(SegmentPlanner(_client(http_post)).plan(_source_packet(), _baseline()))
+    assert package.topic_map is not None
+    assert package.topic_map.fight.startswith("A missed civilization")
+
+
 def test_planner_rejects_beat_fact_id_that_is_not_a_returned_fact():
     topic_map = _valid_topic_map()
     topic_map["beats"][0]["fact_ids"] = ["invented"]
@@ -612,6 +625,10 @@ def test_planner_system_maps_a_discussion_not_a_recap():
     assert "tweet is the door" in system
     assert "not a beat" in system
     assert "whether the tweet" in system
+    assert "throughline must not restate" in system
+    assert "debate (not a fight)" in system
+    assert "optimistic show" in system
+    assert "ask x" in system
 
 
 def test_facts_are_typed_and_bounded():

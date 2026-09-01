@@ -18,37 +18,49 @@ TOPIC_EXHAUSTED = "topic exhausted"
 MIN_EXCHANGES_BEFORE_EXHAUST = 6
 MIN_EXCHANGES_BEFORE_COMPLETE = 8
 OPEN_MOVES = frozenset({"frame"})
-DEVELOP_MOVES = frozenset({"poke", "number", "reframe", "callback", "question"})
+DEVELOP_MOVES = frozenset(
+    {"poke", "number", "reframe", "callback", "question", "broaden"}
+)
 CLOSE_MOVES = DEVELOP_MOVES | {"land"}
 
 DEFAULT_STANCE = {
-    "BOT1": "Unpack the capability, then say what it does to people.",
-    "BOT2": "Ask the human hole the audience just hit, then have a take.",
+    "BOT1": "Unpack the capability, then say what it unlocks and what someone could build.",
+    "BOT2": "Yes-and the last claim. If this is true, what else is true?",
 }
 DEFAULT_SOUL = {
     "BOT1": (
-        "You get interested in public. The fun part is what this does to "
-        "people, not whether the post proved itself. The conversation "
-        "teaches. You do not deliver the finished answer."
+        "You get interested in public. The fun part is what this enables, "
+        "not whether the post proved itself. The conversation teaches. You "
+        "do not deliver the finished answer."
     ),
     "BOT2": (
         "You learn in public. If they are litigating the tweet, ask what it "
-        "does to people. You do not deliver the answer. You make the next "
-        "human step visible, and you have a take on it."
+        "unlocks. You do not deliver the answer. You make the next step "
+        "visible, and you have a take on it."
     ),
 }
 DEFAULT_OPINIONS = {
     "BOT1": (
-        "The interesting part is what this does to people, not whether the tweet proved it.",
+        "The interesting part is what you could build, and the one trust catch.",
         "If we skip a step, the audience skips it too.",
-        "Privacy, who can see what, and what agents can now read are the show.",
+        "Privacy gets a pass. Products get the hour.",
     ),
     "BOT2": (
         "If I do not get why I should care, they do not get it.",
         "A missing screenshot is a caveat, not the show.",
-        "Two people figuring out what this does to people is the show.",
+        "Two analysts figuring out what this unlocks is the show.",
     ),
 }
+
+
+def debate_from_raw(raw: dict[str, object]) -> object:
+    for key in ("debate", "fight"):
+        value = raw.get(key)
+        if isinstance(value, str) and value.strip():
+            return value
+        if value is not None and not isinstance(value, str):
+            return value
+    return raw.get("debate") if "debate" in raw else raw.get("fight")
 
 
 def host_voices_from_baseline(baseline: BaselineContext) -> tuple[HostVoice, HostVoice]:
@@ -65,9 +77,9 @@ def _voice_from_character(character: CharacterPackTruth) -> HostVoice:
     rules = character.manifest.get("writer_rules")
     if not isinstance(persona, str) or not persona.strip():
         persona = (
-            "Walk through the capability the post showed, then say what it does to people."
+            "Walk through the capability the post showed, then say what it unlocks."
             if slot == "BOT1"
-            else "Ask the human hole the audience just hit, then have a take."
+            else "Yes-and the last claim, then have a take on what else is true."
         )
     clean_rules: list[str] = []
     if isinstance(rules, (list, tuple)):
@@ -76,9 +88,9 @@ def _voice_from_character(character: CharacterPackTruth) -> HostVoice:
         )
     if not clean_rules:
         if slot == "BOT1":
-            clean_rules.append("Name the capability, then what it does to people.")
+            clean_rules.append("Name the capability, then what you could build.")
         else:
-            clean_rules.append("Ask the human hole the audience just hit, then have a take.")
+            clean_rules.append("Yes-and. If this is true, what else is true?")
     return HostVoice(
         speaker=slot,
         persona=persona,
@@ -135,10 +147,16 @@ def synthesize_topic_map(package: SegmentPackage) -> TopicMap:
         done_when="Both hosts have landed their job and have nothing grounded left to add.",
     )
     return TopicMap(
-        throughline=package.question,
-        fight=tension,
+        throughline=(
+            "what this capability unlocks, what you could build from it, "
+            "and the one privacy or trust catch that still matters"
+        ),
+        fight=(
+            "optimistic product brainstorm versus the one trust catch, "
+            "without treating the tweet as a crime scene"
+        ),
         beats=(beat,),
-        done_when="The throughline has been argued from both host questions.",
+        done_when="The throughline has been explored from both host jobs.",
     )
 
 
@@ -238,15 +256,15 @@ def coverage_as_dict(coverage: CoverageState, topic_map: TopicMap) -> dict[str, 
     beat = current_beat(topic_map, coverage)
     still_open: list[str] = []
     if beat.id not in coverage.bot1_landed:
-        still_open.append("BOT1 has not landed the thesis yet")
+        still_open.append("BOT1 has not landed their job yet")
     if beat.id not in coverage.bot2_landed:
-        still_open.append("BOT2 has not landed the number yet")
+        still_open.append("BOT2 has not landed their job yet")
     if beat.id in coverage.bot1_landed and beat.id not in coverage.bot1_exhausted:
         still_open.append("BOT1 still has more to say on this beat")
     if beat.id in coverage.bot2_landed and beat.id not in coverage.bot2_exhausted:
         still_open.append("BOT2 still has more to say on this beat")
     if coverage.exchanges_on_beat < MIN_EXCHANGES_BEFORE_COMPLETE:
-        still_open.append("the well is not empty yet; keep the fight going")
+        still_open.append("the well is not empty yet; keep the debate going")
     if coverage.map_complete:
         still_open = []
     return {
@@ -277,6 +295,7 @@ def beat_as_dict(beat: Beat) -> dict[str, object]:
 def topic_map_as_dict(topic_map: TopicMap) -> dict[str, object]:
     return {
         "throughline": topic_map.throughline,
+        "debate": topic_map.fight,
         "fight": topic_map.fight,
         "done_when": topic_map.done_when,
         "beats": [beat_as_dict(beat) for beat in topic_map.beats],

@@ -79,6 +79,8 @@ def test_legacy_package_synthesizes_one_beat_from_question_and_angles():
     assert topic_map.beats[0].bot1_job == "scope"
     assert topic_map.beats[0].bot2_job == "takeover"
     assert topic_map.beats[0].question == package.question
+    assert topic_map.throughline != package.question
+    assert "unlocks" in topic_map.throughline
 
 
 def _argue(state: CoverageState, topic_map: TopicMap, beat_id: str, count: int) -> CoverageState:
@@ -192,4 +194,5 @@ def test_discussion_phase_starts_open():
     assert discussion_phase(CoverageState.initial(), topic_map) == "open"
     assert moves_for_phase("open") == frozenset({"frame"})
     assert "land" not in moves_for_phase("develop")
+    assert "broaden" in moves_for_phase("develop")
     assert "land" in moves_for_phase("close")

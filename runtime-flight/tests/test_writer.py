@@ -321,6 +321,9 @@ def test_writer_prompt_targets_four_to_four_point_six_seconds():
     assert "the audience" in system
     assert "points of view" in system
     assert "tweet is the door" in system
+    assert "broaden" in system
+    assert "promotional copy" in system
+    assert "AI analyst" in system
     assert captured["user"]["target_duration_s"] == 4.3
 
 
