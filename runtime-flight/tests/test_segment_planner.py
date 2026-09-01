@@ -316,13 +316,51 @@ def test_cancellation_returns_no_invented_package():
     _run(run())
 
 
-def test_fenced_markdown_content_fails_without_stripping():
-    fenced = "```json\n" + json.dumps(_valid_plan_payload()) + "\n```"
+def test_fenced_markdown_json_is_accepted():
+    payload = _valid_plan_payload()
+    fenced = "```json\n" + json.dumps(payload) + "\n```"
 
     async def http_post(url, *, headers, json, timeout):
         return FakeResponse(
             200,
             {"choices": [{"message": {"content": fenced}}]},
+        )
+
+    async def run():
+        client = _client(http_post)
+        return await client.complete_json(system="sys", user={"k": "v"})
+
+    assert _run(run()) == payload
+
+
+def test_json_object_extracted_from_leading_prose():
+    payload = {"ok": True, "speaker": "BOT1"}
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "content": 'Sure.\n{"ok": true, "speaker": "BOT1"}'
+                        }
+                    }
+                ]
+            },
+        )
+
+    async def run():
+        return await _client(http_post).complete_json(system="sys", user={"k": "v"})
+
+    assert _run(run()) == payload
+
+
+def test_unfenced_non_json_content_still_fails():
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            {"choices": [{"message": {"content": "not json"}}]},
         )
 
     async def run():
@@ -451,30 +489,31 @@ def test_framing_rejects_1001_characters():
         _package_with_framing("f" * 1001)
 
 
-def test_planner_accepts_1000_char_framing_and_rejects_1001():
+def test_planner_accepts_1000_char_framing_and_clips_1001():
     accepted = _valid_plan_payload(framing="f" * 1000)
-    rejected = _valid_plan_payload(framing="f" * 1001)
+    overlong = _valid_plan_payload(framing=("Short clause. " + "f" * 1000))
 
     async def accept_post(url, *, headers, json, timeout):
         return FakeResponse(200, _json_body(accepted))
 
-    async def reject_post(url, *, headers, json, timeout):
-        return FakeResponse(200, _json_body(rejected))
+    async def clip_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(overlong))
 
     async def accept():
         return await SegmentPlanner(_client(accept_post)).plan(
             _source_packet(), _baseline()
         )
 
-    async def reject():
-        return await SegmentPlanner(_client(reject_post)).plan(
+    async def clip():
+        return await SegmentPlanner(_client(clip_post)).plan(
             _source_packet(), _baseline()
         )
 
     package = _run(accept())
     assert len(package.framing) == 1000
-    with pytest.raises(SegmentPlannerError, match="framing exceeds 1000 characters"):
-        _run(reject())
+    clipped = _run(clip())
+    assert clipped.framing == "Short clause."
+    assert len(clipped.framing) <= MAX_FRAMING_CHARS
 
 
 def _valid_topic_map() -> dict[str, Any]:
@@ -496,6 +535,27 @@ def _valid_topic_map() -> dict[str, Any]:
     }
 
 
+def test_planner_clips_overlong_beat_jobs():
+    topic_map = _valid_topic_map()
+    topic_map["beats"][0]["bot1_job"] = (
+        "Unpack the capability the tweet shows and then sit with what it does "
+        "to people when a cheap radio can hear a unique tire ID and an agent "
+        "can turn that capture into a picture of who moved through the street "
+        "last night without anyone agreeing to be seen, and whether that is "
+        "already how agents start to see a neighborhood."
+    )
+    assert len(topic_map["beats"][0]["bot1_job"]) > 280
+    payload = _valid_plan_payload(topic_map=topic_map)
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(payload))
+
+    package = _run(SegmentPlanner(_client(http_post)).plan(_source_packet(), _baseline()))
+    assert package.topic_map is not None
+    assert len(package.topic_map.beats[0].bot1_job) <= 280
+    assert package.topic_map.beats[0].bot1_job.startswith("Unpack the capability")
+
+
 def test_planner_keeps_a_real_topic_map_and_does_not_invent_a_card():
     payload = _valid_plan_payload(topic_map=_valid_topic_map())
 
@@ -508,6 +568,19 @@ def test_planner_keeps_a_real_topic_map_and_does_not_invent_a_card():
     assert package.topic_map.beats[0].bot1_job.startswith("Land that monitoring")
     assert package.topic_map.beats[0].bot2_job.startswith("Land how many")
     assert package.center.author == EXPECTED_AUTHOR
+
+
+def test_planner_accepts_debate_alias_for_fight():
+    topic_map = _valid_topic_map()
+    topic_map["debate"] = topic_map.pop("fight")
+    payload = _valid_plan_payload(topic_map=topic_map)
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(200, _json_body(payload))
+
+    package = _run(SegmentPlanner(_client(http_post)).plan(_source_packet(), _baseline()))
+    assert package.topic_map is not None
+    assert package.topic_map.fight.startswith("A missed civilization")
 
 
 def test_planner_rejects_beat_fact_id_that_is_not_a_returned_fact():
@@ -549,6 +622,14 @@ def test_planner_system_maps_a_discussion_not_a_recap():
     assert "bot1" in system
     assert "bot2" in system
     assert "spoken line" in system
+    assert "human question" in system
+    assert "tweet is the door" in system
+    assert "not a beat" in system
+    assert "whether the tweet" in system
+    assert "throughline must not restate" in system
+    assert "debate (not a fight)" in system
+    assert "optimistic show" in system
+    assert "ask x" in system
 
 
 def test_facts_are_typed_and_bounded():

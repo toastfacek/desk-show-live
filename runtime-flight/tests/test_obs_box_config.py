@@ -64,4 +64,6 @@ def test_write_obs_files_uses_requested_record_directory(
     assert '"server_port": 4555' in websocket.read_text(encoding="utf-8")
     basic = config_dir / "basic" / "profiles" / "Untitled" / "basic.ini"
     assert f"FilePath={record_dir.resolve()}" in basic.read_text(encoding="utf-8")
+    global_ini = (config_dir / "global.ini").read_text(encoding="utf-8")
+    assert "BrowserHWAccel=false" in global_ini
     assert record_dir.is_dir()

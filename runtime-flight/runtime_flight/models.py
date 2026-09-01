@@ -166,6 +166,9 @@ class HostVoice:
     speaker: Literal["BOT1", "BOT2"]
     persona: str
     rules: tuple[str, ...]
+    soul: str = ""
+    opinions: tuple[str, ...] = ()
+    stance: str = ""
 
     def __post_init__(self) -> None:
         if self.speaker not in {"BOT1", "BOT2"}:
@@ -175,6 +178,14 @@ class HostVoice:
             raise ValueError("host rules must be a tuple")
         for index, rule in enumerate(self.rules):
             _require_str(rule, f"host rules[{index}]")
+        if not isinstance(self.soul, str):
+            raise ValueError("host soul must be a string")
+        if not isinstance(self.opinions, tuple):
+            raise ValueError("host opinions must be a tuple")
+        for index, opinion in enumerate(self.opinions):
+            _require_str(opinion, f"host opinions[{index}]")
+        if not isinstance(self.stance, str):
+            raise ValueError("host stance must be a string")
 
 
 @dataclass(frozen=True)

@@ -11,8 +11,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+OVERLAY_LAYOUTS = ("wide", "split", "solo_l", "solo_r", "card_full", "hold")
 DEFAULT_OVERLAY_DIR = Path(__file__).resolve().parent.parent / "overlay"
+DESIGN_PREVIEW_DIR = Path(__file__).resolve().parents[2] / "scripts" / "design-preview"
 DEFAULT_MAX_STATE_BYTES = 65_536
+MAX_IMAGE_BYTES = 4_000_000
 HEARTBEAT_INTERVAL_S = 0.25
 STALE_MS = 1_200
 
@@ -21,6 +24,17 @@ _STATIC_FILES = {
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
+}
+_DESIGN_FILES = {
+    "/overlay-live.html": ("overlay-live.html", "text/html; charset=utf-8"),
+    "/overlay-live.js": ("overlay-live.js", "text/javascript; charset=utf-8"),
+    "/tweet-embed.html": ("tweet-embed.html", "text/html; charset=utf-8"),
+}
+_SHOT_FILES = {
+    "/tweet-shot.png": "tweet-shot.png",
+    "/tweet-shot-split.png": "tweet-shot-split.png",
+    "/tweet-shot-solo.png": "tweet-shot-solo.png",
+    "/tweet-shot-card.png": "tweet-shot-card.png",
 }
 
 
@@ -55,7 +69,15 @@ class OverlayServer:
         self._lock = threading.Lock()
         self._healthy = True
         self._sequence = 0
-        self._card = {"author": "", "text": "", "timestamp": ""}
+        self._card: dict[str, Any] = {
+            "author": "",
+            "text": "",
+            "timestamp": "",
+            "layout": "split",
+            "has_shot": False,
+            "card_mode": "",
+        }
+        self._image_bytes: bytes | None = None
         self._heartbeat_written_at = time.monotonic()
         self._httpd: ThreadingHTTPServer | None = None
         self._http_thread: threading.Thread | None = None
@@ -63,6 +85,7 @@ class OverlayServer:
         self._heartbeat_thread: threading.Thread | None = None
         self._heartbeat_path: Path | None = None
         self._card_path: Path | None = None
+        self._image_path: Path | None = None
         self._paused = False
 
     @property
@@ -86,9 +109,11 @@ class OverlayServer:
             self._state_dir = self._overlay_dir / "state"
         self._heartbeat_path = self._state_dir / "heartbeat.json"
         self._card_path = self._state_dir / "card.json"
+        self._image_path = self._state_dir / "tweet.png"
         with self._lock:
             self._write_heartbeat_locked(increment=True)
             self._write_card_locked()
+            self._write_image_locked()
 
         handler = _make_handler(self)
         httpd = ThreadingHTTPServer((self._host, self._port), handler)
@@ -130,20 +155,103 @@ class OverlayServer:
     def __exit__(self, *exc: object) -> None:
         self.stop()
 
+    @property
+    def live_url(self) -> str:
+        return f"{self.url}overlay-live.html"
+
     def set_card(
         self,
         *,
         author: str,
         text: str,
         timestamp: str = "",
+        url: str = "",
+        chyron: str = "",
+        ticker: list[str] | tuple[str, ...] | None = None,
+        image_url: str = "/tweet.png",
+        photo_url: str = "",
+        tweet_id: str = "",
+        speaker: str = "a",
+        seg: str = "",
+        layout: str = "",
+        image_bytes: bytes | None = None,
     ) -> None:
+        items = [item for item in (ticker or ()) if isinstance(item, str) and item]
         with self._lock:
+            current_layout = str(self._card.get("layout") or "split")
             self._card = {
                 "author": author,
                 "text": text,
                 "timestamp": timestamp,
+                "url": url,
+                "chyron": chyron,
+                "ticker": items[:6],
+                "image_url": image_url if image_url.startswith("/") else "/tweet.png",
+                "photo_url": photo_url if isinstance(photo_url, str) and photo_url.startswith("/") else "",
+                "tweet_id": tweet_id if isinstance(tweet_id, str) and tweet_id.isdigit() else "",
+                "speaker": speaker if speaker in {"a", "b"} else "a",
+                "seg": seg,
+                "layout": _normalize_overlay_layout(layout) or current_layout,
+                "has_shot": bool(self._card.get("has_shot")),
+                "card_mode": str(self._card.get("card_mode") or ""),
+                "shot_url": str(self._card.get("shot_url") or ""),
+                "shot_split_url": str(self._card.get("shot_split_url") or ""),
+                "shot_solo_url": str(self._card.get("shot_solo_url") or ""),
+                "shot_card_url": str(self._card.get("shot_card_url") or ""),
             }
+            if image_bytes is not None:
+                if len(image_bytes) > MAX_IMAGE_BYTES:
+                    raise ValueError("tweet image exceeds size limit")
+                self._image_bytes = image_bytes
             self._write_card_locked()
+            self._write_image_locked()
+
+    def set_shots(self, dest: Path, *, card_mode: str = "") -> dict[str, str]:
+        from runtime_flight.tweet_shot import (
+            SHOT_CARD_NAME,
+            SHOT_NAME,
+            SHOT_SOLO_NAME,
+            SHOT_SPLIT_NAME,
+        )
+
+        paths = {
+            "shot_url": dest / SHOT_NAME,
+            "shot_split_url": dest / SHOT_SPLIT_NAME,
+            "shot_solo_url": dest / SHOT_SOLO_NAME,
+            "shot_card_url": dest / SHOT_CARD_NAME,
+        }
+        urls = {key: f"/{path.name}" for key, path in paths.items() if path.is_file()}
+        if "shot_url" not in urls:
+            raise ValueError("missing tweet-shot.png")
+        if self._state_dir is not None:
+            for path in paths.values():
+                if path.is_file() and path.parent.resolve() != self._state_dir.resolve():
+                    target = self._state_dir / path.name
+                    target.write_bytes(path.read_bytes())
+        with self._lock:
+            self._card["has_shot"] = True
+            if card_mode in {"shot", "embed"}:
+                self._card["card_mode"] = card_mode
+            self._card.update(urls)
+            if self._card_path is not None:
+                self._write_card_locked()
+        return urls
+
+    def set_card_mode(self, mode: str) -> str:
+        name = mode if mode in {"shot", "embed", ""} else ""
+        with self._lock:
+            self._card["card_mode"] = name
+            if self._card_path is not None:
+                self._write_card_locked()
+        return name
+
+    def set_layout(self, layout: str) -> str:
+        name = _normalize_overlay_layout(layout) or "split"
+        with self._lock:
+            self._card["layout"] = name
+            if self._card_path is not None:
+                self._write_card_locked()
+        return name
 
     def set_healthy(self, healthy: bool) -> None:
         with self._lock:
@@ -165,11 +273,35 @@ class OverlayServer:
                 "age_ms": self._age_ms_locked(),
             }
 
-    def card_response(self) -> dict[str, str]:
+    def card_response(self) -> dict[str, Any]:
         with self._lock:
             return dict(self._card)
 
+    def shot_bytes(self, filename: str) -> bytes | None:
+        if filename not in _SHOT_FILES.values():
+            return None
+        if self._state_dir is None:
+            return None
+        path = self._state_dir / filename
+        if not path.is_file():
+            return None
+        return path.read_bytes()
+
+    def tweet_image_bytes(self) -> bytes | None:
+        with self._lock:
+            if self._image_bytes:
+                return self._image_bytes
+            if self._image_path is not None and self._image_path.is_file():
+                return self._image_path.read_bytes()
+            return None
+
     def static_bytes(self, filename: str) -> bytes:
+        if filename in {"overlay-live.html", "overlay-live.js", "tweet-embed.html"}:
+            path = (DESIGN_PREVIEW_DIR / filename).resolve()
+            root = DESIGN_PREVIEW_DIR.resolve()
+            if path.parent != root or not path.is_file():
+                raise FileNotFoundError(filename)
+            return path.read_bytes()
         path = (self._overlay_dir / filename).resolve()
         overlay_root = self._overlay_dir.resolve()
         if overlay_root not in path.parents and path != overlay_root:
@@ -210,6 +342,23 @@ class OverlayServer:
             max_bytes=self._max_state_bytes,
         )
 
+    def _write_image_locked(self) -> None:
+        if not self._image_bytes or self._image_path is None:
+            return
+        atomic_write_bytes(
+            self._image_path,
+            self._image_bytes,
+            max_bytes=MAX_IMAGE_BYTES,
+        )
+
+
+def _normalize_overlay_layout(layout: str) -> str:
+    if layout == "card":
+        return "card_full"
+    if layout in OVERLAY_LAYOUTS:
+        return layout
+    return ""
+
 
 def _make_handler(overlay: OverlayServer) -> type[BaseHTTPRequestHandler]:
     class OverlayHandler(BaseHTTPRequestHandler):
@@ -221,7 +370,22 @@ def _make_handler(overlay: OverlayServer) -> type[BaseHTTPRequestHandler]:
             if path == "/card.json":
                 self._send_json(overlay.card_response())
                 return
-            static = _STATIC_FILES.get(path)
+            if path == "/tweet.png":
+                image = overlay.tweet_image_bytes()
+                if image is None:
+                    self.send_error(404)
+                    return
+                self._send(200, image, "image/png")
+                return
+            shot_name = _SHOT_FILES.get(path)
+            if shot_name is not None:
+                shot = overlay.shot_bytes(shot_name)
+                if shot is None:
+                    self.send_error(404)
+                    return
+                self._send(200, shot, "image/png")
+                return
+            static = _STATIC_FILES.get(path) or _DESIGN_FILES.get(path)
             if static is None:
                 self.send_error(404)
                 return
@@ -248,6 +412,7 @@ def _make_handler(overlay: OverlayServer) -> type[BaseHTTPRequestHandler]:
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
             self.send_header("Pragma", "no-cache")
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(body)
 

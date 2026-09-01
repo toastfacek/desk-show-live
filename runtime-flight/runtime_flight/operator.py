@@ -18,6 +18,7 @@ from runtime_flight.config import (
 from runtime_flight.obs_session import ObsSession
 from runtime_flight.obs_setup import setup_obs
 from runtime_flight.source import SourceError, load_source_packet
+from runtime_flight.stage import StageError, expected_text_requests, run_stage
 from runtime_flight.signals import install_panic_handler
 
 PAID_FLAG_ENV = "RUNTIME_ALLOW_PAID"
@@ -193,6 +194,63 @@ def cmd_discuss(
         max_turns=max_turns,
         package=package,
     )
+
+
+def cmd_stage(
+    config: RuntimeConfig,
+    *,
+    tweet_url: str,
+    out_dir: Path,
+    confirm_text_requests: int,
+    plan: bool,
+    write: bool,
+    keep_overlay: bool,
+    overlay_port: int,
+    fixture_path: Path | None,
+    run_stage_fn=run_stage,
+    http_get=None,
+    http_post=None,
+    overlay=None,
+) -> dict[str, Any]:
+    if write:
+        plan = True
+    needed = expected_text_requests(plan=plan, write=write)
+    if needed:
+        if confirm_text_requests != needed:
+            raise OperatorError(
+                f"stage --confirm-text-requests must be {needed} for this mode"
+            )
+        require_text_request_limit(config.mode, confirm_text_requests)
+    elif confirm_text_requests not in {0, needed}:
+        raise OperatorError("stage ingest-only does not consume text requests")
+    fixture = None
+    if fixture_path is not None:
+        import json
+
+        try:
+            raw = json.loads(Path(fixture_path).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise OperatorError("tweet fixture is not valid JSON") from error
+        if not isinstance(raw, dict):
+            raise OperatorError("tweet fixture must be a JSON object")
+        fixture = raw
+    try:
+        return run_stage_fn(
+            tweet_url=tweet_url,
+            config=config,
+            out_dir=out_dir,
+            confirm_text_requests=confirm_text_requests,
+            plan=plan,
+            write=write,
+            overlay_port=overlay_port,
+            keep_overlay=keep_overlay,
+            fixture=fixture,
+            http_get=http_get,
+            http_post=http_post,
+            overlay=overlay,
+        )
+    except StageError as error:
+        raise OperatorError(str(error)) from error
 
 
 def cmd_replay(bundle: Path, *, network_call: Callable[..., Any] | None = None) -> dict[str, Any]:

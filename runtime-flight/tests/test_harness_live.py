@@ -145,6 +145,40 @@ class LiveWriter:
         )
 
 
+class ContinuingWriter:
+    """Same host keeps the thought open so take 2 can chain."""
+
+    def __init__(self) -> None:
+        self.calls: list[dict[str, Any]] = []
+
+    async def write(
+        self,
+        package: SegmentPackage,
+        planned_transcript: tuple[Thought, ...],
+        next_speaker: Literal["BOT1", "BOT2"],
+        thought_open: bool,
+        segment_phase: Literal["open", "develop", "close"],
+        target_duration_s: float = 4.3,
+        reissue: Literal["shorter, blander"] | None = None,
+        **kwargs: Any,
+    ) -> Thought:
+        self.calls.append(
+            {
+                "next_speaker": next_speaker,
+                "segment_phase": segment_phase,
+                "reissue": reissue,
+                "thought_open": thought_open,
+            }
+        )
+        n = len(self.calls)
+        return Thought(
+            speaker=next_speaker,
+            text=f"{next_speaker} keeps the thought going {n}.",
+            thought_open=n % 2 == 1,
+            angle_used=package.angles[0],
+        )
+
+
 class FailingWriter:
     async def write(self, *args: Any, **kwargs: Any) -> Thought:
         raise WriterError("writer down")
@@ -354,7 +388,7 @@ def test_one_performer_request_max(tmp_path: Path) -> None:
     assert all(req.speaker in {"BOT1", "BOT2"} for req in performer.started)
 
 
-def test_hero_then_exact_chain_url(tmp_path: Path) -> None:
+def test_speaker_cut_rebases_to_hero(tmp_path: Path) -> None:
     harness, _, performer, _ = _harness(tmp_path)
 
     async def run() -> None:
@@ -363,11 +397,28 @@ def test_hero_then_exact_chain_url(tmp_path: Path) -> None:
     _run(run())
     assert performer.started[0].anchor == "hero"
     assert performer.started[0].image_url == "hero"
-    assert performer.started[1].anchor == "chain"
-    assert performer.started[1].image_url == FRAME_URL.format(take=1)
+    assert performer.started[0].speaker == "BOT1"
+    assert performer.started[1].speaker == "BOT2"
+    assert performer.started[1].anchor == "hero"
+    assert performer.started[1].image_url == "hero"
     for beat in harness.beats:
         if beat["submit"]:
             assert set(beat["submit"]) == {"take", "line", "speaker"}
+
+
+def test_same_speaker_chains_the_exact_frame_url(tmp_path: Path) -> None:
+    harness, _, performer, _ = _harness(tmp_path, writer=ContinuingWriter())
+
+    async def run() -> None:
+        await harness.run_simulated(until_aired=2)
+
+    _run(run())
+    assert performer.started[0].anchor == "hero"
+    assert performer.started[0].image_url == "hero"
+    assert performer.started[0].speaker == "BOT1"
+    assert performer.started[1].speaker == "BOT1"
+    assert performer.started[1].anchor == "chain"
+    assert performer.started[1].image_url == FRAME_URL.format(take=1)
 
 
 def test_late_take_uses_card_or_hold(tmp_path: Path) -> None:

@@ -125,6 +125,7 @@ class Harness:
             "holds_recent": 0,
             "flags": dict(self.flags),
             "next_take": self.next_take,
+            "layout": getattr(self.player, "layout", None),
             "layout_i": self.layout_i,
             "segment": {
                 "layout_plan": self.segment.get("layout_plan") or ["wide"],

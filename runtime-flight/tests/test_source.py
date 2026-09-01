@@ -16,6 +16,7 @@ from runtime_flight.source import (
     EXPECTED_LINKED_URL,
     EXPECTED_TWEET_ID,
     EXPECTED_TWEET_URL,
+    STAGED_BINDING,
     SourceError,
     load_source_packet,
 )
@@ -229,6 +230,62 @@ def test_source_rejects_tweet_text_over_2000_characters(tmp_path: Path):
     packet["tweet"]["text"] = "a" * 2001
     written = _write_source_files(tmp_path / "inputs", packet=packet)
     with pytest.raises((SourceError, ValueError), match="2000|text"):
+        load_source_packet(written["packet"], written["lock"])
+
+
+def test_staged_binding_accepts_a_reviewed_non_dwarkesh_tweet(tmp_path: Path):
+    packet = {
+        "tweet": {
+            "id": "1234567890123456789",
+            "author": "example_user",
+            "text": "A public note about a new workflow.",
+            "url": "https://x.com/example_user/status/1234567890123456789",
+        },
+        "linked_source": {
+            "title": "example.com",
+            "subtitle": "Linked from the source tweet",
+            "url": "https://example.com/workflow-note",
+            "excerpt_path": EXCERPT_NAME,
+        },
+        "reviewed": True,
+    }
+    written = _write_source_files(tmp_path / "inputs", packet=packet)
+    lock = written["lock_data"]
+    lock["binding"] = STAGED_BINDING
+    lock["tweet_id"] = packet["tweet"]["id"]
+    lock["tweet_author"] = packet["tweet"]["author"]
+    lock["tweet_url"] = packet["tweet"]["url"]
+    written["lock"].write_text(json.dumps(lock, indent=2) + "\n", encoding="utf-8")
+    source = load_source_packet(written["packet"], written["lock"])
+    assert source.tweet.id == "1234567890123456789"
+    assert source.tweet.author == "example_user"
+    assert source.linked_source.url == "https://example.com/workflow-note"
+
+
+def test_staged_binding_rejects_lock_identity_mismatch(tmp_path: Path):
+    packet = {
+        "tweet": {
+            "id": "1234567890123456789",
+            "author": "example_user",
+            "text": "A public note about a new workflow.",
+            "url": "https://x.com/example_user/status/1234567890123456789",
+        },
+        "linked_source": {
+            "title": "example.com",
+            "subtitle": "Linked from the source tweet",
+            "url": "https://example.com/workflow-note",
+            "excerpt_path": EXCERPT_NAME,
+        },
+        "reviewed": True,
+    }
+    written = _write_source_files(tmp_path / "inputs", packet=packet)
+    lock = written["lock_data"]
+    lock["binding"] = STAGED_BINDING
+    lock["tweet_id"] = "0000000000000000000"
+    lock["tweet_author"] = packet["tweet"]["author"]
+    lock["tweet_url"] = packet["tweet"]["url"]
+    written["lock"].write_text(json.dumps(lock, indent=2) + "\n", encoding="utf-8")
+    with pytest.raises(SourceError, match="id"):
         load_source_packet(written["packet"], written["lock"])
 
 

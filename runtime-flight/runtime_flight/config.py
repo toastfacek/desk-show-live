@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Literal
@@ -129,6 +129,17 @@ def load_config(path: Path) -> RuntimeConfig:
         obs_record=_require_bool(obs, "record"),
         stream_enabled=_require_bool(stream, "enabled"),
     )
+
+
+def apply_source_dir(config: RuntimeConfig, source_dir: Path) -> RuntimeConfig:
+    root = Path(source_dir).resolve()
+    packet = root / "source_packet.local.json"
+    lock = root / "source_packet.lock.json"
+    if not packet.is_file() or not lock.is_file():
+        raise ConfigError(
+            "source-dir must contain source_packet.local.json and source_packet.lock.json"
+        )
+    return replace(config, source_packet=packet, source_lock=lock)
 
 
 def validate_obs_config(config: RuntimeConfig) -> None:

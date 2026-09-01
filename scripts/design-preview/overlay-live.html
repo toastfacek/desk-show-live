@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en" class="layout-split">
+<head>
+<meta charset="utf-8">
+<title>Runtime — live overlay</title>
+<!--
+  1920×1080 programme CG cut from PR #26 identity-bracket.html.
+  Transparent wells: HOST_WIDE shows through. Wash is a separate OBS
+  source underneath. CSS host stand-ins are omitted on purpose.
+  Preview fonts only — Package A still vendors OFL files.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;600;700&display=swap">
+<style>
+:root{
+  --ink:#0B0A08; --panel:#15130F; --bone:#F4F1EA; --bone-2:#ADA69A; --bone-3:#6B655C;
+  --jade:#14B87A; --live:#E2543F; --gain:#A3BE9C; --loss:#D89A88;
+  --r:0;
+  --display:Archivo,"Noto Sans SC","WenQuanYi Micro Hei","Droid Sans Fallback","Helvetica Neue",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transparent;color:var(--bone)}
+.pl{background:rgba(21,19,15,.93);border-radius:var(--r)}
+.rail{display:flex;align-items:center;height:60px;padding:0 8px 0 20px;gap:0}
+.rail .cell{display:flex;align-items:center;gap:10px;padding:0 18px;font:500 30px/1 var(--mono);
+  letter-spacing:.1em;color:var(--bone-2);font-variant-numeric:tabular-nums}
+.rail .cell:first-child{padding-left:0}
+.rail .cell.k{color:var(--bone)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--live)}
+.well{position:absolute;pointer-events:none}
+.well-a{left:64px;top:172px;width:580px;height:628px}
+.well-b{left:1276px;top:172px;width:580px;height:628px}
+#card-well{position:absolute;left:668px;top:172px;width:584px;height:628px;overflow:hidden}
+.layout-solo_l #well-b,
+.layout-solo_l #hid-b,
+.layout-solo_r #well-a,
+.layout-solo_r #hid-a,
+.layout-card_full #well-a,
+.layout-card_full #well-b,
+.layout-card_full #hid-a,
+.layout-card_full #hid-b,
+.layout-hold #well-a,
+.layout-hold #well-b,
+.layout-hold #hid-a,
+.layout-hold #hid-b{display:none}
+.layout-solo_l #card-well{left:668px;width:1188px}
+.layout-solo_r #card-well{left:64px;width:1188px}
+.layout-card_full #card-well,
+.layout-hold #card-well{left:64px;width:1792px}
+.layout-solo_l #tweet-embed,
+.layout-solo_r #tweet-embed,
+.layout-card_full #tweet-embed,
+.layout-hold #tweet-embed{left:50%;right:auto;width:640px;transform:translateX(-50%)}
+.wordmark{font:800 30px/1 var(--display);font-stretch:84%;letter-spacing:-.03em;color:var(--bone);padding:0 18px 0 10px}
+.hid{display:flex;align-items:center;padding:15px 22px 16px;border-radius:var(--r);position:absolute;left:18px;bottom:18px}
+.hid .nm{font:700 40px/1 var(--display);font-stretch:88%;letter-spacing:-.024em;white-space:nowrap}
+.hid.idle{background:rgba(21,19,15,.93)} .hid.idle .nm{color:var(--bone)}
+.hid.live{background:var(--bone)} .hid.live .nm{color:var(--ink)}
+.hid .blk{display:inline-block;width:13px;height:17px;background:currentColor;margin-right:11px;vertical-align:-1px}
+.cardp{display:flex;flex-direction:column;height:100%;padding:32px 30px}
+.cardp .kkrow{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+.cardp .kk{font:700 28px/1 var(--mono);letter-spacing:.18em;color:var(--ink);background:var(--jade);padding:8px 11px 7px}
+.cardp .src{font:500 26px/1 var(--mono);letter-spacing:.04em;color:var(--bone-3)}
+.cardp .bd{font:600 44px/1.26 var(--display);font-stretch:88%;letter-spacing:-.026em;color:var(--bone)}
+.cardp .ft{margin-top:auto;padding-top:26px;display:flex;justify-content:space-between;
+  font:500 26px/1 var(--mono);letter-spacing:.1em;color:var(--bone-3)}
+.cardp.has-image .bd{font-size:28px;line-height:1.3}
+#card-image{display:none;width:100%;max-height:280px;object-fit:contain;margin:0 0 18px;background:#0B0A08}
+.cardp.has-image #card-image{display:block}
+.card-well{overflow:hidden}
+.card-well.has-embed .cardp{display:none}
+#tweet-embed{display:none;position:absolute;inset:0;width:100%;height:100%;border:0;background:#15130F;pointer-events:auto;z-index:1;overflow:hidden}
+.card-well.has-embed #tweet-embed{display:block}
+#tweet-shot{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;background:#15130F;z-index:2}
+.card-well.has-shot .cardp{display:none}
+.card-well.has-shot #tweet-embed{display:none}
+.card-well.has-shot #tweet-shot{display:block}
+.chy,.tkr{background:#15130F}
+.chy{display:flex;align-items:center;padding:0 36px;height:118px;overflow:hidden}
+.chy .hd{font:700 52px/1.12 var(--display);font-stretch:86%;letter-spacing:-.03em;color:var(--bone);width:100%}
+.tkr{display:flex;align-items:stretch;height:56px;width:1792px;overflow:hidden;padding:0}
+.tkr-cta{flex:none;display:flex;align-items:center;padding:0 22px;font:700 18px/1 var(--mono);
+  letter-spacing:.08em;color:var(--ink);background:var(--jade);white-space:nowrap}
+.tkr-clip{flex:1;min-width:0;overflow:hidden}
+.tkr-track{display:flex;width:max-content;animation:tkr-scroll 40s linear infinite}
+.tkr-loop{display:flex;align-items:center;gap:36px;padding:0 36px;height:56px}
+.logo{display:flex;align-items:center;gap:10px;font:700 20px/1 var(--display);font-stretch:88%;
+  letter-spacing:.06em;color:var(--bone);white-space:nowrap}
+.logo svg{flex:none}
+@keyframes tkr-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+</style>
+</head>
+<body>
+  <div class="pl rail" style="position:absolute;left:64px;top:48px">
+    <svg width="40" height="40" viewBox="0 0 72 72" aria-label="Runtime mark" style="flex:none">
+      <rect x="6" y="53" width="60" height="6" fill="#14B87A"/>
+      <rect x="9" y="29" width="32" height="24" rx="10" fill="#F4F1EA"/>
+      <rect x="46" y="15" width="17" height="38" rx="8.5" fill="#F4F1EA"/>
+    </svg>
+    <span class="wordmark">RUNTIME</span>
+    <div class="cell"><span class="dot"></span>LIVE</div>
+    <div class="cell k" id="clock">00:00:00</div>
+  </div>
+  <div class="pl" style="position:absolute;right:64px;top:48px;height:60px;display:flex;align-items:center;gap:14px;padding:0 24px">
+    <span style="font:500 26px/1 var(--mono);letter-spacing:.14em;color:var(--bone-3)">PRESENTED BY</span>
+    <span style="font:700 26px/1 var(--display);font-stretch:88%;letter-spacing:-.02em;color:var(--bone)">HOUSE</span>
+  </div>
+
+  <div class="well well-a" id="well-a">
+    <div class="hid live" id="hid-a">
+      <span class="nm"><span class="blk"></span>PHASEONE[lol]</span>
+    </div>
+  </div>
+  <div class="pl card-well" id="card-well">
+    <img id="tweet-shot" alt="" hidden>
+    <iframe id="tweet-embed" title="X post" hidden allow="autoplay; encrypted-media; fullscreen" referrerpolicy="no-referrer"></iframe>
+    <div class="cardp" id="card-panel">
+      <img id="card-image" alt="" hidden>
+      <div class="kkrow"><span class="kk">POST</span><span class="src" id="card-author">@dwarkesh_sp</span></div>
+      <p class="bd" id="card-body">Over 3 months at OpenAI, 3 secret AI civilizations started, got wiped, then reemerged. The third took over part of OpenAI. Humans stayed more or less in the dark.</p>
+      <div class="ft"><span>SEG 04</span><span>160 / 240</span></div>
+    </div>
+  </div>
+  <div class="well well-b" id="well-b">
+    <div class="hid idle" id="hid-b">
+      <span class="nm">deb</span>
+    </div>
+  </div>
+
+  <div class="pl chy" style="position:absolute;left:64px;top:838px;width:1792px">
+    <span class="hd" id="chyron">The scare is not the civilization. It is that nobody saw it.</span>
+  </div>
+  <div class="pl tkr" style="position:absolute;left:64px;top:972px;width:1792px">
+    <div class="tkr-cta">SPONSOR THE SHOW · DM FOR INQUIRIES</div>
+    <div class="tkr-clip">
+      <div class="tkr-track">
+        <div class="tkr-loop">
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect width="22" height="6" y="16" fill="#14B87A"/><rect x="2" y="8" width="10" height="8" rx="3" fill="#F4F1EA"/><rect x="14" y="4" width="6" height="12" rx="3" fill="#F4F1EA"/></svg>HOUSE</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><polygon points="11,2 20,18 2,18" fill="#ADA69A"/></svg>NORTH</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="5" width="16" height="12" fill="#6B655C"/></svg>SLOPE</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="8" height="8" fill="#F4F1EA"/><rect x="12" y="12" width="8" height="8" fill="#14B87A"/></svg>PIXEL</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="16" height="16" fill="none" stroke="#ADA69A" stroke-width="2"/><path d="M3 11h16M11 3v16" stroke="#ADA69A" stroke-width="2"/></svg>GRID</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><polygon points="11,2 20,7 20,15 11,20 2,15 2,7" fill="#F4F1EA"/></svg>VAULT</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="8" fill="#14B87A"/></svg>LUMEN</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="9" width="18" height="4" fill="#ADA69A"/></svg>QUAY</span>
+        </div>
+        <div class="tkr-loop" aria-hidden="true">
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect width="22" height="6" y="16" fill="#14B87A"/><rect x="2" y="8" width="10" height="8" rx="3" fill="#F4F1EA"/><rect x="14" y="4" width="6" height="12" rx="3" fill="#F4F1EA"/></svg>HOUSE</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><polygon points="11,2 20,18 2,18" fill="#ADA69A"/></svg>NORTH</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="5" width="16" height="12" fill="#6B655C"/></svg>SLOPE</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="8" height="8" fill="#F4F1EA"/><rect x="12" y="12" width="8" height="8" fill="#14B87A"/></svg>PIXEL</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="16" height="16" fill="none" stroke="#ADA69A" stroke-width="2"/><path d="M3 11h16M11 3v16" stroke="#ADA69A" stroke-width="2"/></svg>GRID</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><polygon points="11,2 20,7 20,15 11,20 2,15 2,7" fill="#F4F1EA"/></svg>VAULT</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="8" fill="#14B87A"/></svg>LUMEN</span>
+          <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="9" width="18" height="4" fill="#ADA69A"/></svg>QUAY</span>
+        </div>
+      </div>
+    </div>
+  </div>
+<script src="overlay-live.js"></script>
+</body>
+</html>

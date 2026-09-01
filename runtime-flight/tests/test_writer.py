@@ -315,6 +315,15 @@ def test_writer_prompt_targets_four_to_four_point_six_seconds():
     assert "4.3" in system
     assert "120" in system
     assert "280" not in system
+    assert "not X, it's Y" in system
+    assert "just a vibe" in system
+    assert "The discussion teaches" in system
+    assert "the audience" in system
+    assert "points of view" in system
+    assert "tweet is the door" in system
+    assert "broaden" in system
+    assert "promotional copy" in system
+    assert "AI analyst" in system
     assert captured["user"]["target_duration_s"] == 4.3
 
 
@@ -472,8 +481,9 @@ def test_non_bool_thought_open_is_rejected():
         _run(run())
 
 
-def test_fenced_markdown_content_fails_without_stripping():
-    fenced = "```json\n" + json_module.dumps(_valid_thought_payload()) + "\n```"
+def test_fenced_markdown_json_is_accepted():
+    payload = _valid_thought_payload()
+    fenced = "```json\n" + json_module.dumps(payload) + "\n```"
 
     async def http_post(url, *, headers, json, timeout):
         return FakeResponse(200, {"choices": [{"message": {"content": fenced}}]})
@@ -482,8 +492,8 @@ def test_fenced_markdown_content_fails_without_stripping():
         writer = Writer(_client(http_post))
         return await _write(writer)
 
-    with pytest.raises(TextClientError, match="JSON"):
-        _run(run())
+    thought = _run(run())
+    assert thought.text == payload["text"]
 
 
 def test_timeout_returns_no_invented_thought():
@@ -646,10 +656,13 @@ def test_writer_sends_current_beat_coverage_and_host_voices():
     assert user["coverage"]["still_open"]
     assert user["hosts"]["BOT1"]["persona"].startswith("Calm")
     assert user["hosts"]["BOT2"]["writer_rules"] == ["Ask what moved."]
+    assert user["hosts"]["BOT1"]["soul"]
+    assert user["hosts"]["BOT2"]["opinions"]
     system = captured["system"].lower()
     assert "discussion" in system
     assert "recap" in system
     assert "persona" in system
+    assert "empty the well" in system
     assert "PHASEONE" not in captured["system"]
     assert "deb" not in captured["system"]
 

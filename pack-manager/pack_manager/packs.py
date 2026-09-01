@@ -22,6 +22,8 @@ _CHARACTER_V2_KEYS = frozenset(
         "persona",
         "writer_rules",
         "voice_direction",
+        "soul",
+        "opinions",
         "tts",
         "asset_ids",
     }
@@ -309,6 +311,8 @@ class PackService:
         PackService._require_non_empty_string(
             manifest["voice_direction"], "voice_direction"
         )
+        PackService._validate_optional_soul(manifest)
+        PackService._validate_optional_opinions(manifest)
 
     @staticmethod
     def _validate_scene_manifest(
@@ -469,6 +473,24 @@ class PackService:
     def _require_non_empty_string(value: object, field: str) -> None:
         if not isinstance(value, str) or not value.strip():
             raise ValidationError(f"{field} must be a non-empty string")
+
+    @staticmethod
+    def _validate_optional_soul(manifest: dict) -> None:
+        if "soul" not in manifest:
+            return
+        PackService._require_non_empty_string(manifest["soul"], "soul")
+
+    @staticmethod
+    def _validate_optional_opinions(manifest: dict) -> None:
+        if "opinions" not in manifest:
+            return
+        opinions = manifest["opinions"]
+        if not isinstance(opinions, list):
+            raise ValidationError("opinions must be a list")
+        if not opinions:
+            raise ValidationError("opinions must be a non-empty list")
+        for index, opinion in enumerate(opinions):
+            PackService._require_non_empty_string(opinion, f"opinions[{index}]")
 
     @staticmethod
     def _require_positive_integer(value: object, field: str) -> None:

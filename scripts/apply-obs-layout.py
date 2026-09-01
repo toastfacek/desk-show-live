@@ -221,17 +221,24 @@ def apply_layout(
             ),
         )
 
+    client.set_current_scene_transition("Cut")
     client.set_input_settings(
         name="HOST_WIDE",
         settings={
             "is_local_file": True,
             "local_file": str(clip.resolve()),
-            "looping": True,
-            "restart_on_activate": True,
+            "looping": False,
+            "restart_on_activate": False,
+            "close_when_inactive": False,
+            "clear_on_media_end": False,
             "hw_decode": False,
         },
         overlay=False,
     )
+    try:
+        client.set_input_mute(name="HOST_WIDE", muted=False)
+    except Exception:
+        pass
     # Color sources default to a 1920×1080 plate and would cover the desk.
     # Size them as 8px speaking bars and hide until set_speaking.
     for name, well, x in (

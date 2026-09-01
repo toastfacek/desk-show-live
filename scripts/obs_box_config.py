@@ -55,6 +55,8 @@ def write_obs_files(
                 "LicenseAccepted=true",
                 "EnableAutoUpdates=false",
                 "LastRunVersion=32.2.0",
+                # CEF stays black on llvmpipe if this stays true.
+                "BrowserHWAccel=false",
                 "",
                 "[Basic]",
                 "Profile=Untitled",

@@ -6,7 +6,7 @@
 | :---- | :---- |
 | Hosts, scenes, locked hero | `pack-manager/` (`data/` is gitignored; seed still is `pack-manager/fixtures/hero_wide.png`) |
 | OBS clock | `obs-harness/` |
-| Live flight | `runtime-flight/` |
+| Live flight | `runtime-flight/` ([flight-check notes](runtime-flight/LIVE_FLIGHT_CHECK.md)) |
 | Prompt-safe sheets (words only) | `studio.yaml` |
 | Asset map | [`ASSETS.md`](ASSETS.md) |
 

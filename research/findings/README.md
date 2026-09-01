@@ -9,4 +9,9 @@ Design-agent contract: [../deliverables/DESIGN_BRIEF.md](../deliverables/DESIGN_
 Editorial (not a visual lane):
 
 - [talk-show-segment-lifecycle.md](talk-show-segment-lifecycle.md) — TBPN / PTI / SportsCenter / Siskel & Ebert cadence, and the two-host LLM contract for Segmenter + Writer.
+- [dialogue-and-character.md](dialogue-and-character.md) — How games, improv, LLM character stacks, and conversation analysis make two complementary voices feel alive; steal-for-HostMind checklist.
 - [tbpn-host-dialogue.md](tbpn-host-dialogue.md) — five recent Diet TBPN transcripts: tape-vs-needle adjacency pairs and a prompt-ready Writer contract.
+
+Operational (not a visual lane):
+
+- [../../runtime-flight/LIVE_FLIGHT_CHECK.md](../../runtime-flight/LIVE_FLIGHT_CHECK.md) — First paid OBS live: Constrained Baseline decode, silent mix, Fade + `card_full`, sprite-centered crops. Tweet URL → `tweet.png` + dynamic producer card is `runtime_flight stage`.

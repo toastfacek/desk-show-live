@@ -3,12 +3,67 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import time
+from pathlib import Path
 
 
 LAYOUTS = ("wide", "split", "solo_l", "solo_r", "card_full", "hold")
 HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
 HIGHLIGHT_SOURCES = ("HL_A", "HL_B")
+HOST_WIDE_PLAYBACK = {
+    "is_local_file": True,
+    "looping": False,
+    "restart_on_activate": False,
+    "close_when_inactive": False,
+    "clear_on_media_end": False,
+    "hw_decode": False,
+}
+
+
+def prepare_obs_clip(path: str | Path) -> Path:
+    """Remux H3 Constrained Baseline into High@3.2 so ffmpeg_source paints.
+
+    Fal's ready files are valid media; this box's OBS source goes black on
+    them. Evidence keeps the original. Playback uses a sibling `.obs.mp4`.
+    """
+    src = Path(path)
+    dest = src.with_name(f"{src.stem}.obs{src.suffix}")
+    if (
+        dest.is_file()
+        and dest.stat().st_size > 0
+        and dest.stat().st_mtime >= src.stat().st_mtime
+    ):
+        return dest
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(dest.name + ".tmp.mp4")
+    try:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(src),
+                "-c:v",
+                "libx264",
+                "-profile:v",
+                "high",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "aac",
+                "-movflags",
+                "+faststart",
+                str(tmp),
+            ],
+            check=True,
+            capture_output=True,
+        )
+        os.replace(tmp, dest)
+        return dest
+    except (OSError, subprocess.CalledProcessError):
+        tmp.unlink(missing_ok=True)
+        return src
 
 
 class ObsPlayer:
@@ -76,10 +131,13 @@ class ObsPlayer:
         on_air = None
         try:
             status = client.get_media_input_status(name="HOST_WIDE")
-            remaining = getattr(status, "media_duration", 0) - getattr(
-                status, "media_cursor", 0
-            )
-            remaining_s = max(0.0, remaining / 1000.0) if remaining else 0.0
+            duration = getattr(status, "media_duration", None)
+            cursor = getattr(status, "media_cursor", None)
+            if duration is None or cursor is None:
+                remaining_s = 0.0
+            else:
+                remaining = duration - cursor
+                remaining_s = max(0.0, remaining / 1000.0) if remaining else 0.0
             on_air = {
                 "kind": "host" if scene in HOST_LAYOUTS else "card",
                 "path": None,
@@ -109,16 +167,24 @@ class ObsPlayer:
     def set_layout(self, name: str) -> None:
         if name not in LAYOUTS:
             raise ValueError(f"unknown layout {name}")
-        self._req().set_current_program_scene(name)
+        client = self._req()
+        current = client.get_current_program_scene().current_program_scene_name
+        if current != name:
+            client.set_current_program_scene(name)
         self.layout = name
 
     def play_clip(self, path: str) -> None:
         client = self._req()
+        playable = str(prepare_obs_clip(path))
         client.set_input_settings(
             name="HOST_WIDE",
-            settings={"local_file": path},
+            settings={"local_file": playable, **HOST_WIDE_PLAYBACK},
             overlay=True,
         )
+        try:
+            client.set_input_mute(name="HOST_WIDE", muted=False)
+        except Exception:
+            pass
         try:
             client.trigger_media_input_action(
                 name="HOST_WIDE",

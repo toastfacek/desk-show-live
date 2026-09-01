@@ -12,6 +12,7 @@ import yaml
 
 from runtime_flight.config import (
     ConfigError,
+    apply_source_dir,
     load_config,
     redacted_summary,
     validate_config,
@@ -106,6 +107,27 @@ def test_load_config_resolves_paths_relative_to_config_file(
     ).resolve()
     assert loaded.source_packet == (config_dir / "inputs/source_packet.local.json").resolve()
     assert loaded.source_lock == (config_dir / "inputs/source_packet.lock.json").resolve()
+
+
+def test_apply_source_dir_overrides_packet_and_lock(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_dir = tmp_path / "flight"
+    config_dir.mkdir()
+    config_path = _write_config(config_dir)
+    _set_complete_env(monkeypatch)
+    staged = tmp_path / "staged" / "123"
+    staged.mkdir(parents=True)
+    packet = staged / "source_packet.local.json"
+    lock = staged / "source_packet.lock.json"
+    packet.write_text("{}", encoding="utf-8")
+    lock.write_text("{}", encoding="utf-8")
+    loaded = apply_source_dir(load_config(config_path), staged)
+    assert loaded.source_packet == packet.resolve()
+    assert loaded.source_lock == lock.resolve()
+    with pytest.raises(ConfigError, match="source-dir"):
+        apply_source_dir(load_config(config_path), tmp_path / "missing")
 
 
 def test_validate_config_rejects_missing_env(
