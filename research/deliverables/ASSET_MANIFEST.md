@@ -2,6 +2,8 @@
 
 Hand this file and [DESIGN_BRIEF.md](DESIGN_BRIEF.md) to a design agent. They implement Package A. Package B can ride along or follow.
 
+**Relocked 2026-09-01.** [RELOCK_PROPOSAL.md](RELOCK_PROPOSAL.md) is the accepted decision record; this manifest contains the resulting production contract.
+
 Ship into `assets/broadcast/` exactly as named. Do not invent a parallel tree. Preview work may live under `research/mocks/` until accepted.
 
 All rectangles are 1920×1080, origin top-left. Values marked **lock** are project-locked. Values marked **rev** replace a provisional spec number — use the revision.
@@ -10,22 +12,21 @@ All rectangles are 1920×1080, origin top-left. Values marked **lock** are proje
 
 | Token | Value | Status |
 | --- | --- | --- |
-| `foundation` | `#101116` | lock |
-| `plate` | `#171A20` | lock |
-| `idle-frame` | `#2A2E38` | **rev** — 8 px `plate` on foundation disappears |
-| `text-primary` | `#F2F0E8` | lock |
-| `text-secondary` | `#A9ADB7` | lock |
-| `amber` | `#F2A541` | BOT1 / accent only |
-| `teal` | `#2FB7B2` | BOT2 / accent only |
-| `gain` | `#4FC58B` | with `▲` and a sign |
-| `loss` | `#E05D68` | with `▼` and a sign |
-| `border-frame` | 8 px opaque | lock |
+| `foundation` | `#0B0A08` | lock |
+| `plate` | `#15130F` at 93% | lock; essential type still meets ≥7:1 |
+| `text-primary` | `#F4F1EA` | lock |
+| `text-secondary` | `#ADA69A` | lock |
+| `jade` | `#14B87A` | programme accent; desk rule and kicker chip only |
+| `live` | `#E2543F` | 10 px LIVE dot only |
+| `gain` | `#A3BE9C` | with `▲` and a numeric sign |
+| `loss` | `#D89A88` | with `▼` and a numeric sign |
 | `rule-essential` | 4 px | lock |
 | `radius-max` | 8 px | lock |
 | `skew` | 0° | lock |
 | `glow` | none | lock |
-| Display face | Barlow Condensed 700 | vendor OFL |
+| Display face | Archivo 600–800, variable `wdth` 62–125 | vendor OFL |
 | Data face | Inter 600 / 700 + `tnum` | vendor OFL |
+| System face | JetBrains Mono 500 | vendor OFL |
 
 Essential type ≥ 26 px. Contrast of essential text on its plate ≥ 7:1. No text below 500 weight.
 
@@ -33,19 +34,16 @@ Essential type ≥ 26 px. Contrast of essential text on its plate ≥ 7:1. No te
 
 | Element | x | y | w | h | Notes |
 | --- | ---: | ---: | ---: | ---: | --- |
-| `HOST_CROP_L` | 40 | 100 | 620 | 700 | 50% of 1344×768, cover-scaled. |
-| `CENTER_CARD` | 660 | 100 | 600 | 700 | Border inside the rect. Safe interior 24,40,552×620. |
-| `HOST_CROP_R` | 1260 | 100 | 620 | 700 | Same source, other half. |
-| `SHOW_BUG` | 96 | 54 | 72 | 72 | Persistent. |
-| `SPONSOR_CELL` | **184** | **70** | 220 | 40 | **rev** — spec `96,134` overlaps the left well. |
-| `LIVE_BADGE` | 1584 | 54 | 112 | 40 | Persistent while live. |
-| `CLOCK` | 1704 | 54 | 120 | 40 | Tabular. |
-| `CHYRON` | 0 | 900 | 1920 | 96 | Kicker cell 240 px. |
-| `TICKER` | 0 | 996 | 1920 | 52 | One row. |
+| `HOST_CROP_L` | 64 | 140 | 580 | 660 | 50% of 1344×768, cover-scaled. |
+| `CENTER_CARD` | 668 | 140 | 584 | 660 | 24 px gutters from both host wells. |
+| `HOST_CROP_R` | 1276 | 140 | 580 | 660 | Same source, other half. |
+| `SYSTEM_RAIL` | 64 | 48 | 1792 | 60 | Mark, LIVE, segment, clock and sponsor share one rail. |
+| `CHYRON` | 64 | 838 | 1792 | 118 | Kicker chip plus land. |
+| `TICKER` | 64 | 972 | 1792 | 56 | One row. |
 
-Host IDs and `ON AIR` tabs attach to the aperture, inside the 8 px frame. Do not place a unique fact in y > 1026 (player chrome).
+Host IDs attach to the aperture. The active host's name plate inverts; there are no host frames or `ON AIR` tabs. Do not place a unique fact in y > 1026 (player chrome).
 
-768p cover into a well: scale half-frame 672×768 by `max(620/672, 700/768)` = 0.9226, then crop the vertical excess (~9 px). Do not let a compositor letterbox or stretch.
+768p cover into a well: scale half-frame 672×768 by `max(580/672, 660/768)` = 0.863, then crop the horizontal excess. Do not let a compositor letterbox or stretch.
 
 ## Package A — identity + live CG (design now)
 
@@ -53,7 +51,8 @@ Every item is a file you hand back. HTML/CSS is the production medium. A Figma p
 
 | ID | Deliverable | Format | Spec |
 | --- | --- | --- | --- |
-| A1 | `assets/broadcast/fonts/BarlowCondensed-Bold.ttf` | TTF | Weight 700. Include `OFL.txt`. |
+| A1a | `assets/broadcast/fonts/Archivo-Variable.ttf` | TTF | Weights 600–800; width axis 62–125. Include `OFL.txt`. |
+| A1b | `assets/broadcast/fonts/JetBrainsMono-Medium.ttf` | TTF | Weight 500. Include `OFL.txt`. |
 | A2 | `assets/broadcast/fonts/Inter-SemiBold.ttf` | TTF | Weight 600, tabular nums verified in a browser. Include `OFL.txt`. |
 | A3 | `assets/broadcast/fonts/Inter-Bold.ttf` | TTF | Weight 700, `tnum`. |
 | A4 | `assets/broadcast/tokens.css` | CSS | Custom properties for every token in the table above. No extra colours. |
@@ -66,15 +65,14 @@ Every item is a file you hand back. HTML/CSS is the production medium. A Figma p
 
 | Template | Type | Copy | Motion |
 | --- | --- | --- | --- |
-| `SHOW_BUG` | persistent | none | none on topic change |
-| `LIVE_BADGE` | persistent | `LIVE` Inter 700 / 30 px | none |
-| `CLOCK` | persistent | `HH:MM:SS` Inter 700 / 30 / `tnum` | digits only |
-| `SPONSOR_CELL` | persistent | `PRESENTED BY` Inter 600 + name | hold 8–12 s; never crawl |
-| `HOST_FRAME_L/R` | attached | none | 8 px `idle-frame`; `amber` if BOT1 speaking; `teal` if BOT2 |
-| `SPEAKER_STATE` | attached | `ON AIR` Inter 700 / 16–18 | solid lozenge, top-left of the active frame. Colour alone is a fail. |
-| `HOST_ID_L/R` | attached | `PHASEONE[lol]` / `deb` Barlow 700 / 40. Axis/handle Inter 600 / 22–28 | 5–7 s first show. Exact case. No `text-transform: uppercase` on `deb`. |
+| `SHOW_BUG` | persistent in rail | accepted two-mass mark | none on topic change |
+| `LIVE_BADGE` | persistent in rail | `LIVE` JetBrains Mono 500 / 30 px + 10 px `live` dot | none |
+| `CLOCK` | persistent in rail | `HH:MM:SS` JetBrains Mono 500 / 30 / `tnum` | digits only |
+| `SPONSOR_CELL` | right side of rail | `PRESENTED BY` JetBrains Mono 500 / ≥26 + name | hold 8–12 s; never crawl |
+| `SPEAKER_STATE` | attached to host ID | active host-name plate inverts to ink on bone and carries the live cursor | exactly one inverted plate when speaker is known; none when unknown |
+| `HOST_ID_L/R` | attached | `PHASEONE[lol]` / `deb` Archivo 700 / 40. Axis/handle JetBrains Mono 500 / 22–28 | 5–7 s first show. Exact case. No `text-transform: uppercase` on `deb`. |
 | `CENTER_CARD` / **post** | payload | kicker ≤12, author ≤48, body ≤240 chars / 8 lines | plate swap only; shell never moves |
-| `CHYRON` | bottom | kicker ≤12 uppercase Barlow 28; headline ≤90 Barlow 42, ≤2 lines, sentence case | replace copy under a stationary plate |
+| `CHYRON` | bottom | kicker ≤12 uppercase Archivo 700 / 28; headline ≤90 Archivo 700 / 42, ≤2 lines, sentence case | replace copy under a stationary plate |
 | `TICKER` | bottom | paginated 6–8 s; one symbol/value/`▲` or one short sentence | one moving row |
 | `HOLD` | z=100 | brand + `STAND BY` | **off** unless `hold: true` |
 
@@ -84,7 +82,7 @@ M0 card payload is **post** only. Leave `chart` / `image` / `guest` / `error` as
 
 1. Overflow: edit → wrap → ellipsis. Never shrink below 26 px.
 2. Chyron is the land. If headline ≈ card body, the template is being fed a reject. Still render; do not “fix” by shrinking.
-3. Gain/loss: `▲ +0.80` / `▼ −0.22` plus colour. Never colour alone.
+3. Gain/loss: `▲ +0.80` / `▼ −0.22` plus colour. Render a sign only when a numeric `value` or `change` exists; sentence items have no sign. Never colour alone.
 4. No avatars, tweet chrome, or live-fetched images in the post card.
 
 ## Package B — baked motion and audio (same cadence, can follow)
@@ -109,8 +107,8 @@ Feed [fixtures/segment-20260831T154227Z.json](fixtures/segment-20260831T154227Z.
 
 Acceptance stills the design agent must attach:
 
-1. `split` + BOT1 `ON AIR` + post card + land chyron + ticker.
-2. Same, BOT2 `ON AIR` (amber off, teal on, tab moved).
+1. `split` + BOT1 active plate + post card + land chyron + ticker.
+2. Same, BOT2 active plate (inversion moves to the other name).
 3. `hold: true` (desk gone, furniture optional).
 4. 480p downscale of still 1 at 100% crop on the chyron and on `PHASEONE[lol]`.
 
@@ -122,15 +120,15 @@ A compositor that puts the real 10.4 s two-shot under these plates is in [../moc
 - [ ] Tokens file has no undeclared colour.
 - [ ] Bug is original and legible at 72×72 and at 32×32.
 - [ ] Overlay body is transparent when not holding.
-- [ ] Sponsor sits at `184,70`, not on the left host.
-- [ ] Idle frames visible (`#2A2E38` or equivalent 8 px contrast).
+- [ ] Sponsor is right-aligned in the system rail at a 64 px inset and never overlaps a host well.
 - [ ] `deb` is not forced uppercase.
-- [ ] One `ON AIR` tab maximum; tab present whenever a speaker is set.
+- [ ] Exactly one host-name plate is inverted whenever a speaker is set; none is inverted when unknown.
 - [ ] Card body that exceeds 240 chars ellipsizes; type size unchanged.
 - [ ] Fixture land paints; fixture `rejected_package_chyron` is not used.
 - [ ] No named-show language in any asset.
 - [ ] Still 1 survives a 480p (`scale=854:480`) read of names, land, and `▲/▼`.
+- [ ] No textural cell is below 20 px for ASCII or 8 px for mosaic/Bayer; host-visible texture is static.
 
 ## Out of scope
 
-ATEM/vMix/Teradek. Ross/Chyron. Host/hero generation. Writer prompts. Chat chrome. Guest card. Chart plot. Ad-read stills. Relocking the graphics spec (report collisions; do not silently fork more rectangles).
+ATEM/vMix/Teradek. Ross/Chyron. Host/hero generation. Writer prompts. Chat chrome. Guest card. Chart plot. Ad-read stills. Any future relock without an explicit decision record.

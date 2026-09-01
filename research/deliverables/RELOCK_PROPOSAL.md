@@ -1,12 +1,21 @@
-# Relock proposal — Package A token and geometry table
+# Relock decision record — Package A token and geometry table
 
-**Status: proposal. Nothing ships against it until it is signed off.**
+**Status: accepted on 2026-09-01 for Package A.** Sections 1–5, the two-host desk mark, and the revised acceptance checklist are the production direction.
 
 [ASSET_MANIFEST.md](ASSET_MANIFEST.md) puts *"relocking the graphics spec"* out of scope and asks instead that collisions be reported rather than silently forked. The design work in [../mocks/identity-bracket.html](../mocks/identity-bracket.html) has reached a coherent system that departs from the locked table in about fifteen places. Shipping it into `assets/broadcast/` without this document would be that silent fork.
 
-So this is the report. Every departure, what it replaces, and why. Approve it and Package A can be cut against the right-hand column; reject any line and the design returns to the left.
+This record preserves every departure, what it replaces, and why. Package A is cut against the right-hand column. The authoritative file contract and pixel grammar have been updated in [ASSET_MANIFEST.md](ASSET_MANIFEST.md) and [../runtime-graphics-spec.md](../runtime-graphics-spec.md).
 
 Three things did **not** change and are not up for discussion here: the 26 px essential-type floor, the ≥7:1 contrast requirement on essential text, and the rule that no text is ever baked into a generated frame.
+
+## Decision summary
+
+- **Accepted:** the warm espresso/jade colour system in §1.
+- **Accepted:** the floating 64 px geometry and unified top rail in §2.
+- **Accepted:** inverted host-name plates as the sole speaker-state signal in §3.
+- **Accepted:** Archivo for display, Inter for data, and JetBrains Mono 500 for system text in §4.
+- **Accepted with an operational gate:** the coarse code layer in §5. It ships static when hosts are visible; moving texture stays behind a flag until a received Twitch rendition passes the encode test.
+- **Accepted:** the current two-mass mark, derived from the two hosts and shared desk rule, for Package A5.
 
 ---
 
@@ -69,7 +78,7 @@ The live plate also carries a small cursor, the same mark that follows the wordm
 | --- | --- | --- |
 | Display | Barlow Condensed 700 | **Archivo** 600–800, variable `wdth` 62–125 |
 | Data | Inter 600/700 + `tnum` | unchanged |
-| System | — | **JetBrains Mono** 400/500 — status, clocks, symbols, labels |
+| System | — | **JetBrains Mono** 500 — status, clocks, symbols, labels |
 
 Archivo was already named in [../findings/L5-type-color.md](../findings/L5-type-color.md) as the best single-family route: one variable grotesque, OFL, cleared for video titling. Its width axis means **copy is fitted by width rather than by size**, which makes the "never shrink below 26 px" rule far easier to hold. All three are OFL and vendored; the CDN links in the mocks are preview only.
 
@@ -107,27 +116,25 @@ Lines that survive unchanged from the manifest are marked ⟢. Lines that change
 
 ---
 
-## What is blocked on this
+## Implementation impact
 
-Per deliverable, rather than as a single claim. An earlier draft of this document said Package A was blocked on §1 and §2 only; that was wrong, and the table is the correction.
+The decisions are resolved. This table records which accepted section each deliverable now implements.
 
-| Deliverable | Blocked on | Why |
+| Deliverable | Implements | Production direction |
 | --- | --- | --- |
-| `A1` BarlowCondensed-Bold.ttf | **§4** | §4 replaces this face outright. A1 names a file that would not be vendored. |
-| `A2`, `A3` Inter | — | Inter is retained for data in both columns. |
-| `A4` tokens.css | **§1** | Cannot be written against two colour tables. |
-| `A5` show-bug.svg | — | Uses `bone` and `jade` only. Preview cuts in [../mocks/mark/](../mocks/mark/). |
-| `A6` overlay/index.html | **§2** | Its root geometry is the rectangle table. |
-| `A7` app.js | **§3** | It drives speaker state, and §3 changes what state there is to drive. |
-| `A8` style.css | **§1 §2 §3 §4** | It implements every template, so it touches all four. |
-
-So the useful sequencing is: **§1 and §2 unblock the most (A4, A6), §4 unblocks the fonts, and §3 is required before any of A7 or A8 is written.** Only A2, A3 and A5 can be cut against the current text with nothing outstanding.
+| `A1a–A1b` display/system fonts | **§4** | Vendor Archivo variable plus JetBrains Mono 500 and their OFL files. |
+| `A2`, `A3` Inter | **§4** | Retain Inter for data and tabular numerals. |
+| `A4` tokens.css | **§1** | Use the accepted warm-neutral table with jade and live tokens. |
+| `A5` show-bug.svg | **mark decision** | Promote the two-mass mark from [../mocks/mark/](../mocks/mark/). |
+| `A6` overlay/index.html | **§2** | Implement the floating 64 px grid and unified rail. |
+| `A7` app.js | **§3** | Drive exactly one inverted host-name plate when a speaker is known. |
+| `A8` style.css | **§1 §2 §3 §4 §5** | Implement the accepted system; keep on-air texture static. |
 
 Package B is unaffected — it is a motion and audio cadence, and nothing in it depends on the colour table.
 
-## What is still open from the first pass
+## Collision resolution
 
 | # | Collision | Status |
 | --- | --- | --- |
-| 2 | Sponsor rev at `184,70` still crosses the left well's top border by 10 px | **Open**, and moot if §2 is approved — the rail has no overlap at all |
-| 4 | Fixture ships sentence ticker items carrying a `sign` but no `value`, producing an arrow pointing at nothing | **Open** — honour `sign` only alongside a `value` or `change`. One condition in the ticker renderer, independent of everything above |
+| 2 | Sponsor rev at `184,70` crosses the left well's top border by 10 px | **Closed by §2** — sponsor content lives in the unified rail, right-aligned at a 64 px inset. |
+| 4 | Sentence ticker items can carry a `sign` without a `value` | **Closed** — render a sign only when a numeric `value` or `change` is present; sentence items render without a sign. |
