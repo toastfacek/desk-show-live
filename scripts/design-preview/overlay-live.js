@@ -27,7 +27,7 @@ function applyProducerCard(card, nodes) {
     nodes.chyron.textContent = card.chyron;
   }
   if (nodes.image) {
-    const src = safeImageUrl(card.image_url, nodes.cardOrigin);
+    const src = safeImageUrl(card.photo_url || "", nodes.cardOrigin);
     if (src) {
       nodes.image.src = src;
       nodes.image.hidden = false;

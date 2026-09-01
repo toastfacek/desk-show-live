@@ -108,6 +108,7 @@ def ingest_tweet(
         text=fetched.text,
         url=fetched.url,
         image_url=f"/{IMAGE_NAME}",
+        photo_url="/media.png" if media_path is not None else "",
         chyron=_standby_chyron(fetched.text),
     )
     (dest / CARD_NAME).write_text(
@@ -149,6 +150,7 @@ def producer_card_payload(
     chyron: str = "",
     ticker: list[str] | None = None,
     image_url: str = f"/{IMAGE_NAME}",
+    photo_url: str = "",
     speaker: str = "a",
     seg: str = "",
     timestamp: str = "",
@@ -162,6 +164,7 @@ def producer_card_payload(
         "chyron": chyron,
         "ticker": items[:6],
         "image_url": image_url,
+        "photo_url": photo_url if photo_url.startswith("/") else "",
         "speaker": speaker if speaker in {"a", "b"} else "a",
         "seg": seg,
     }

@@ -206,12 +206,12 @@ applyProducerCard({{
   text: "<script>alert(1)</script>",
   chyron: "Ship the workflow",
   ticker: ["unlock", "catch"],
-  image_url: "/tweet.png",
+  photo_url: "/media.jpg",
 }}, nodes);
 assert.strictEqual(nodes.author.textContent, "@example_user");
 assert.strictEqual(nodes.body.textContent, "<script>alert(1)</script>");
 assert.strictEqual(nodes.chyron.textContent, "Ship the workflow");
-assert.strictEqual(nodes.image.src, "http://127.0.0.1:8765/tweet.png");
+assert.strictEqual(nodes.image.src, "http://127.0.0.1:8765/media.jpg");
 assert.strictEqual(nodes.ticker.textContent, "unlock  ·  catch");
 console.log("ok");
 """,

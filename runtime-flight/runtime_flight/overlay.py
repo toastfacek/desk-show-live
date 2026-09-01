@@ -154,6 +154,7 @@ class OverlayServer:
         chyron: str = "",
         ticker: list[str] | tuple[str, ...] | None = None,
         image_url: str = "/tweet.png",
+        photo_url: str = "",
         speaker: str = "a",
         seg: str = "",
         image_bytes: bytes | None = None,
@@ -168,6 +169,7 @@ class OverlayServer:
                 "chyron": chyron,
                 "ticker": items[:6],
                 "image_url": image_url if image_url.startswith("/") else "/tweet.png",
+                "photo_url": photo_url if isinstance(photo_url, str) and photo_url.startswith("/") else "",
                 "speaker": speaker if speaker in {"a", "b"} else "a",
                 "seg": seg,
             }
