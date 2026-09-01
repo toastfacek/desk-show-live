@@ -136,6 +136,9 @@ class FakeObsClient:
     def set_scene_item_transform(self, scene_name, item_id, transform):
         self.calls.append(("set_scene_item_transform", scene_name, item_id, transform))
 
+    def set_scene_item_enabled(self, scene_name, item_id, enabled):
+        self.calls.append(("set_scene_item_enabled", scene_name, item_id, enabled))
+
     def _next_scene_item_id(self) -> int:
         item_id = self.next_scene_item_id
         self.next_scene_item_id += 1

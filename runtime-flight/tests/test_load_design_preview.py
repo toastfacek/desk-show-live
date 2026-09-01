@@ -84,3 +84,44 @@ def test_apply_wash_sits_under_the_desk_and_leaves_the_contract() -> None:
     assert all(call[3] == 0 for call in indexes)
 
     assert validate_contract(client) == []
+
+
+def test_overlay_live_is_transparent_1080_cg_not_the_review_page() -> None:
+    html = Path(__file__).resolve().parents[2] / "scripts" / "design-preview" / "overlay-live.html"
+    text = html.read_text(encoding="utf-8")
+    assert "1920px" in text
+    assert "1080px" in text
+    assert "background:transparent" in text
+    assert "PHASEONE[lol]" in text
+    assert ">deb<" in text
+    assert "Runtime mark" in text
+    assert 'class="set"' not in text
+    assert "The overlay stops performing" not in text
+
+
+def test_overlay_live_url_selects_speaker() -> None:
+    assert load_design_preview.overlay_live_url(8766) == (
+        "http://127.0.0.1:8766/overlay-live.html?speaker=a"
+    )
+    assert "speaker=b" in load_design_preview.overlay_live_url(8766, speaker="b")
+
+
+def test_apply_preview_points_watchdog_at_identity_and_hides_obs_type() -> None:
+    client = complete_obs_client()
+    summary = load_design_preview.apply_preview(
+        client,
+        wash="http://127.0.0.1:8766/dither-wash.html?static=1",
+        overlay="http://127.0.0.1:8766/overlay-live.html?speaker=a",
+    )
+    watchdog = [
+        call
+        for call in client.calls
+        if call[0] == "set_input_settings" and call[1] == "WATCHDOG"
+    ]
+    assert watchdog[-1][2]["url"].endswith("overlay-live.html?speaker=a")
+    hidden = set(summary["hidden_furniture"])
+    assert "split:NAME_A" in hidden
+    assert "split:HEADLINE" in hidden
+    assert "split:CENTER" in hidden
+    assert summary["wells"]["wells"]["left"]["x"] == 64
+    assert validate_contract(client) == []

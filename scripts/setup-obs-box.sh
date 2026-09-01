@@ -89,4 +89,4 @@ cd "${ROOT}/runtime-flight"
   --record-dir "$RECORD_DIR" \
   --watchdog-url "$WATCHDOG_URL"
 echo "OBS box ready. program scene=split. not streaming."
-echo "Design preview (PR #26 wash, not Package A): python scripts/load-design-preview.py"
+echo "Design preview (PR #26 overlay+wash, not Package A): python scripts/load-design-preview.py"
