@@ -130,17 +130,18 @@ A hard half-split (`crop_right=672` / `crop_left=672`) plus
 `OBS_BOUNDS_SCALE_OUTER` into the design wells put them at well-rel
 **0.37 / 0.62** — scrunched on the left and right sides of the programme.
 
-Design-preview crops (`scripts/load-design-preview.py`) now take a **500px**
-window on those centers, `crop_top=48`, `boundsAlignment` center (0). Position
-alignment stays top-left so the well sits at (64, 172) / (1276, 172), 32px
-under the original y=140 frame. `cropToBounds` is on so `SCALE_OUTER` cannot
-paint into the logo, sponsor, or timer. Well height is 628 so the chyron at
-y=838 stays clear.
+Design-preview crops (`scripts/load-design-preview.py`) now take a **400px**
+window on those centers, `crop_top=64`, `boundsAlignment` center (0). That
+is a tighter zoom than the 500px window so the sprites fill more of each
+well. Position alignment stays top-left so the well sits at (64, 172) /
+(1276, 172). `cropToBounds` is on so `SCALE_OUTER` cannot paint into the
+logo, sponsor, or timer. Well height is 628 so the chyron at y=838 stays
+clear.
 
 | | Left well-rel | Right well-rel |
 | :-- | :-- | :-- |
 | 50/50 half | 0.37 | 0.62 |
-| 500px on sprite | 0.50 | 0.48 |
+| 400px on sprite | 0.50 | 0.50 |
 
 Do not ask fal to reframe this. It is an OBS crop. Do not write the locked
 spec wells in `scripts/apply-obs-layout.py` (`40/1260/620×700`) until relock;

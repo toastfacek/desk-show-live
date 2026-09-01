@@ -205,9 +205,10 @@ def test_host_crops_center_sprites_inside_each_well() -> None:
     )
     assert left_w == load_design_preview.CROP_W
     assert right_w == load_design_preview.CROP_W
-    assert left["crop_left"] == 0
-    assert 230 < load_design_preview.HOST_L_X < left_w
+    assert left["crop_left"] < load_design_preview.HOST_L_X
+    visible_left = load_design_preview.HOST_L_X - left["crop_left"]
     visible_right = load_design_preview.HOST_R_X - right["crop_left"]
+    assert abs(visible_left - load_design_preview.CROP_W / 2) <= 2
     assert abs(visible_right - load_design_preview.CROP_W / 2) <= 2
     well = load_design_preview.DESIGN_WELLS["left"]
     transform = load_design_preview._bounds(

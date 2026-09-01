@@ -59,10 +59,10 @@ SOURCE_W = 1344
 SOURCE_H = 768
 HALF_W = SOURCE_W // 2
 # Measured on the locked Light Media Club two-shot: sprites sit near
-# x=240 and x=1092, not the center of each 672px half. Tighter windows
-# pan them into the wells instead of pinning them to the outer edges.
-CROP_W = 500
-CROP_TOP = 48
+# x=240 and x=1092, not the center of each 672px half. A 400px window
+# zooms them into the 580×628 wells without losing the desk mics.
+CROP_W = 400
+CROP_TOP = 64
 HOST_L_X = 240
 HOST_R_X = 1092
 HOST_WIDE_PLAYBACK = {
