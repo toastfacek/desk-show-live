@@ -1,32 +1,21 @@
 const CARD_POLL_MS = 250;
 
-const WIDE_SHOT_LAYOUTS = {
-  solo_l: true,
-  solo_r: true,
-  card_full: true,
-  hold: true,
+const SHOT_BY_LAYOUT = {
+  solo_l: { path: "/tweet-shot-solo.png", key: "shot_solo_url" },
+  solo_r: { path: "/tweet-shot-solo.png", key: "shot_solo_url" },
+  card_full: { path: "/tweet-shot-card.png", key: "shot_card_url" },
+  hold: { path: "/tweet-shot-card.png", key: "shot_card_url" },
 };
 
-function shotFallbackPath(layout) {
-  const name = normalizeLayout(layout);
-  if (name === "solo_l" || name === "solo_r") {
-    return "/tweet-shot-solo.png";
-  }
-  if (name === "card_full" || name === "hold") {
-    return "/tweet-shot-card.png";
-  }
-  return "/tweet-shot-split.png";
+function shotFor(layout) {
+  return SHOT_BY_LAYOUT[normalizeLayout(layout)] || {
+    path: "/tweet-shot-split.png",
+    key: "shot_split_url",
+  };
 }
 
-function shotUrlKey(layout) {
-  const name = normalizeLayout(layout);
-  if (name === "solo_l" || name === "solo_r") {
-    return "shot_solo_url";
-  }
-  if (name === "card_full" || name === "hold") {
-    return "shot_card_url";
-  }
-  return "shot_split_url";
+function shotFallbackPath(layout) {
+  return shotFor(layout).path;
 }
 
 function shouldUseShot(card, layout, mode) {
@@ -37,26 +26,24 @@ function shouldUseShot(card, layout, mode) {
   if (forced === "shot") {
     return true;
   }
-  return Boolean(
-    WIDE_SHOT_LAYOUTS[normalizeLayout(layout)] && card && card.has_shot
-  );
+  return Boolean(SHOT_BY_LAYOUT[normalizeLayout(layout)] && card && card.has_shot);
 }
 
 function applyTweetShot(card, nodes) {
   if (!nodes || !nodes.shot || !nodes.well || !nodes.well.classList) {
     return false;
   }
-  const layout = (nodes && nodes.layout) || "split";
-  const mode = (nodes && nodes.cardMode) || (card && card.card_mode) || "";
+  const layout = nodes.layout || "split";
+  const mode = nodes.cardMode || (card && card.card_mode) || "";
   if (!shouldUseShot(card, layout, mode)) {
     nodes.well.classList.remove("has-shot");
     nodes.shot.hidden = true;
     return false;
   }
-  const origin = nodes.embedOrigin || nodes.cardOrigin;
+  const spec = shotFor(layout);
   const src = safeImageUrl(
-    (card && card[shotUrlKey(layout)]) || shotFallbackPath(layout),
-    origin
+    (card && card[spec.key]) || spec.path,
+    nodes.embedOrigin || nodes.cardOrigin
   );
   if (src && nodes.shot.src !== src) {
     nodes.shot.src = src;
@@ -99,7 +86,7 @@ function applyProducerCard(card, nodes) {
   if (typeof card.chyron === "string" && nodes.chyron && card.chyron) {
     nodes.chyron.textContent = card.chyron;
   }
-  if (typeof card.speaker === "string" && (card.speaker === "a" || card.speaker === "b")) {
+  if (card.speaker === "a" || card.speaker === "b") {
     nodes.speaker = card.speaker;
   }
   nodes.card = card;
@@ -108,48 +95,43 @@ function applyProducerCard(card, nodes) {
   } else if (typeof card.speaker === "string") {
     applyOverlayLayout(nodes.layout || "split", nodes);
   }
-  if (nodes.embed) {
-    const embedSrc = officialEmbedPath(
-      card.tweet_id,
-      nodes.embedOrigin || nodes.cardOrigin
-    );
-    if (embedSrc) {
-      if (nodes.embed.src !== embedSrc) {
-        nodes.embed.src = embedSrc;
-      }
-      nodes.embed.hidden = false;
-      if (nodes.well && nodes.well.classList) {
-        nodes.well.classList.add("has-embed");
-      }
-    }
-  }
+  wireOfficialEmbed(card.tweet_id, nodes);
   applyTweetShot(card, nodes);
-  if (nodes.image) {
-    const src = safeImageUrl(card.photo_url || "", nodes.cardOrigin);
-    if (src) {
-      nodes.image.src = src;
-      nodes.image.hidden = false;
-      if (nodes.panel) {
-        nodes.panel.classList.add("has-image");
-      }
-    }
+  wirePhoto(card.photo_url || "", nodes);
+}
+
+function wireOfficialEmbed(tweetId, nodes) {
+  if (!nodes.embed) {
+    return;
   }
-  if (Array.isArray(card.ticker) && nodes.ticker) {
-    const labels = card.ticker.filter(function (item) {
-      return typeof item === "string" && item;
-    }).slice(0, 6);
-    if (labels.length) {
-      const line = labels.join("  ·  ");
-      nodes.ticker.textContent = line;
-      const copies = nodes.tickerCopies;
-      if (copies && typeof copies.forEach === "function") {
-        copies.forEach(function (el) {
-          if (el && el !== nodes.ticker) {
-            el.textContent = line;
-          }
-        });
-      }
-    }
+  const embedSrc = officialEmbedPath(
+    tweetId,
+    nodes.embedOrigin || nodes.cardOrigin
+  );
+  if (!embedSrc) {
+    return;
+  }
+  if (nodes.embed.src !== embedSrc) {
+    nodes.embed.src = embedSrc;
+  }
+  nodes.embed.hidden = false;
+  if (nodes.well && nodes.well.classList) {
+    nodes.well.classList.add("has-embed");
+  }
+}
+
+function wirePhoto(photoUrl, nodes) {
+  if (!nodes.image) {
+    return;
+  }
+  const src = safeImageUrl(photoUrl, nodes.cardOrigin);
+  if (!src) {
+    return;
+  }
+  nodes.image.src = src;
+  nodes.image.hidden = false;
+  if (nodes.panel) {
+    nodes.panel.classList.add("has-image");
   }
 }
 
@@ -172,6 +154,16 @@ function normalizeLayout(raw) {
   return "split";
 }
 
+function applyHid(node, show, live) {
+  if (!node) {
+    return;
+  }
+  node.hidden = !show;
+  if (show) {
+    node.className = live ? "hid live" : "hid idle";
+  }
+}
+
 function applyOverlayLayout(layout, nodes) {
   const name = normalizeLayout(layout);
   const spec = OVERLAY_LAYOUTS[name];
@@ -182,20 +174,8 @@ function applyOverlayLayout(layout, nodes) {
     });
     root.classList.add("layout-" + name);
   }
-  if (nodes && nodes.hidA) {
-    nodes.hidA.hidden = !spec.showA;
-    if (spec.showA) {
-      const live = !spec.showB || nodes.speaker === "a";
-      nodes.hidA.className = live ? "hid live" : "hid idle";
-    }
-  }
-  if (nodes && nodes.hidB) {
-    nodes.hidB.hidden = !spec.showB;
-    if (spec.showB) {
-      const live = !spec.showA || nodes.speaker === "b";
-      nodes.hidB.className = live ? "hid live" : "hid idle";
-    }
-  }
+  applyHid(nodes && nodes.hidA, spec.showA, !spec.showB || (nodes && nodes.speaker === "a"));
+  applyHid(nodes && nodes.hidB, spec.showB, !spec.showA || (nodes && nodes.speaker === "b"));
   return name;
 }
 
@@ -255,7 +235,6 @@ function bootProducerOverlay() {
     body: document.getElementById("card-body"),
     chyron: document.getElementById("chyron"),
     image: document.getElementById("card-image"),
-    ticker: null,
     panel: document.getElementById("card-panel"),
     well: document.getElementById("card-well"),
     embed: document.getElementById("tweet-embed"),

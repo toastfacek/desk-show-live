@@ -9,16 +9,15 @@ from __future__ import annotations
 import shutil
 import subprocess
 import tempfile
-from io import BytesIO
 from pathlib import Path
 
 from PIL import Image
 
-from runtime_flight.tweet_embed import TweetEmbedError, embed_frame_path
+from runtime_flight.tweet_embed import embed_frame_path
+from runtime_flight.tweet_image import PANEL
 
 SHOT_W = 640
 SHOT_H = 1400
-PANEL = (21, 19, 15)
 SPLIT_SIZE = (584, 628)
 SOLO_SIZE = (1188, 628)
 CARD_SIZE = (1792, 628)
@@ -57,16 +56,16 @@ def cover_crop(
 
 def is_blank_panel(image: Image.Image, *, panel: tuple[int, int, int] = PANEL) -> bool:
     rgb = image.convert("RGB")
-    pixels = rgb.load()
     total = rgb.width * rgb.height
     if total < 1:
         return True
-    matches = 0
-    for y in range(rgb.height):
-        for x in range(rgb.width):
-            if pixels[x, y] == panel:
-                matches += 1
-    return matches / total > 0.98
+    mismatch = 0
+    for pixel in rgb.getdata():
+        if pixel != panel:
+            mismatch += 1
+            if mismatch * 50 >= total:
+                return False
+    return True
 
 
 def _is_panel(
@@ -214,13 +213,6 @@ def capture_from_overlay(
     dest: Path,
     **kwargs,
 ) -> Path:
-    if not tweet_id.isdigit():
-        raise TweetEmbedError("tweet id is not a numeric status id")
-    base = overlay_url.rstrip("/")
-    return capture_embed_shot(base + embed_frame_path(tweet_id), dest, **kwargs)
-
-
-def png_bytes(image: Image.Image) -> bytes:
-    buf = BytesIO()
-    image.convert("RGB").save(buf, format="PNG")
-    return buf.getvalue()
+    return capture_embed_shot(
+        overlay_url.rstrip("/") + embed_frame_path(tweet_id), dest, **kwargs
+    )

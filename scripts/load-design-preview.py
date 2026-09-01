@@ -328,10 +328,6 @@ def extract_preview(dest: Path, *, ref: str = DESIGN_REF) -> dict[str, str]:
     return written
 
 
-def extract_wash(dest: Path, *, ref: str = DESIGN_REF) -> Path:
-    return Path(extract_preview(dest, ref=ref)["dither-wash.html"])
-
-
 def serve_preview(dest: Path, port: int) -> dict:
     dest.mkdir(parents=True, exist_ok=True)
     pid_path = dest / "http.pid"
@@ -550,11 +546,6 @@ def main() -> int:
         type=float,
         default=1.0,
         help="Wash drift rate. Ignored with --static. HTML default is 1.",
-    )
-    parser.add_argument(
-        "--drift",
-        action="store_true",
-        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--extract-only",

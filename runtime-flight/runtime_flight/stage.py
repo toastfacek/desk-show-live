@@ -138,12 +138,15 @@ async def _run_stage_async(
         image_bytes=image_bytes,
     )
     try:
-        from runtime_flight.tweet_shot import capture_from_overlay
+        import subprocess
+
+        from runtime_flight.tweet_embed import TweetEmbedError
+        from runtime_flight.tweet_shot import TweetShotError, capture_from_overlay
 
         shot_dir = dest / "shots"
         capture_from_overlay(overlay_server.url, source.tweet.id, shot_dir)
         overlay_server.set_shots(shot_dir)
-    except Exception:
+    except (TweetShotError, TweetEmbedError, OSError, ValueError, subprocess.TimeoutExpired):
         pass
 
     package = None

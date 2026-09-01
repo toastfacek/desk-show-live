@@ -14,7 +14,7 @@ PANEL = (21, 19, 15)
 BONE = (244, 241, 234)
 BONE_2 = (173, 166, 154)
 BONE_3 = (107, 101, 92)
-JADE = (20, 184, 122)
+LEMON = (212, 224, 74)
 
 _FONT_DIR = Path("/usr/share/fonts/truetype/dejavu")
 _SANS = _FONT_DIR / "DejaVuSans.ttf"
@@ -48,7 +48,7 @@ def render_tweet_card(
     badge_box = draw.textbbox((0, 0), badge, font=badge_font)
     badge_w = badge_box[2] - badge_box[0] + 22
     badge_h = badge_box[3] - badge_box[1] + 16
-    draw.rectangle((pad, y, pad + badge_w, y + badge_h), fill=JADE)
+    draw.rectangle((pad, y, pad + badge_w, y + badge_h), fill=LEMON)
     draw.text((pad + 11, y + 7), badge, font=badge_font, fill=INK)
     draw.text((pad + badge_w + 14, y + 8), handle, font=_font(_MONO, 20), fill=BONE_3)
     y += badge_h + 22
