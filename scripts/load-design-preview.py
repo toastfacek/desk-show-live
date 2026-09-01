@@ -66,8 +66,8 @@ CROP_TOP = 64
 # deb is the tall lozenge. The shared top crop plus a centered cover
 # clipped the crown. Keep more source above her and take the extra
 # from the desk.
-CROP_TOP_R = 12
-CROP_BOTTOM_R = 96
+CROP_TOP_R = 0
+CROP_BOTTOM_R = 200
 HOST_L_X = 240
 HOST_R_X = 1092
 HOST_WIDE_PLAYBACK = {
