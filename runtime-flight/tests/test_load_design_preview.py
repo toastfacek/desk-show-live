@@ -131,6 +131,11 @@ def test_overlay_live_polls_card_without_html_injection() -> None:
     assert "overflow:hidden" in text
     assert ".card-well.has-embed .cardp{display:none}" in text
     assert 'id="chyron"' in text
+    assert 'class="kk">DESK' not in text
+    assert "SPONSOR THE SHOW" in text
+    assert "DM FOR INQUIRIES" in text
+    assert "tkr-scroll" in text
+    assert "width:1792px" in text
     assert "overlay-live.js" in text
     assert "innerHTML" not in text
     assert "innerHTML" not in script

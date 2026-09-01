@@ -63,7 +63,16 @@ function applyProducerCard(card, nodes) {
       return typeof item === "string" && item;
     }).slice(0, 6);
     if (labels.length) {
-      nodes.ticker.textContent = labels.join("  ·  ");
+      const line = labels.join("  ·  ");
+      nodes.ticker.textContent = line;
+      const copies = nodes.tickerCopies;
+      if (copies && typeof copies.forEach === "function") {
+        copies.forEach(function (el) {
+          if (el && el !== nodes.ticker) {
+            el.textContent = line;
+          }
+        });
+      }
     }
   }
 }
@@ -96,6 +105,9 @@ function bootProducerOverlay() {
     chyron: document.getElementById("chyron"),
     image: document.getElementById("card-image"),
     ticker: document.getElementById("ticker"),
+    tickerCopies: typeof document !== "undefined"
+      ? document.querySelectorAll(".tkr-copy")
+      : [],
     panel: document.getElementById("card-panel"),
     well: document.getElementById("card-well"),
     embed: document.getElementById("tweet-embed"),
