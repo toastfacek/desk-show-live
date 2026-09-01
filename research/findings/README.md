@@ -10,6 +10,7 @@ Editorial (not a visual lane):
 
 - [talk-show-segment-lifecycle.md](talk-show-segment-lifecycle.md) — TBPN / PTI / SportsCenter / Siskel & Ebert cadence, and the two-host LLM contract for Segmenter + Writer.
 - [dialogue-and-character.md](dialogue-and-character.md) — How games, improv, LLM character stacks, and conversation analysis make two complementary voices feel alive; steal-for-HostMind checklist.
+- [tbpn-host-dialogue.md](tbpn-host-dialogue.md) — five recent Diet TBPN transcripts: tape-vs-needle adjacency pairs and a prompt-ready Writer contract.
 
 Operational (not a visual lane):
 

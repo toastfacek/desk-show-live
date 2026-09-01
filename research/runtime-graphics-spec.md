@@ -2,9 +2,11 @@
 
 Target canvas: **1920×1080**. This document specifies the deterministic layer only; generated hosts/set remain one 1344×768 wide source described by `studio.yaml`.
 
+**Relocked 2026-09-01.** The accepted rationale and old/new comparison are preserved in [deliverables/RELOCK_PROPOSAL.md](deliverables/RELOCK_PROPOSAL.md). This document is the resulting pixel grammar.
+
 ## Status of measurements
 
-- **Project-locked** values are Runtime decisions: 8 px opaque host/card borders, maximum 8 px radius, no glow, no skew, and 3–4 px minimum essential rules at 1080p.
+- **Project-locked** values are Runtime decisions: floating 64 px furniture, sharp borderless panels, maximum 8 px radius, no glow, no skew, and 3–4 px minimum essential rules at 1080p.
 - **Provisional** values are implementation starting points not established as universal broadcast or Twitch standards. They must pass the validation ladder at the end before M0 lock.
 - Evidence and rationale are consolidated in the [style report](runtime-style-report.md) and source lanes [L3](findings/L3-broadcast-graphics.md), [L4](findings/L4-multibox-layouts.md), [L5](findings/L5-type-color.md) and [L6](findings/L6-motion-idents.md).
 
@@ -37,11 +39,11 @@ Back to front:
 | 10 | `HOST_WIDE` | Dedicated full-source item for `wide` only |
 | 20 | `HOST_CROP_L/R` | Two synchronized instances of the same media source |
 | 30 | host dim plates | Off by default; max provisional 16% neutral black for text-heavy centre cards |
-| 40 | host borders and speaker tabs | Opaque; attached to apertures |
+| 40 | active host-name plate | Attached to apertures; exactly one inverted when speaker is known |
 | 50 | `CENTER_CARD` shell and payload | Covers source join whenever present |
 | 60 | host IDs | Attached to host apertures |
 | 70 | chyron, ticker, sponsor furniture | Opaque bottom stack |
-| 80 | show bug, LIVE, clock, top sponsor cell | Persistent |
+| 80 | unified system rail | Mark, LIVE, segment, clock and sponsor; persistent |
 | 90 | stinger overlay + track matte | Must fully occlude the cut once |
 | 100 | panic/hold card | Highest operational layer |
 
@@ -55,7 +57,6 @@ The source join must never depend on a visible one-pixel seam. The two crops ove
 | --- | ---: | --- |
 | `space-1/2/4` | 4 / 8 / 16 px | Provisional spacing rhythm |
 | `rule-essential` | 4 px | Project-locked within required 3–4 px range |
-| `border-frame` | 8 px | Project-locked |
 | `divider-source` | 8 px opaque | Project-locked |
 | `radius-sm` | 4 px | Provisional |
 | `radius-max` | 8 px | Project-locked maximum |
@@ -69,16 +70,16 @@ All geometry lands on whole canvas pixels after browser/OBS scaling. Avoid fract
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `foundation` | `#101116` | Canvas, primary furniture |
-| `plate` | `#171A20` | Raised cards, tabs |
-| `text-primary` | `#F2F0E8` | Essential text |
-| `text-secondary` | `#A9ADB7` | Metadata |
-| `amber` | `#F2A541` | BOT1/accent state |
-| `teal` | `#2FB7B2` | BOT2/accent state |
-| `gain` | `#4FC58B` | Positive state with sign/shape |
-| `loss` | `#E05D68` | Negative state with sign/shape |
+| `foundation` | `#0B0A08` | Canvas, primary furniture |
+| `plate` | `#15130F` at 93% | Raised cards; essential text still meets ≥7:1 |
+| `text-primary` | `#F4F1EA` | Essential text |
+| `text-secondary` | `#ADA69A` | Metadata |
+| `jade` | `#14B87A` | Programme accent; desk rule and kicker chip only |
+| `live` | `#E2543F` | 10 px LIVE dot only |
+| `gain` | `#A3BE9C` | Positive state with sign/shape |
+| `loss` | `#D89A88` | Negative state with sign/shape |
 
-Furniture remains charcoal/off-white. Amber and teal occupy small tabs, 4–8 px rules or short labels, not entire shells. No gradients, transparency-based glass, RGB masks or fine textures.
+Furniture remains warm-dark/off-white. Jade is the only saturated furniture colour and never identifies a host. No gradients, transparency-based glass, RGB masks or fine textures.
 
 ### Type
 
@@ -86,26 +87,28 @@ Bundle pinned static font files and their OFL texts with the OBS project.
 
 | Role | Family/style | Provisional size |
 | --- | --- | ---: |
-| short kicker | Barlow Condensed 700, uppercase | 28 px |
-| headline | Barlow Condensed 700, sentence case | 42 px |
-| host name | Barlow Condensed 700, prescribed case | 40 px |
+| short kicker | Archivo 700, uppercase | 28 px |
+| headline | Archivo 700, sentence case | 42 px |
+| host name | Archivo 700, prescribed case | 40 px |
 | handle/metadata | Inter 600 | 28 px |
 | ticker/body | Inter 600 | 28 px |
-| clock/LIVE | Inter 700, tabular numerals for clock | 30 px |
+| clock/LIVE/system | JetBrains Mono 500, tabular numerals for clock | 30 px |
 
-Barlow Condensed and Inter use the SIL Open Font License 1.1 and are suitable for commercial video titling; retain licence/copyright files when distributing fonts ([Barlow OFL](https://github.com/google/fonts/blob/main/ofl/barlowcondensed/OFL.txt), [Inter OFL](https://github.com/rsms/inter/blob/v4.0/LICENSE.txt), [SIL OFL FAQ](https://software.sil.org/downloads/r/oflt/OFL-FAQ.txt)).
+Archivo, Inter and JetBrains Mono use the SIL Open Font License 1.1 and are suitable for commercial video titling; retain licence/copyright files when distributing fonts ([Archivo OFL](https://github.com/google/fonts/blob/main/ofl/archivo/OFL.txt), [Inter OFL](https://github.com/rsms/inter/blob/v4.0/LICENSE.txt), [JetBrains Mono OFL](https://github.com/JetBrains/JetBrainsMono/blob/master/OFL.txt), [SIL OFL FAQ](https://software.sil.org/downloads/r/oflt/OFL-FAQ.txt)).
 
-Essential text must not fall below the provisional 26 px floor. Use fixed-width regions, copy editing, wrapping and ellipsis before reducing size. Verify `font-variant-numeric: tabular-nums` in the actual OBS browser source; if unsupported, pin a static Inter build known to expose tabular figures. All essential text sits on an opaque token plate and targets at least 7:1 calculated contrast as a Runtime margin, not a sourced broadcast threshold.
+Use Archivo's width axis (`wdth` 62–125) to fit display copy before reducing size. JetBrains Mono never takes a headline, card body or host name.
+
+Essential text must not fall below the provisional 26 px floor. Use fixed-width regions, copy editing, wrapping and ellipsis before reducing size. Verify `font-variant-numeric: tabular-nums` in the actual OBS browser source; if unsupported, pin a static Inter build known to expose tabular figures. All essential text sits on a composited token plate and targets at least 7:1 calculated contrast as a Runtime margin, not a sourced broadcast threshold.
 
 ## Safe area and furniture
 
 The following are **provisional Runtime safe regions**, not Twitch standards:
 
-- critical horizontal inset: 96 px
-- critical top inset: 54 px
+- critical horizontal inset: 64 px
+- critical top inset: 48 px
 - critical bottom inset: 54 px
-- maximum bottom furniture reservation: 180 px
-- working host/card top: 100 px
+- maximum bottom furniture reservation: 190 px
+- working host/card top: 140 px
 - working host/card bottom: 800 px
 
 Nonessential solid colour may bleed to canvas edges. Do not place a unique fact only in the lowest 54 px because player controls may cover it.
@@ -114,28 +117,22 @@ Provisional bottom stack:
 
 | Element | Rectangle |
 | --- | --- |
-| chyron | `x=0, y=900, w=1920, h=96` |
-| ticker | `x=0, y=996, w=1920, h=52` |
-| optional sponsor strip | `x=0, y=1048, w=1920, h=32` |
+| chyron | `x=64, y=838, w=1792, h=118` |
+| ticker | `x=64, y=972, w=1792, h=56` |
 
-The optional sponsor strip is nonessential and may be omitted. Prefer the top sponsor cell so the ticker remains the only moving row.
+The ticker remains the only moving row.
 
-Top furniture starting rectangles are provisional:
-
-- bug: `x=96, y=54, w=72, h=72`
-- LIVE: `x=1584, y=54, w=112, h=40`
-- clock: `x=1704, y=54, w=120, h=40`
-- sponsor cell: `x=96, y=134, w=220, h=40`
+Top furniture uses one system rail at `x=64, y=48, w=1792, h=60`. The accepted two-mass mark, LIVE, segment counter and clock form the left lockup; sponsor content is right-aligned at the same 64 px canvas inset.
 
 ## Layouts
 
 ### Fixed source transforms
 
-`HOST_CROP_L` and `HOST_CROP_R` reference the same `HOST_WIDE` media source and playhead. Each selects exactly one 50% source half. Within the multibox family, its source crop and scale are fixed; only the 620×700 aperture position changes. Never zoom or rescale a host to indicate speech.
+`HOST_CROP_L` and `HOST_CROP_R` reference the same `HOST_WIDE` media source and playhead. Each selects exactly one 50% source half. Within the multibox family, its source crop and scale are fixed; only the 580×660 aperture position changes. Never zoom or rescale a host to indicate speech.
 
 The exact cover transform is **provisional and resolution-profile-specific**:
 
-- 768p input half: start from 672×768; cover a 620×700 aperture and trim only the minimum vertical excess.
+- 768p input half: start from 672×768; cover a 580×660 aperture at scale 0.863 and trim only the minimum horizontal excess.
 - 480p input half: start from 427×480; cover the same aperture and trim only the minimum horizontal excess.
 
 Store and test separate 768p and 480p transform profiles. Do not let OBS choose an implicit stretch.
@@ -144,18 +141,18 @@ Store and test separate 768p and 480p transform profiles. Do not let OBS choose 
 
 Provisional rectangles:
 
-- left host aperture: `x=40, y=100, w=620, h=700`
-- centre card: `x=660, y=100, w=600, h=700`
-- right host aperture: `x=1260, y=100, w=620, h=700`
+- left host aperture: `x=64, y=140, w=580, h=660`
+- centre card: `x=668, y=140, w=584, h=660`
+- right host aperture: `x=1276, y=140, w=580, h=660`
 
-The centre shell sits above both host items and fully covers their inner edges. Its 8 px border is included inside the 600×700 rectangle.
+The centre shell sits above both host items and fully covers their inner edges. The 24 px gutters remain opaque beneath it.
 
 ### `paired`
 
 For a centre-free discussion, translate the fixed apertures to:
 
-- left: `x=340, y=100, w=620, h=700`
-- right: `x=960, y=100, w=620, h=700`
+- left: `x=380, y=140, w=580, h=660`
+- right: `x=960, y=140, w=580, h=660`
 
 Overlap source picture by at least 4 provisional pixels beneath a project-locked opaque 8 px divider centred at `x=956..964`. Crop origins remain aligned so desk height, eyeline and background continuity are truthful. Never expose a one-pixel source seam.
 
@@ -165,24 +162,24 @@ Use a separate `HOST_WIDE` scene item fit to the 1920×1080 programme canvas beh
 
 ### `solo_l` / `solo_r`
 
-For M0, retain the selected host's fixed 620×700 transform and move its aperture into the appropriate composition; use the remaining field for a centre payload or neutral furniture. Do not enlarge the crop. Any future enlarged solo is a separate approved source profile and requires its own 480p encode test.
+For M0, retain the selected host's fixed 580×660 transform and move its aperture into the appropriate composition; use the remaining field for a centre payload or neutral furniture. Do not enlarge the crop. Any future enlarged solo is a separate approved source profile and requires its own 480p encode test.
 
 ### `card_full` and `hold`
 
-`card_full` uses the opaque centre-card grammar expanded inside the provisional safe rectangle `x=96, y=54, w=1728, h=846`, stopping above the bottom stack. Host audio remains independent.
+`card_full` uses the centre-card grammar expanded inside `x=64, y=140, w=1792, h=660`, stopping above the bottom stack. Host audio remains independent.
 
 `hold` uses the same geometry with a baked non-text background and OBS-rendered status copy. Ticker and top furniture may continue; no frozen host frame should be visible.
 
 ## Centre-card payload rules
 
-The 600×700 shell has a provisional safe interior of `x=24, y=40, w=552, h=620` relative to the shell. One payload template changes inside this shell; outer geometry never changes.
+The 584×660 shell has a safe interior of `x=24, y=40, w=536, h=580` relative to the shell. One payload template changes inside this shell; outer geometry never changes.
 
 Common rules:
 
-- Opaque `plate` background and 8 px border.
+- 93% `plate` background with no border; essential type remains ≥7:1 on the composited panel.
 - Maximum two hierarchy levels beyond the payload itself.
 - No text baked into generated imagery; all labels are HTML/OBS.
-- No microtype, hairline charts, fine grid, dither or low-contrast gradient.
+- No microtype, hairline charts, fine grid, fine dither or low-contrast gradient.
 - Overflow order: edit copy → wrap within limits → ellipsize; never shrink below 26 px.
 
 Payloads:
@@ -199,12 +196,11 @@ For text-heavy post/chart cards, a provisional 16% black dim plate may cover the
 
 Speaker state is deterministic and never audio-driven:
 
-- inactive frame: 8 px `plate`
-- BOT1 active frame: 8 px `amber`
-- BOT2 active frame: 8 px `teal`
-- active state also displays a solid `ON AIR` tab or filled lozenge attached to the top-left of that host frame
-- the tab/shape is mandatory redundancy; colour alone is insufficient
-- no glow, pulse loop, zoom or source-opacity flutter
+- inactive host-name plate: normal `plate` with `text-primary`
+- active host-name plate: ink on bone inversion at 17.5:1
+- active plate carries the same small cursor used by the on-air wordmark
+- exactly one plate is inverted when a speaker is known; neither is inverted when unknown
+- no colour-only state, extra tab, border, glow, pulse loop, zoom or source-opacity flutter
 
 Provisional response starting points: 300 ms attack and 600 ms release. The director supplies the intended speaker, so coughs and generated mouth errors cannot flash the state. At a handoff, allow no more than one active state; when unknown, show neither.
 
@@ -212,9 +208,9 @@ Host IDs preserve exact case: `PHASEONE[lol]` and `deb`. Provisional dwell is 5�
 
 ## Chyron and ticker
 
-The 96 px provisional chyron contains:
+The 118 px chyron contains:
 
-- a fixed-width kicker cell, provisional 240 px
+- a fixed-width kicker chip
 - a flexible headline region
 - maximum one 28 px kicker line and two 42 px headline lines
 - stationary plate during ordinary topic changes; replace copy under a short vertical clip
@@ -233,7 +229,7 @@ Ticker rules:
 
 ## Sponsor furniture
 
-Preferred sponsor placement is a static 220×40 provisional top cell attached to the bug or clock group. Use `PRESENTED BY` in Inter 600 plus an approved high-contrast sponsor mark.
+Sponsor content is a static cell right-aligned inside the 60 px system rail. Use `PRESENTED BY` in JetBrains Mono 500 at no less than 26 px plus an approved high-contrast sponsor mark.
 
 Rules:
 
@@ -242,7 +238,14 @@ Rules:
 - provisional minimum hold: 8–12 seconds
 - sponsor changes occur only while ticker motion is paused or between paginated ticker items
 - no simultaneous logo animation and ticker crawl
-- if a 32 px bottom sponsor strip is used, it replaces other nonessential content and carries no unique information
+- no second sponsor row is permitted beneath the ticker
+
+## Code layer
+
+- No ASCII textural cell is below 20 px at 1080; no mosaic or Bayer cell is below 8 px.
+- A ground wash may occupy only margins and gutters beneath opaque pictures/panels. It never sits behind essential type.
+- Host-free fields may use coarse ASCII/mosaic texture.
+- Texture is static whenever a host is visible. Drift in host-free states stays behind a flag until a received Twitch rendition passes the validation ladder.
 
 ## Motion and audio test starts
 
@@ -270,17 +273,18 @@ Test a representative 60–90 second programme containing both generation profil
 1. Capture a lossless/native 1920×1080 OBS master.
 2. Encode/stream with the intended Twitch bitrate, frame rate, colour range and audio chain; record the received output rather than relying on OBS preview.
 3. Inspect the received 1080 rendition at 100% and a Twitch 480p rendition at 100%; include a normal viewing-distance/mobile check.
-4. Verify all 4 px rules remain continuous and every 8 px border remains opaque without ringing.
+4. Verify all 4 px rules remain continuous and borderless panel edges remain clean without ringing.
 5. Verify the card/divider hides the source join in motion, during layout movement and on the exact transition frame.
 6. Verify fixed host crops do not zoom, stretch or jump between `paired`, `split` and solo compositions.
 7. Run both 768p and 480p host inputs through `split` and `wide`; judge identity, eyes, contour stability and shell/rim separation independently.
 8. Confirm every essential 26–28 px sample remains readable; test `PHASEONE[lol]`, lowercase `deb`, narrow counters, brackets, percentages and a worst-case two-line headline.
 9. Confirm Inter numerals are tabular and do not shift columns as clock/market values update.
-10. Confirm amber/teal active states remain distinguishable in grayscale and common colour-vision simulations because the solid state tab also changes.
+10. Confirm the active name-plate inversion remains unmistakable in grayscale and common colour-vision simulations without colour information.
 11. Confirm gain/loss signs and ▲/▼ remain visible when chroma is softened.
 12. Confirm post overflow, long names and missing payloads fail safely without shrinking type or exposing raw URLs.
 13. Confirm only one row moves; measure crawl/pagination comprehension at 480p and revise cadence.
 14. Inspect wipes frame by frame for incomplete cover, matte fringing, banding and a visible host-chain discontinuity.
 15. Listen for pumping, clipped stings and speech masking; tune ducking beyond the 100/600 ms starting values.
 16. Check player controls against bug, ticker and sponsor placement; remove any unique fact from covered regions.
-17. Lock pixel/timing values only after the test capture, recording the accepted OBS profile, bitrate, frame rate and rendition.
+17. Confirm no host-visible texture moves; test any flagged host-free drift for bitrate cost and crawling artifacts.
+18. Lock remaining provisional timing values only after the test capture, recording the accepted OBS profile, bitrate, frame rate and rendition.
