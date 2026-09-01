@@ -7,25 +7,11 @@ const WIDE_SHOT_LAYOUTS = {
   hold: true,
 };
 
-function shotFallbackPath(layout) {
-  const name = normalizeLayout(layout);
-  if (name === "solo_l" || name === "solo_r") {
-    return "/tweet-shot-solo.png";
-  }
-  if (name === "card_full" || name === "hold") {
-    return "/tweet-shot-card.png";
-  }
+function shotFallbackPath(_layout) {
   return "/tweet-shot-split.png";
 }
 
-function shotUrlKey(layout) {
-  const name = normalizeLayout(layout);
-  if (name === "solo_l" || name === "solo_r") {
-    return "shot_solo_url";
-  }
-  if (name === "card_full" || name === "hold") {
-    return "shot_card_url";
-  }
+function shotUrlKey(_layout) {
   return "shot_split_url";
 }
 
