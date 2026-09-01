@@ -104,10 +104,7 @@ function bootProducerOverlay() {
     body: document.getElementById("card-body"),
     chyron: document.getElementById("chyron"),
     image: document.getElementById("card-image"),
-    ticker: document.getElementById("ticker"),
-    tickerCopies: typeof document !== "undefined"
-      ? document.querySelectorAll(".tkr-copy")
-      : [],
+    ticker: null,
     panel: document.getElementById("card-panel"),
     well: document.getElementById("card-well"),
     embed: document.getElementById("tweet-embed"),

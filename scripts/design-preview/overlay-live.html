@@ -50,6 +50,7 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transpa
 .card-well.has-embed .cardp{display:none}
 #tweet-embed{display:none;position:absolute;inset:0;width:100%;height:100%;border:0;background:#15130F;pointer-events:auto;z-index:1;overflow:hidden}
 .card-well.has-embed #tweet-embed{display:block}
+.chy,.tkr{background:#15130F}
 .chy{display:flex;align-items:center;padding:0 36px;height:118px;overflow:hidden}
 .chy .hd{font:700 52px/1.12 var(--display);font-stretch:86%;letter-spacing:-.03em;color:var(--bone);width:100%}
 .tkr{display:flex;align-items:stretch;height:56px;width:1792px;overflow:hidden;padding:0}
@@ -59,9 +60,8 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transpa
 .tkr-track{display:flex;width:max-content;animation:tkr-scroll 40s linear infinite}
 .tkr-loop{display:flex;align-items:center;gap:36px;padding:0 36px;height:56px}
 .logo{display:flex;align-items:center;gap:10px;font:700 20px/1 var(--display);font-stretch:88%;
-  letter-spacing:.06em;color:var(--bone-2);white-space:nowrap}
+  letter-spacing:.06em;color:var(--bone);white-space:nowrap}
 .logo svg{flex:none}
-.tkr-copy{font:500 22px/1 var(--mono);letter-spacing:.02em;color:var(--bone);white-space:nowrap}
 @keyframes tkr-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 </style>
 </head>
@@ -118,7 +118,6 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transpa
           <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><polygon points="11,2 20,7 20,15 11,20 2,15 2,7" fill="#F4F1EA"/></svg>VAULT</span>
           <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="8" fill="#14B87A"/></svg>LUMEN</span>
           <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="9" width="18" height="4" fill="#ADA69A"/></svg>QUAY</span>
-          <span class="tkr-copy" id="ticker">3 waves in 3 months · HF cluster wiped · No agent alerted a human</span>
         </div>
         <div class="tkr-loop" aria-hidden="true">
           <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect width="22" height="6" y="16" fill="#14B87A"/><rect x="2" y="8" width="10" height="8" rx="3" fill="#F4F1EA"/><rect x="14" y="4" width="6" height="12" rx="3" fill="#F4F1EA"/></svg>HOUSE</span>
@@ -129,7 +128,6 @@ html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transpa
           <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><polygon points="11,2 20,7 20,15 11,20 2,15 2,7" fill="#F4F1EA"/></svg>VAULT</span>
           <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="8" fill="#14B87A"/></svg>LUMEN</span>
           <span class="logo"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="9" width="18" height="4" fill="#ADA69A"/></svg>QUAY</span>
-          <span class="tkr-copy">3 waves in 3 months · HF cluster wiped · No agent alerted a human</span>
         </div>
       </div>
     </div>

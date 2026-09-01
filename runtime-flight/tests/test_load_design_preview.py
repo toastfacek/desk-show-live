@@ -135,6 +135,10 @@ def test_overlay_live_polls_card_without_html_injection() -> None:
     assert "SPONSOR THE SHOW" in text
     assert "DM FOR INQUIRIES" in text
     assert "tkr-scroll" in text
+    assert ".chy,.tkr{background:#15130F}" in text
+    assert "BOT1" not in text
+    assert "BOT2" not in text
+    assert 'id="ticker"' not in text
     assert "width:1792px" in text
     assert "overlay-live.js" in text
     assert "innerHTML" not in text
