@@ -59,12 +59,14 @@ def is_blank_panel(image: Image.Image, *, panel: tuple[int, int, int] = PANEL) -
     total = rgb.width * rgb.height
     if total < 1:
         return True
+    pixels = rgb.load()
     mismatch = 0
-    for pixel in rgb.getdata():
-        if pixel != panel:
-            mismatch += 1
-            if mismatch * 50 >= total:
-                return False
+    for y in range(rgb.height):
+        for x in range(rgb.width):
+            if pixels[x, y] != panel:
+                mismatch += 1
+                if mismatch * 50 >= total:
+                    return False
     return True
 
 
