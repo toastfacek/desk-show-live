@@ -3,6 +3,9 @@
 Zero-cost operator commands for the Dwarkesh Patel one-tweet live test. Paid
 `smoke` and `live` are human-gated and are not implied by a passing test suite.
 
+Programme learnings from the first paid OBS live (decode, audio, fade, crop,
+overlay port): [LIVE_FLIGHT_CHECK.md](LIVE_FLIGHT_CHECK.md).
+
 `check`, `setup-obs`, `rehearse`, `replay`, and `verify-flight` are bound to the
 flight services. `smoke` and `live` are bound too, but they still refuse unless
 `RUNTIME_ALLOW_PAID=1` and `--confirm-spend` matches the cap. They never stop an
