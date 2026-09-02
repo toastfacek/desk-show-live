@@ -6,10 +6,12 @@ Zero-cost operator commands for the Dwarkesh Patel one-tweet live test. Paid
 Programme learnings from the first paid OBS live (decode, audio, fade, crop,
 overlay port): [LIVE_FLIGHT_CHECK.md](LIVE_FLIGHT_CHECK.md).
 
-`check`, `setup-obs`, `rehearse`, `replay`, and `verify-flight` are bound to the
-flight services. `smoke` and `live` are bound too, but they still refuse unless
-`RUNTIME_ALLOW_PAID=1` and `--confirm-spend` matches the cap. They never stop an
-existing OBS stream.
+`board` is the visual producer harness: a loopback control room with program
+preview, live state, writer/story/queue tabs, and operator buttons. It runs a
+zero-cost demo clock. `check`, `setup-obs`, `rehearse`, `replay`, and
+`verify-flight` are bound to the flight services. `smoke` and `live` are bound
+too, but they still refuse unless `RUNTIME_ALLOW_PAID=1` and `--confirm-spend`
+matches the cap. They never stop an existing OBS stream.
 
 Flight source (operator-supplied, never paraphrase):
 
@@ -19,6 +21,7 @@ Flight source (operator-supplied, never paraphrase):
 ## Commands
 
 ```bash
+python3 -m runtime_flight board --port 8766
 python3 -m runtime_flight check --config config.yaml
 python3 -m runtime_flight setup-obs --config config.yaml
 python3 -m runtime_flight rehearse --config config.yaml --rundown rundowns/one_tweet_90s.yaml

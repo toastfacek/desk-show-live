@@ -94,6 +94,7 @@ class LiveHarness:
         clip_duration_s: float = CLIP_DURATION_S,
         layout_plan: tuple[str, ...] | None = None,
         overlay: Any | None = None,
+        producer: Any | None = None,
         obs_session: Any | None = None,
         max_attempts: int | None = None,
         sleep: SleepFn | None = None,
@@ -109,6 +110,7 @@ class LiveHarness:
         self.clip_duration_s = clip_duration_s
         self.layout_plan = list(layout_plan or DEFAULT_LAYOUT_PLAN)
         self.overlay = overlay
+        self.producer = producer
         self.obs_session = obs_session
         self.max_attempts = max_attempts
         self._sleep = sleep
@@ -122,7 +124,7 @@ class LiveHarness:
         self.stop_reason: str | None = None
         self.recording_path: str | None = None
         self.after_step = None
-        self.flags = {"hold": False, "panic": False}
+        self.flags = {"hold": False, "panic": False, "preview": False}
         self.ready: list[ReadyTake] = []
         self.cooking: dict[str, Any] | None = None
         self.on_air: dict[str, Any] | None = None
@@ -206,6 +208,7 @@ class LiveHarness:
         }
 
     async def step(self) -> None:
+        self._drain_producer()
         self.player.t = self.t
         self._poll_stream_status()
         self._observe_player()
@@ -220,6 +223,7 @@ class LiveHarness:
             beat = decide(self.snapshot())
             self.beats.append(beat)
             await self._execute(beat)
+        self._publish_producer()
         if self.after_step is not None:
             self.after_step()
 
@@ -395,6 +399,26 @@ class LiveHarness:
                     "recording_s": self.obs_session.recording_duration_s(),
                 }
             )
+
+    def _drain_producer(self) -> None:
+        if self.producer is None:
+            return
+        drain = getattr(self.producer, "drain_commands", None)
+        if not callable(drain):
+            return
+        from runtime_flight.producer import apply_operator
+
+        for action in drain():
+            apply_operator(self, action)
+
+    def _publish_producer(self) -> None:
+        if self.producer is None:
+            return
+        publish = getattr(self.producer, "publish", None)
+        if callable(publish):
+            from runtime_flight.producer import project_from_harness
+
+            publish(project_from_harness(self, mode="live"))
 
     def _center(self) -> dict[str, str]:
         return {
