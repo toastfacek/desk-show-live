@@ -26,7 +26,9 @@ from runtime_flight.obs_setup import DEFAULT_WATCHDOG_URL
 from runtime_flight.fal_gateway import H3_MAX_TURBO_ENDPOINT
 from runtime_flight.operator import (
     OperatorError,
+    cmd_cook_queue,
     cmd_discuss,
+    cmd_enqueue,
     cmd_paid_flight,
     cmd_prepare_pass,
     cmd_replay,
@@ -69,6 +71,7 @@ def main(
     time_fal_runner=None,
     prepare_pass_runner=None,
     prepare_queue_runner=None,
+    cook_queue_runner=None,
     http_get=None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="runtime_flight")
@@ -234,6 +237,56 @@ def main(
         help="Writer budget for --queue. Must be at least the queue length.",
     )
 
+    enqueue_parser = subparsers.add_parser(
+        "enqueue",
+        help="Drop staged tweet directories into the content inbox. No cook.",
+    )
+    enqueue_parser.add_argument(
+        "--inbox",
+        type=Path,
+        required=True,
+        help="Inbox root with pending/claimed/done/dropped.",
+    )
+    enqueue_parser.add_argument(
+        "source_dirs",
+        nargs="+",
+        type=Path,
+        metavar="DIR",
+        help="Staged tweet directories. Producers dissect these; cook-queue dequeues them.",
+    )
+
+    cook_parser = subparsers.add_parser(
+        "cook-queue",
+        help="Dequeue the next dissected tweet and cook until a 45-60s ready buffer. No OBS.",
+    )
+    _add_paid_args(cook_parser)
+    cook_parser.add_argument("--inbox", type=Path, required=True)
+    cook_parser.add_argument(
+        "--ready-buffer-s",
+        type=int,
+        default=50,
+        help="Stop claiming new tweets once ready plus in-flight tape hits 45-60s.",
+    )
+    cook_parser.add_argument("--turns", type=int, default=2)
+    cook_parser.add_argument("--confirm-text-requests", type=int, required=True)
+    cook_parser.add_argument(
+        "--endpoint",
+        default=H3_MAX_TURBO_ENDPOINT,
+        help="H3 image-to-video endpoint. Defaults to H3 Max Turbo.",
+    )
+    cook_parser.add_argument("--duration", type=int, default=5)
+    cook_parser.add_argument(
+        "--rate",
+        default=str(PREPARE_PASS_RATE_USD_PER_S),
+        help="768P USD per second. Turbo promo default is 0.01.",
+    )
+    cook_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("out"),
+        help="Directory that receives cook-queue/<run-id>/.",
+    )
+
     timeline_parser = subparsers.add_parser(
         "timeline",
         help="Render cook waterfall and flame graph HTML from a run directory.",
@@ -358,6 +411,28 @@ def main(
                 turns=args.turns,
                 confirm_text_requests=args.confirm_text_requests,
                 run_prepare_queue=prepare_queue_runner,
+                http_post=http_post,
+            )
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            return 0
+        if args.command == "enqueue":
+            payload = cmd_enqueue(inbox=args.inbox, source_dirs=list(args.source_dirs))
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            return 0
+        if args.command == "cook-queue":
+            config = load_validated_config(args.config, require_obs=False)
+            payload = cmd_cook_queue(
+                config,
+                confirm_spend=args.confirm_spend,
+                inbox=args.inbox,
+                ready_buffer_s=args.ready_buffer_s,
+                turns=args.turns,
+                confirm_text_requests=args.confirm_text_requests,
+                endpoint=args.endpoint,
+                duration_s=args.duration,
+                rate=args.rate,
+                out_dir=args.out,
+                run_cook_queue=cook_queue_runner,
                 http_post=http_post,
             )
             print(yaml.safe_dump(payload, sort_keys=False), end="")

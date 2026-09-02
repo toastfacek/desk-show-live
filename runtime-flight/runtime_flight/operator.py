@@ -337,6 +337,70 @@ def cmd_prepare_pass(
     return run_prepare_pass(config=updated, out_dir=out_dir)
 
 
+def cmd_enqueue(*, inbox: Path, source_dirs: list[Path]) -> dict[str, Any]:
+    from runtime_flight.content_queue import enqueue, needs_producer, pending_ids
+
+    if not source_dirs:
+        raise OperatorError("enqueue needs at least one staged directory")
+    claimed = [str(enqueue(inbox, path)) for path in source_dirs]
+    return {
+        "inbox": str(Path(inbox).resolve()),
+        "enqueued": claimed,
+        "pending": list(pending_ids(inbox)),
+        "needs_producer": list(needs_producer(inbox)),
+    }
+
+
+def cmd_cook_queue(
+    config: RuntimeConfig,
+    *,
+    confirm_spend: str | None,
+    inbox: Path,
+    ready_buffer_s: int,
+    turns: int,
+    confirm_text_requests: int,
+    endpoint: str,
+    duration_s: int,
+    rate: str,
+    out_dir: Path | None = None,
+    run_cook_queue=None,
+    http_post=None,
+) -> dict[str, Any]:
+    from runtime_flight.prepare_pass import apply_prepare_overrides, parse_prepare_rate
+    from runtime_flight.queue_worker import (
+        READY_BUFFER_MAX_S,
+        READY_BUFFER_MIN_S,
+        run_cook_queue as default_run,
+    )
+
+    require_paid_flag()
+    require_confirm_spend(config, confirm_spend)
+    if duration_s != 5:
+        raise OperatorError("cook-queue --duration must be 5")
+    if not (READY_BUFFER_MIN_S <= ready_buffer_s <= READY_BUFFER_MAX_S):
+        raise OperatorError("cook-queue --ready-buffer-s must be 45 to 60")
+    if confirm_text_requests < 1:
+        raise OperatorError("cook-queue --confirm-text-requests must be at least 1")
+    require_text_request_limit(config.mode, confirm_text_requests)
+    updated = apply_prepare_overrides(
+        config,
+        endpoint=endpoint or H3_MAX_TURBO_ENDPOINT,
+        duration_s=duration_s,
+        rate_768p_usd_per_s=parse_prepare_rate(rate),
+    )
+    validate_config(updated, require_obs=False)
+    runner = run_cook_queue if run_cook_queue is not None else default_run
+    return runner(
+        config=updated,
+        inbox=inbox,
+        ready_buffer_s=ready_buffer_s,
+        turns=turns,
+        max_text_requests=confirm_text_requests,
+        out_dir=out_dir,
+        http_post=http_post,
+    )
+
+
 def cmd_replay(bundle: Path, *, network_call: Callable[..., Any] | None = None) -> dict[str, Any]:
     if network_call is not None:
         raise OperatorError("replay performs no network calls")
