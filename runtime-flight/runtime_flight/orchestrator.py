@@ -38,8 +38,8 @@ from runtime_flight.prepare_queue import _write_one
 from runtime_flight.prompt import assemble_prompt
 from runtime_flight.segment_planner import SegmentPlanner, SegmentPlannerError
 from runtime_flight.source import load_source_packet
+from runtime_flight.runway import has_runway, resolve_until
 from runtime_flight.spend import SpendCapExceeded, SpendLedger, SpendMeter
-from runtime_flight.sunday import resolve_until
 from runtime_flight.text_client import TextAttemptLimiter, TextClient, TextClientError
 from runtime_flight.topic_map import host_voices_from_baseline
 from runtime_flight.writer import Writer, WriterError
@@ -51,9 +51,9 @@ def run_orchestrator(
     *,
     config: RuntimeConfig,
     inbox: Path,
-    until: str,
     turns: int,
     max_text_requests: int,
+    until: str | None = None,
     out_dir: Path | None = None,
     list_url: str | None = None,
     list_file: Path | None = None,
@@ -70,7 +70,7 @@ def run_orchestrator(
     if turns not in PREPARE_PASS_TURNS:
         raise OperatorError("run-list --turns must be 2 or 3")
     clock = now_fn or (lambda: datetime.now(timezone.utc))
-    deadline = resolve_until(until, now=clock())
+    deadline = resolve_until(until)
     inbox = Path(inbox).resolve()
     if list_url or list_file:
         load_list(
@@ -162,11 +162,21 @@ async def _run_async(
     stop_reason = "empty"
 
     while True:
-        if now_fn() >= deadline:
-            stop_reason = "sunday"
+        if deadline is not None and now_fn() >= deadline:
+            stop_reason = "until"
             break
         if len(pending_ids(inbox)) < PREFETCH_PENDING:
             pull_next_page(inbox, bearer=bearer, http_get=http_get, fixtures=fixtures)
+        pending = len(pending_ids(inbox))
+        if not has_runway(
+            reserved_usd=meter.total,
+            cap_usd=meter.cap_usd,
+            take_cost_usd=meter.next_cost,
+            text_left=limiter.max_requests - limiter.attempts,
+            pending=pending,
+        ):
+            stop_reason = "empty" if pending < 1 else "runway"
+            break
         claimed = claim_next(inbox, dissected=False)
         if claimed is None:
             stop_reason = "empty"
@@ -198,8 +208,8 @@ async def _run_async(
         except (SegmentPlannerError, WriterError, TextClientError, OperatorError) as error:
             if isinstance(error, TextClientError) and "budget" in str(error):
                 mark_dropped(inbox, item_id)
-                dropped.append({"tweet_id": item_id, "reason": "text"})
-                stop_reason = "text"
+                dropped.append({"tweet_id": item_id, "reason": "runway"})
+                stop_reason = "runway"
                 break
             mark_dropped(inbox, item_id)
             dropped.append({"tweet_id": item_id, "reason": str(error)})
@@ -221,8 +231,8 @@ async def _run_async(
                 ready: ReadyTake = await performer.start(request)
             except SpendCapExceeded:
                 mark_dropped(inbox, item_id)
-                dropped.append({"tweet_id": item_id, "reason": "spend"})
-                stop_reason = "spend"
+                dropped.append({"tweet_id": item_id, "reason": "runway"})
+                stop_reason = "runway"
                 any_ready = False
                 break
             row = {
@@ -240,7 +250,7 @@ async def _run_async(
                 any_ready = True
             else:
                 dropped.append({"tweet_id": item_id, "take": ready.take, "reason": ready.status})
-        if stop_reason == "spend":
+        if stop_reason == "runway":
             break
         if any_ready:
             mark_done(inbox, item_id)
@@ -257,7 +267,7 @@ async def _run_async(
         "run_id": run_id,
         "work_dir": str(work_dir),
         "mode": "run-list",
-        "until": deadline.isoformat(),
+        "until": deadline.isoformat() if deadline is not None else None,
         "stop_reason": stop_reason,
         "commented": commented,
         "dropped": dropped,

@@ -10,7 +10,7 @@ import yaml
 
 from runtime_flight.discuss import DiscussError, run_discuss
 from runtime_flight.stage import StageError
-from runtime_flight.sunday import UntilError
+from runtime_flight.runway import UntilError
 from runtime_flight.tweet_list import TweetListError
 from runtime_flight.config import (
     ConfigError,
@@ -306,7 +306,7 @@ def main(
 
     run_list_parser = subparsers.add_parser(
         "run-list",
-        help="Load a Twitter list and comment tweet by tweet until Sunday. No OBS.",
+        help="Load a Twitter list and comment tweet by tweet until runway runs out. No OBS.",
     )
     _add_paid_args(run_list_parser)
     run_list_parser.add_argument("--inbox", type=Path, required=True)
@@ -314,8 +314,8 @@ def main(
     run_list_parser.add_argument("--list-file", type=Path)
     run_list_parser.add_argument(
         "--until",
-        default="sunday",
-        help="Stop at end of Sunday (UTC) or an ISO-8601 timestamp.",
+        default=None,
+        help="Optional ISO-8601 stop. Default: keep going until runway (spend, text, or empty list).",
     )
     run_list_parser.add_argument("--turns", type=int, default=2)
     run_list_parser.add_argument("--confirm-text-requests", type=int, required=True)

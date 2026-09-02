@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 import json
-from datetime import datetime, timezone
+from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 
@@ -133,21 +133,14 @@ def test_run_list_comments_in_list_order_then_stops_empty(
     assert cooks == ["cook:1", "cook:2", "cook:3", "cook:4", "cook:5", "cook:6"]
 
 
-def test_run_list_stops_at_sunday_after_the_current_tweet(
+def test_run_list_stops_when_spend_runway_is_gone(
     tmp_path: Path,
     flight_setup: dict,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config = _config(tmp_path, flight_setup, monkeypatch)
+    config = replace(_config(tmp_path, flight_setup, monkeypatch), spend_cap_usd=Decimal("0.10"))
     inbox = tmp_path / "inbox"
     list_file, fixtures = _list_and_fixtures(tmp_path, ("333", "111", "222"))
-    t0 = datetime(2026, 9, 6, 23, 59, 50, tzinfo=timezone.utc)
-    past = datetime(2026, 9, 7, 0, 0, 1, tzinfo=timezone.utc)
-    calls = {"n": 0}
-
-    def now_fn():
-        calls["n"] += 1
-        return t0 if calls["n"] <= 3 else past
 
     async def concat_fn(clips, dest: Path) -> None:
         dest.write_bytes(b"concat")
@@ -155,7 +148,6 @@ def test_run_list_stops_at_sunday_after_the_current_tweet(
     summary = run_orchestrator(
         config=config,
         inbox=inbox,
-        until="sunday",
         turns=2,
         max_text_requests=12,
         out_dir=tmp_path / "out",
@@ -167,9 +159,8 @@ def test_run_list_stops_at_sunday_after_the_current_tweet(
         concat_fn=concat_fn,
         writer_factory=lambda client: ScriptWriter(client),
         planner_factory=lambda client: ScriptPlanner(),
-        now_fn=now_fn,
     )
-    assert summary["stop_reason"] == "sunday"
+    assert summary["stop_reason"] == "runway"
     assert summary["commented"] == ["333"]
     assert pending_ids(inbox) == ("111", "222")
 
@@ -203,8 +194,6 @@ def test_run_list_cli_refuses_without_paid_flag(
             "12.00",
             "--inbox",
             str(tmp_path / "inbox"),
-            "--until",
-            "sunday",
             "--confirm-text-requests",
             "24",
         ],

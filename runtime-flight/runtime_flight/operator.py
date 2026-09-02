@@ -426,7 +426,7 @@ def cmd_run_list(
     *,
     confirm_spend: str | None,
     inbox: Path,
-    until: str,
+    until: str | None = None,
     turns: int,
     confirm_text_requests: int,
     endpoint: str,
