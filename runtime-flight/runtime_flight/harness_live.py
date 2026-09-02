@@ -630,7 +630,11 @@ class LiveHarness:
             take = int(str(beat["host_source"]).split(":")[1])
             clip = next(item for item in self.ready if item.take == take)
             self.ready = [item for item in self.ready if item.take != take]
-            path = str(clip.clip_path) if clip.clip_path is not None else ""
+            path = (
+                str(clip.clip_path.resolve())
+                if clip.clip_path is not None
+                else ""
+            )
             if not self._obs_command("play_clip", path):
                 return
             self.on_air = {

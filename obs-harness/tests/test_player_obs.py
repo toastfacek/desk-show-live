@@ -252,13 +252,29 @@ def test_play_clip_points_host_wide_at_obs_playable(tmp_path: Path):
         call for call in client.calls if call[0] == "set_input_settings"
     ]
     assert settings[-1][1] == "HOST_WIDE"
-    assert settings[-1][2]["local_file"].endswith("003.obs.mp4")
+    local_file = Path(settings[-1][2]["local_file"])
+    assert local_file.is_absolute()
+    assert local_file.name == "003.obs.mp4"
     assert settings[-1][2]["looping"] is False
     assert settings[-1][2]["restart_on_activate"] is False
     assert settings[-1][2]["clear_on_media_end"] is False
     mute = [call for call in client.calls if call[0] == "set_input_mute"]
     assert mute[-1][1] == "HOST_WIDE"
     assert mute[-1][2] is False
+
+
+def test_play_clip_resolves_relative_paths_to_absolute(tmp_path: Path, monkeypatch):
+    src = _tiny_clip(tmp_path / "004.mp4")
+    monkeypatch.chdir(tmp_path)
+    client = FakeObsClient()
+    player = _player_with_client(client)
+    player.play_clip("004.mp4")
+    settings = [
+        call for call in client.calls if call[0] == "set_input_settings"
+    ]
+    local_file = Path(settings[-1][2]["local_file"])
+    assert local_file == (tmp_path / "004.obs.mp4").resolve()
+    assert local_file.is_file()
 
 
 def test_set_layout_skips_obs_when_already_on_that_scene():
