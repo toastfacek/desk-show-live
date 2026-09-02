@@ -13,6 +13,7 @@ from PIL import Image
 
 from pack_manager.baselines import LoadedBaseline
 from pack_manager.errors import ValidationError
+from pack_manager.hosts import require_show_loadout
 from pack_manager.runtime import load_locked_baseline
 
 HERO_WIDTH = 1344
@@ -65,6 +66,20 @@ class BaselineContext:
         hero_sha256 = loaded.manifest["hero"]["sha256"]
         _validate_hero_png(hero_bytes, hero_sha256)
         return cls._from_loaded(loaded, hero_bytes)
+
+    @classmethod
+    def load_loadout(cls, data_dir: Path, baseline_id: str) -> BaselineContext:
+        context = cls.load(data_dir, baseline_id)
+        bot1 = next(character for character in context.characters if character.slot == "BOT1")
+        bot2 = next(character for character in context.characters if character.slot == "BOT2")
+        require_show_loadout(
+            hero_sha256=context.hero_sha256,
+            display_names=context.display_names,
+            bot1_visual=bot1.manifest.get("visual_invariants", {}),
+            bot2_visual=bot2.manifest.get("visual_invariants", {}),
+            scene=context.scene.manifest,
+        )
+        return context
 
     @staticmethod
     def _from_loaded(loaded: LoadedBaseline, hero_bytes: bytes) -> BaselineContext:

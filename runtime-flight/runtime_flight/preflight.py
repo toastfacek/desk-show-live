@@ -249,7 +249,9 @@ def _probe_baseline(config: RuntimeConfig) -> BaselineContext:
     if not config.baseline_id:
         raise PreflightError("baseline is not configured")
     try:
-        return BaselineContext.load(config.pack_manager_data_dir, config.baseline_id)
+        return BaselineContext.load_loadout(
+            config.pack_manager_data_dir, config.baseline_id
+        )
     except Exception as error:
         raise PreflightError("baseline load failed") from error
 

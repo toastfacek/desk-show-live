@@ -69,7 +69,9 @@ async def _run_segment_async(
     performer_factory,
 ) -> int:
     source = load_source_packet(config.source_packet, config.source_lock)
-    baseline = BaselineContext.load(config.pack_manager_data_dir, config.baseline_id or "")
+    baseline = BaselineContext.load_loadout(
+        config.pack_manager_data_dir, config.baseline_id or ""
+    )
     limiter = TextAttemptLimiter(max_text_requests)
     client = TextClient(
         base_url=config.text_base_url or "",

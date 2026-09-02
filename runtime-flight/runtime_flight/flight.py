@@ -135,7 +135,9 @@ def run_paid_flight(
 
 async def _run_rehearsal_async(config: RuntimeConfig, *, out_dir: Path | None) -> None:
     source = load_source_packet(config.source_packet, config.source_lock)
-    baseline = BaselineContext.load(config.pack_manager_data_dir, config.baseline_id or "")
+    baseline = BaselineContext.load_loadout(
+        config.pack_manager_data_dir, config.baseline_id or ""
+    )
     limiter = TextAttemptLimiter(config.text_flight_max_requests)
     client = TextClient(
         base_url=config.text_base_url or "",
@@ -204,7 +206,9 @@ async def _run_paid_async(
     sleep,
 ) -> int:
     source = load_source_packet(config.source_packet, config.source_lock)
-    baseline = BaselineContext.load(config.pack_manager_data_dir, config.baseline_id or "")
+    baseline = BaselineContext.load_loadout(
+        config.pack_manager_data_dir, config.baseline_id or ""
+    )
     limiter = TextAttemptLimiter(max_text_requests)
     client = TextClient(
         base_url=config.text_base_url or "",

@@ -298,3 +298,25 @@ def test_runtime_flight_bootstrap_installs_local_distributions():
     from pack_manager.runtime import load_locked_baseline
 
     assert callable(load_locked_baseline)
+
+
+def test_load_loadout_accepts_canonical_lock(tmp_path: Path):
+    from pack_manager.hosts import lock_canonical_hosts
+
+    data_dir = tmp_path / "pack-data"
+    locked = lock_canonical_hosts(data_dir)
+    context = BaselineContext.load_loadout(data_dir, locked.id)
+    bot1 = next(character for character in context.characters if character.slot == "BOT1")
+    bot2 = next(character for character in context.characters if character.slot == "BOT2")
+    assert bot1.manifest["visual_invariants"]["silhouette"] == (
+        "Broad rounded orange software sprite."
+    )
+    assert bot2.manifest["visual_invariants"]["silhouette"] == (
+        "Tall cobalt software sprite."
+    )
+    assert "live media clubhouse" in context.scene.manifest["set"]
+
+
+def test_load_loadout_rejects_non_canonical_lock(flight_setup):
+    with pytest.raises(ValidationError, match="single Light Media Club loadout"):
+        BaselineContext.load_loadout(flight_setup["data_dir"], flight_setup["locked"].id)

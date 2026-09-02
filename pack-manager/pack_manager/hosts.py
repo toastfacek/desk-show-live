@@ -1,13 +1,17 @@
-"""Lock the canonical PHASEONE[lol] / deb packs and 1344x768 hero still."""
+"""The single desk-show loadout: Light Media Club, orange and cobalt."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import struct
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 from .assets import AssetStore
-from .baselines import Baseline, BaselineService
+from .baselines import Baseline, BaselineService, LoadedBaseline
 from .candidates import CandidateService
 from .db import Database
 from .errors import IntegrityError, ValidationError
@@ -144,6 +148,88 @@ SCENE_MANIFEST = {
     "reanchor_every": 5,
 }
 
+LOADOUT_ERROR = (
+    "flight uses the single Light Media Club loadout "
+    "(orange and cobalt sprites, fixture hero)"
+)
+
+
+def loadout_hero_sha256() -> str:
+    return hashlib.sha256(DEFAULT_HERO.read_bytes()).hexdigest()
+
+
+def is_show_loadout(
+    *,
+    hero_sha256: str,
+    display_names: Mapping[str, str],
+    bot1_visual: Mapping[str, Any],
+    bot2_visual: Mapping[str, Any],
+    scene: Mapping[str, Any],
+) -> bool:
+    if hero_sha256 != loadout_hero_sha256():
+        return False
+    if dict(display_names) != {"BOT1": BOT1_NAME, "BOT2": BOT2_NAME}:
+        return False
+    for actual, expected in (
+        (bot1_visual, BOT1_MANIFEST["visual_invariants"]),
+        (bot2_visual, BOT2_MANIFEST["visual_invariants"]),
+    ):
+        for key in ("silhouette", "eye_design", "proportions"):
+            if actual.get(key) != expected[key]:
+                return False
+    if scene.get("set") != SCENE_MANIFEST["set"]:
+        return False
+    if list(scene.get("palette") or []) != list(SCENE_MANIFEST["palette"]):
+        return False
+    if scene.get("lighting") != SCENE_MANIFEST["lighting"]:
+        return False
+    return True
+
+
+def require_show_loadout(
+    *,
+    hero_sha256: str,
+    display_names: Mapping[str, str],
+    bot1_visual: Mapping[str, Any],
+    bot2_visual: Mapping[str, Any],
+    scene: Mapping[str, Any],
+) -> None:
+    if not is_show_loadout(
+        hero_sha256=hero_sha256,
+        display_names=display_names,
+        bot1_visual=bot1_visual,
+        bot2_visual=bot2_visual,
+        scene=scene,
+    ):
+        raise ValidationError(LOADOUT_ERROR)
+
+
+def loaded_is_show_loadout(loaded: LoadedBaseline) -> bool:
+    try:
+        fields = _loadout_fields_from_loaded(loaded)
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return False
+    return is_show_loadout(**fields)
+
+
+def _loadout_fields_from_loaded(loaded: LoadedBaseline) -> dict[str, Any]:
+    manifest = loaded.manifest
+    visuals: dict[str, Mapping[str, Any]] = {}
+    for record in manifest["packs"]["characters"]:
+        payload = json.loads(loaded.verified_bytes[record["path"]].decode("utf-8"))
+        visuals[record["slot"]] = payload["manifest"]["visual_invariants"]
+    scene_record = manifest["packs"]["scene"]
+    scene_payload = json.loads(
+        loaded.verified_bytes[scene_record["path"]].decode("utf-8")
+    )
+    return {
+        "hero_sha256": manifest["hero"]["sha256"],
+        "display_names": manifest["display_names"],
+        "bot1_visual": visuals["BOT1"],
+        "bot2_visual": visuals["BOT2"],
+        "scene": scene_payload["manifest"],
+    }
+
 
 def lock_canonical_hosts(
     data_dir: Path,
@@ -153,7 +239,7 @@ def lock_canonical_hosts(
 ) -> Baseline:
     data_dir = Path(data_dir)
     hero_path = Path(hero_path) if hero_path is not None else DEFAULT_HERO
-    _require_hero_png(hero_path)
+    _require_loadout_hero(hero_path)
 
     database = Database(data_dir / "manager.sqlite3")
     database.initialize()
@@ -162,7 +248,7 @@ def lock_canonical_hosts(
     candidates = CandidateService(database, assets, packs)
     baselines = BaselineService(database, assets, packs, candidates)
 
-    existing = _latest_baseline(baselines)
+    existing = _show_loadout(baselines)
     if existing is not None and not force:
         return existing
 
@@ -197,11 +283,23 @@ def lock_canonical_hosts(
     return baselines.lock_run(approved.cast_key)
 
 
-def _latest_baseline(service: BaselineService) -> Baseline | None:
-    listed = service.list_baselines()
-    if not listed:
+def _show_loadout(service: BaselineService) -> Baseline | None:
+    matches = [
+        baseline
+        for baseline in service.list_baselines()
+        if _baseline_is_show_loadout(service, baseline)
+    ]
+    if not matches:
         return None
-    return max(listed, key=lambda item: item.created_at)
+    return max(matches, key=lambda item: item.created_at)
+
+
+def _baseline_is_show_loadout(service: BaselineService, baseline: Baseline) -> bool:
+    try:
+        loaded = service.load(baseline.id)
+    except (IntegrityError, ValidationError, KeyError, json.JSONDecodeError):
+        return False
+    return loaded_is_show_loadout(loaded)
 
 
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -228,6 +326,15 @@ def _require_hero_png(path: Path) -> None:
         )
 
 
+def _require_loadout_hero(path: Path) -> None:
+    _require_hero_png(path)
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    if digest != loadout_hero_sha256():
+        raise ValidationError(
+            "loadout hero must be the Light Media Club two-shot fixture"
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="pack_manager.hosts")
     parser.add_argument(
@@ -245,7 +352,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Create a new locked baseline even if one already exists.",
+        help="Create a new loadout lock even if one already exists.",
     )
     args = parser.parse_args(argv)
     try:

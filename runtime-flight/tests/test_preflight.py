@@ -13,11 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from pack_manager.assets import AssetStore
-from pack_manager.baselines import BaselineService
-from pack_manager.candidates import CandidateService
-from pack_manager.db import Database
-from pack_manager.packs import PackService
+from pack_manager.hosts import lock_canonical_hosts
 from runtime_flight.__main__ import main
 from runtime_flight.config import load_config, validate_config
 from runtime_flight.obs_session import ObsSession
@@ -27,7 +23,6 @@ from runtime_flight.preflight import (
     run_preflight,
     submit_fal_job,
 )
-from test_baseline import make_png_bytes
 from test_config import (
     SECRET_API_KEY,
     SECRET_BASE_URL,
@@ -36,7 +31,6 @@ from test_config import (
     _set_complete_env,
     _write_config,
 )
-from conftest import character_manifest_v2, scene_manifest_v2
 from conftest_obs import FakeObsClient, complete_obs_client
 
 FORBIDDEN_ROOT_MODULES = {
@@ -126,48 +120,9 @@ def _complete_env(monkeypatch: pytest.MonkeyPatch, flight_setup: dict) -> None:
 
 def _make_flight_setup(tmp_path: Path) -> dict:
     data_dir = tmp_path / "pack-data"
-    database = Database(data_dir / "manager.sqlite3")
-    database.initialize()
-    asset_store = AssetStore(data_dir, database)
-    pack_service = PackService(database, asset_store)
-    candidate_service = CandidateService(database, asset_store, pack_service)
-    baseline_service = BaselineService(
-        database, asset_store, pack_service, candidate_service
-    )
-
-    bot1_asset = asset_store.put_bytes("bot1.png", make_png_bytes(64, 64), "image/png")
-    bot2_asset = asset_store.put_bytes("bot2.png", make_png_bytes(64, 64), "image/png")
-    scene_asset = asset_store.put_bytes("studio.png", make_png_bytes(64, 64), "image/png")
-    hero = asset_store.put_bytes("hero.png", make_png_bytes(), "image/png")
-
-    bot1 = pack_service.create_pack("character", "BOT1")
-    bot2 = pack_service.create_pack("character", "BOT2")
-    scene = pack_service.create_pack("scene", "Studio")
-    bot1_version = pack_service.create_version(
-        bot1.id, character_manifest_v2([bot1_asset.id])
-    )
-    bot2_version = pack_service.create_version(
-        bot2.id, character_manifest_v2([bot2_asset.id])
-    )
-    scene_version = pack_service.create_version(
-        scene.id, scene_manifest_v2([scene_asset.id])
-    )
-    candidate = candidate_service.create(
-        character_versions={
-            "BOT1": (bot1_version.pack_id, bot1_version.version),
-            "BOT2": (bot2_version.pack_id, bot2_version.version),
-        },
-        scene_pack_id=scene_version.pack_id,
-        scene_version=scene_version.version,
-        hero_asset_id=hero.id,
-    )
-    approved = candidate_service.approve(
-        candidate.id, canonical=True, review_note="flight-ready"
-    )
-    locked = baseline_service.lock_run(approved.cast_key)
+    locked = lock_canonical_hosts(data_dir)
     return {
         "data_dir": data_dir,
-        "baseline_service": baseline_service,
         "locked": locked,
     }
 

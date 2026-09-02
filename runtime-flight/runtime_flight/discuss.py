@@ -178,7 +178,7 @@ async def _run_discuss_async(
     if max_turns < 1:
         raise DiscussError("max_turns must be at least 1")
     source = load_source_packet(config.source_packet, config.source_lock)
-    baseline = BaselineContext.load(
+    baseline = BaselineContext.load_loadout(
         config.pack_manager_data_dir, config.baseline_id or ""
     )
     limiter = TextAttemptLimiter(max_text_requests)

@@ -153,7 +153,7 @@ async def _run_stage_async(
     thoughts: list[Thought] = []
     limiter = None
     if plan:
-        baseline = BaselineContext.load(
+        baseline = BaselineContext.load_loadout(
             config.pack_manager_data_dir, config.baseline_id or ""
         )
         limiter = TextAttemptLimiter(confirm_text_requests)

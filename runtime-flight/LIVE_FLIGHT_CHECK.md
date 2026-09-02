@@ -213,6 +213,9 @@ stays in the scenes and stays hidden. The overlay owns those plates.
 - Scene pack `reanchor_every` stays 5.
 - Label the live inherit model `baseline` in outputs. Treat `TEXT_MODEL` as a
   secret.
+- There is one loadout: Light Media Club, fixture hero, orange and cobalt
+  sprites. `live` / `stage` / `discuss` / `segment` load that lock. Extra
+  baselines are not a menu. `RUNTIME_BASELINE_ID` must be that loadout.
 
 ## Next-flight checklist
 
@@ -228,6 +231,9 @@ Before `live`:
 5. `load-design-preview.py` has been run after the last `setup-obs`.
 6. `RUNTIME_ALLOW_PAID=1`, spend cap and `--confirm-spend` match. Live CLI has
    no `--max-fal-submissions`; the clock and cap bound fal.
+7. `RUNTIME_BASELINE_ID` is the Light Media Club loadout. Do not inherit a
+   stale tmux baseline. `lock_canonical_hosts` reuses that loadout; it does
+   not return the latest lock of any look.
 
 After the first take lands:
 
