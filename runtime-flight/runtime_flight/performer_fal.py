@@ -56,6 +56,13 @@ class FalCookTimings:
     t_download_s: float | None = None
     t_post_s: float | None = None
     t_cook_s: float | None = None
+    t_hero_s: float | None = None
+    t_result_s: float | None = None
+    t_validate_s: float | None = None
+    t_extract_s: float | None = None
+    t_upload_frame_s: float | None = None
+    t_copy_s: float | None = None
+    status_samples: tuple[dict[str, Any], ...] = ()
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -68,6 +75,13 @@ class FalCookTimings:
             "t_download_s": self.t_download_s,
             "t_post_s": self.t_post_s,
             "t_cook_s": self.t_cook_s,
+            "t_hero_s": self.t_hero_s,
+            "t_result_s": self.t_result_s,
+            "t_validate_s": self.t_validate_s,
+            "t_extract_s": self.t_extract_s,
+            "t_upload_frame_s": self.t_upload_frame_s,
+            "t_copy_s": self.t_copy_s,
+            "status_samples": list(self.status_samples),
         }
 
 
@@ -144,7 +158,14 @@ class FalPerformer:
                 self._active -= 1
 
     async def _perform(self, request: TakeRequest) -> ReadyTake:
+        hero_cached = request.anchor == "hero" and request.baseline_id in self._hero_urls
+        hero_t0 = time.monotonic()
         image_url = await self._resolve_image_url(request)
+        t_hero_s = (
+            _seconds(time.monotonic() - hero_t0)
+            if request.anchor == "hero" and not hero_cached
+            else None
+        )
         arguments = {
             "prompt": request.prompt,
             "duration": self.duration_s,
@@ -165,12 +186,12 @@ class FalPerformer:
         if submit_status == "dropped_422":
             self._meter.ledger.mark_finished(reservation.id, "dropped_422")
             self._consecutive_failures = 0
-            cook = FalCookTimings(t_submit_s=t_submit_s)
+            cook = FalCookTimings(t_submit_s=t_submit_s, t_hero_s=t_hero_s)
             self._persist_cook(request.take, None, "dropped_422", cook)
             return _ready(request, reservation, status="dropped_422", cook=cook)
         if handle is None or submit_status == "unknown_submission":
             self._meter.ledger.mark_unknown_submission(reservation.id)
-            cook = FalCookTimings(t_submit_s=t_submit_s)
+            cook = FalCookTimings(t_submit_s=t_submit_s, t_hero_s=t_hero_s)
             return self._terminal(
                 request, reservation, status="unknown_submission", cook=cook
             )
@@ -190,6 +211,9 @@ class FalPerformer:
             t_poll_s=t_poll_s,
             t_first_progress_s=t_first_progress_s,
             t_completed_s=t_completed_s,
+            t_hero_s=t_hero_s,
+            t_result_s=_seconds(result.t_result_s),
+            status_samples=result.status_samples,
         )
         if result.unknown_submission or result.request_id is None:
             self._meter.ledger.mark_unknown_submission(reservation.id)
@@ -273,6 +297,7 @@ class FalPerformer:
                 expected_duration_s=self.duration_s,
             )
             t_post_s = _seconds(time.monotonic() - post_t0)
+            stages = getattr(processed, "stages_s", None) or {}
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -294,6 +319,13 @@ class FalPerformer:
             t_download_s=t_download_s,
             t_post_s=t_post_s,
             t_cook_s=_seconds(time.monotonic() - t0),
+            t_hero_s=cook.t_hero_s,
+            t_result_s=cook.t_result_s,
+            t_validate_s=_seconds(stages.get("validate")),
+            t_extract_s=_seconds(stages.get("extract")),
+            t_upload_frame_s=_seconds(stages.get("upload")),
+            t_copy_s=_seconds(stages.get("copy")),
+            status_samples=cook.status_samples,
         )
         self._meter.ledger.mark_finished(reservation.id, "COMPLETED")
         self._consecutive_failures = 0
@@ -362,6 +394,12 @@ class FalPerformer:
         }
         with path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(row, separators=(",", ":")) + "\n")
+        try:
+            from runtime_flight.timeline import write_timeline
+
+            write_timeline(path.parent)
+        except Exception:
+            pass
 
     def _terminal(
         self,

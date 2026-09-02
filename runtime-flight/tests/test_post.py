@@ -105,6 +105,9 @@ def test_process_take_validates_extracts_uploads_and_copies(tmp_path: Path) -> N
     probe = _run(validate_media(ready))
     assert probe.video_fingerprint == result.video_fingerprint
     assert probe.audio_fingerprint == result.audio_fingerprint
+    assert result.stages_s is not None
+    assert set(result.stages_s) == {"validate", "extract", "upload", "copy"}
+    assert all(value >= 0 for value in result.stages_s.values())
 
 
 def test_failed_media_check_never_enters_ready(tmp_path: Path) -> None:

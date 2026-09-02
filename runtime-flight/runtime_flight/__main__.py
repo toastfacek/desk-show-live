@@ -37,6 +37,7 @@ from runtime_flight.operator import (
     load_validated_config,
 )
 from runtime_flight.time_fal import run_time_fal
+from runtime_flight.timeline import write_timeline
 from runtime_flight.segment import run_segment
 from runtime_flight.preflight import (
     PreflightError,
@@ -186,6 +187,17 @@ def main(
         help="Directory that receives time-fal/<run-id>/.",
     )
 
+    timeline_parser = subparsers.add_parser(
+        "timeline",
+        help="Render cook waterfall and flame graph HTML from a run directory.",
+    )
+    timeline_parser.add_argument(
+        "--dir",
+        type=Path,
+        required=True,
+        help="time-fal or live work directory (or a fal_cook.jsonl / summary.json).",
+    )
+
     replay_parser = subparsers.add_parser("replay", help="Read a finished evidence bundle. No network.")
     _add_bundle_args(replay_parser)
 
@@ -268,6 +280,10 @@ def main(
             )
             work_dir = Path(payload["work_dir"])
             print((work_dir / "transcript.txt").read_text(encoding="utf-8"), end="")
+            return 0
+        if args.command == "timeline":
+            path = write_timeline(args.dir)
+            print(yaml.safe_dump({"timeline_html": str(path)}, sort_keys=False), end="")
             return 0
         if args.command == "time-fal":
             config = load_validated_config(args.config, require_obs=False)

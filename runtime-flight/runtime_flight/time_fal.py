@@ -18,6 +18,7 @@ from runtime_flight.operator import OperatorError
 from runtime_flight.performer_fal import FalPerformer, ReadyTake, TakeRequest
 from runtime_flight.prompt import assemble_prompt
 from runtime_flight.spend import SpendLedger, SpendMeter
+from runtime_flight.timeline import write_timeline
 
 TIME_FAL_DURATION_S = 5
 TIME_FAL_MAX_TAKES = 3
@@ -113,6 +114,13 @@ async def _run_async(
         ),
         "spend_reserved_usd": str(meter.total),
     }
+    (work_dir / "summary.json").write_text(
+        json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+    )
+    timeline_path = write_timeline(
+        work_dir, title=f"cook timeline · {run_id}", duration_s=float(duration_s)
+    )
+    summary["timeline_html"] = str(timeline_path)
     (work_dir / "summary.json").write_text(
         json.dumps(summary, indent=2) + "\n", encoding="utf-8"
     )

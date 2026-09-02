@@ -719,6 +719,9 @@ def test_ready_take_records_fal_inference_and_cook_clocks(tmp_path: Path) -> Non
     assert row["t_inference_s"] == 2.71
     assert row["status"] == "ready"
     assert row["duration_s"] == 5
+    timeline = tmp_path / "logs" / "timeline.html"
+    assert timeline.is_file()
+    assert "Flame graph" in timeline.read_text(encoding="utf-8")
 
 
 def test_missing_fal_timings_leave_inference_none(tmp_path: Path) -> None:

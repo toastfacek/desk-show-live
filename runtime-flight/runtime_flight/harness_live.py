@@ -842,6 +842,13 @@ class LiveHarness:
             "t_download_s": None,
             "t_post_s": None,
             "t_cook_s": None,
+            "t_hero_s": None,
+            "t_result_s": None,
+            "t_validate_s": None,
+            "t_extract_s": None,
+            "t_upload_frame_s": None,
+            "t_copy_s": None,
+            "status_samples": None,
         }
         self.log.append(row)
         return row
@@ -860,3 +867,10 @@ def _copy_cook(row: dict[str, Any], cook: Any) -> None:
     row["t_download_s"] = payload.get("t_download_s")
     row["t_post_s"] = payload.get("t_post_s")
     row["t_cook_s"] = payload.get("t_cook_s")
+    row["t_hero_s"] = payload.get("t_hero_s")
+    row["t_result_s"] = payload.get("t_result_s")
+    row["t_validate_s"] = payload.get("t_validate_s")
+    row["t_extract_s"] = payload.get("t_extract_s")
+    row["t_upload_frame_s"] = payload.get("t_upload_frame_s")
+    row["t_copy_s"] = payload.get("t_copy_s")
+    row["status_samples"] = payload.get("status_samples")

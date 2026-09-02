@@ -133,6 +133,8 @@ def test_time_fal_runs_three_sequential_hero_cooks(
     assert seen[0].started[1].anchor == "hero"
     assert [req.line for req in seen[0].started] == list(TIME_FAL_LINES)
     assert (tmp_path / "out" / "time-fal" / summary["run_id"] / "summary.json").is_file()
+    assert Path(summary["timeline_html"]).is_file()
+    assert "Flame graph" in Path(summary["timeline_html"]).read_text(encoding="utf-8")
 
 
 def test_time_fal_refuses_without_paid_flag(

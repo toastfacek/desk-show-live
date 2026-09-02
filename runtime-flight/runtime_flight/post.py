@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,6 +30,7 @@ class ProcessedTake:
     final_frame_timestamp_s: float
     video_fingerprint: StreamFingerprint
     audio_fingerprint: StreamFingerprint
+    stages_s: dict[str, float] | None = None
 
 
 async def upload_frame(frame_path: Path, *, upload: UploadFn) -> str:
@@ -74,12 +76,20 @@ async def process_take(
     upload: UploadFn,
     expected_duration_s: int = 5,
 ) -> ProcessedTake:
+    validate_t0 = time.monotonic()
     probe = await validate_media(
         Path(raw_video_path), expected_duration_s=expected_duration_s
     )
+    t_validate_s = time.monotonic() - validate_t0
+    extract_t0 = time.monotonic()
     timestamp = await extract_final_frame(Path(raw_video_path), Path(frame_path))
+    t_extract_s = time.monotonic() - extract_t0
+    upload_t0 = time.monotonic()
     frame_url = await upload_frame(Path(frame_path), upload=upload)
+    t_upload_s = time.monotonic() - upload_t0
+    copy_t0 = time.monotonic()
     copied = await copy_to_ready(Path(raw_video_path), Path(ready_path))
+    t_copy_s = time.monotonic() - copy_t0
     return ProcessedTake(
         frame_url=frame_url,
         frame_path=Path(frame_path),
@@ -87,6 +97,12 @@ async def process_take(
         final_frame_timestamp_s=timestamp,
         video_fingerprint=probe.video_fingerprint,
         audio_fingerprint=probe.audio_fingerprint,
+        stages_s={
+            "validate": round(t_validate_s, 3),
+            "extract": round(t_extract_s, 3),
+            "upload": round(t_upload_s, 3),
+            "copy": round(t_copy_s, 3),
+        },
     )
 
 

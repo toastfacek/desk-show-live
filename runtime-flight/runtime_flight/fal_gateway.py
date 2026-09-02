@@ -61,6 +61,8 @@ class QueueResult:
     unknown_submission: bool
     t_first_progress_s: float | None = None
     t_completed_s: float | None = None
+    t_result_s: float | None = None
+    status_samples: tuple[dict[str, Any], ...] = ()
 
 
 def poll_interval(elapsed_s: float) -> float:
@@ -197,17 +199,24 @@ class FalGateway:
         start = self._now()
         last_state = "IN_QUEUE"
         first_progress_s: float | None = None
+        samples: list[dict[str, Any]] = []
         while True:
             elapsed = self._now() - start
             if elapsed >= limit_s:
                 break
-            status = await self._read_status(handle.status_url)
-            if status is not None:
-                last_state = status
+            sample = await self._read_status_sample(handle.status_url)
+            if sample is not None:
+                last_state = str(sample["status"])
+                samples.append({**sample, "t_s": round(self._now() - start, 3)})
             if last_state == "IN_PROGRESS" and first_progress_s is None:
                 first_progress_s = self._now() - start
             if last_state == "COMPLETED":
-                payload = await self._read_result(handle.response_url) if fetch_result else None
+                t_result_s: float | None = None
+                payload = None
+                if fetch_result:
+                    result_t0 = self._now()
+                    payload = await self._read_result(handle.response_url)
+                    t_result_s = self._now() - result_t0
                 return QueueResult(
                     request_id=handle.request_id,
                     remote_state="COMPLETED",
@@ -215,6 +224,8 @@ class FalGateway:
                     unknown_submission=False,
                     t_first_progress_s=first_progress_s,
                     t_completed_s=self._now() - start,
+                    t_result_s=t_result_s,
+                    status_samples=tuple(samples),
                 )
             if last_state == "CANCELED":
                 return QueueResult(
@@ -222,6 +233,7 @@ class FalGateway:
                     remote_state="CANCELED",
                     payload=None,
                     unknown_submission=False,
+                    status_samples=tuple(samples),
                 )
             interval = poll_interval(elapsed)
             remaining = limit_s - (self._now() - start)
@@ -233,9 +245,20 @@ class FalGateway:
             remote_state=last_state,
             payload=None,
             unknown_submission=False,
+            t_first_progress_s=first_progress_s,
+            status_samples=tuple(samples),
         )
 
     async def _read_status(self, url: str) -> str | None:
+        sample = await self._read_status_sample(url)
+        if sample is None:
+            return None
+        status = sample.get("status")
+        if not isinstance(status, str) or status == "":
+            return None
+        return status
+
+    async def _read_status_sample(self, url: str) -> dict[str, Any] | None:
         try:
             response = await self._request("GET", url, timeout=GET_TIMEOUT_S)
         except (TimeoutError, httpx2.TimeoutException, FalGatewayError):
@@ -254,7 +277,11 @@ class FalGateway:
         status = body.get("status")
         if not isinstance(status, str) or status == "":
             return None
-        return status
+        sample: dict[str, Any] = {"status": status}
+        position = body.get("queue_position")
+        if isinstance(position, int) and not isinstance(position, bool):
+            sample["queue_position"] = position
+        return sample
 
     async def _read_result(self, url: str) -> dict[str, Any]:
         response = await self._request("GET", url, timeout=GET_TIMEOUT_S)
