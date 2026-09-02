@@ -427,7 +427,7 @@ def test_same_speaker_chains_the_exact_frame_url(tmp_path: Path) -> None:
     take1 = next(row for row in harness.log if row["take"] == 1)
     take2 = next(row for row in harness.log if row["take"] == 2)
     assert take2["t_submit"] >= take1["t_ready"]
-    assert performer.max_inflight == 1
+    assert take2["t_submit"] <= take1["t_on_air"]
 
 
 def test_late_take_uses_card_or_hold(tmp_path: Path) -> None:
