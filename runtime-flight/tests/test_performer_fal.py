@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import json
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal
@@ -675,6 +676,63 @@ def test_media_failure_is_failed_and_never_returns_ready_paths(tmp_path: Path) -
     assert ready.request_id == REQUEST_ID
     assert meter.ledger.records()[0].final_remote_state == "failed"
     assert performer.consecutive_failures == 1
+
+
+def test_ready_take_records_fal_inference_and_cook_clocks(tmp_path: Path) -> None:
+    from runtime_flight.performer_fal import FalCookTimings, parse_fal_timings, inference_seconds
+
+    assert parse_fal_timings({"timings": {"inference": 2.71, "queue": 0.4}}) == {
+        "inference": 2.71,
+        "queue": 0.4,
+    }
+    assert inference_seconds({"inference": 2.71}) == 2.71
+    assert parse_fal_timings({"video": {"url": VIDEO_URL}}) is None
+
+    async def reconcile(handle: QueueHandle) -> QueueResult:
+        del handle
+        return _completed(
+            {
+                "video": {"url": VIDEO_URL},
+                "timings": {"inference": 2.71},
+            }
+        )
+
+    performer = _performer(tmp_path, gateway=FakeGateway(reconcile=reconcile))
+
+    async def run():
+        return await performer.start(_request())
+
+    ready = _run(run())
+    assert ready.status == "ready"
+    assert isinstance(ready.cook, FalCookTimings)
+    assert ready.cook.t_inference_s == 2.71
+    assert ready.cook.timings == {"inference": 2.71}
+    assert ready.cook.t_submit_s is not None
+    assert ready.cook.t_poll_s is not None
+    assert ready.cook.t_completed_s is not None
+    assert ready.cook.t_download_s is not None
+    assert ready.cook.t_post_s is not None
+    assert ready.cook.t_cook_s is not None
+    log = tmp_path / "logs" / "fal_cook.jsonl"
+    assert log.is_file()
+    row = json.loads(log.read_text(encoding="utf-8").splitlines()[0])
+    assert row["t_inference_s"] == 2.71
+    assert row["status"] == "ready"
+    assert row["duration_s"] == 5
+
+
+def test_missing_fal_timings_leave_inference_none(tmp_path: Path) -> None:
+    performer = _performer(tmp_path)
+
+    async def run():
+        return await performer.start(_request())
+
+    ready = _run(run())
+    assert ready.status == "ready"
+    assert ready.cook is not None
+    assert ready.cook.t_inference_s is None
+    assert ready.cook.timings is None
+    assert ready.cook.t_cook_s is not None
 
 
 def test_source_does_not_use_harness_level_spend_check_or_root_scaffold() -> None:

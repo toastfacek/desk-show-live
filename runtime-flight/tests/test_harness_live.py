@@ -23,7 +23,7 @@ from runtime_flight.harness_live import (
     writer_phase,
 )
 from runtime_flight.models import Fact, SegmentPackage, Thought, TweetCard
-from runtime_flight.performer_fal import ReadyTake, TakeRequest
+from runtime_flight.performer_fal import FalCookTimings, ReadyTake, TakeRequest
 from runtime_flight.source import (
     EXPECTED_AUTHOR,
     EXPECTED_LINKED_URL,
@@ -294,6 +294,11 @@ class FakePerformer:
             request_id=f"req-{request.take}",
             status="ready",
             reserved_cost_usd=reserved,
+            cook=FalCookTimings(
+                t_inference_s=2.71,
+                timings={"inference": 2.71},
+                t_cook_s=self.delay_s,
+            ),
         )
 
 
@@ -595,6 +600,19 @@ def test_bot_ids_stay_until_set_speaking(tmp_path: Path) -> None:
     assert "host_b" in speaking
     assert all(host in {None, "host_a", "host_b"} for host in speaking)
     assert "host_a" not in {req.speaker for req in performer.started}
+
+
+def test_ready_row_copies_fal_inference(tmp_path: Path) -> None:
+    harness, _, _, _ = _harness(tmp_path)
+
+    async def run() -> None:
+        await harness.run_simulated(until_aired=1)
+
+    _run(run())
+    row = next(item for item in harness.log if item["take"] == 1)
+    assert row["t_inference_s"] == 2.71
+    assert row["fal_timings"] == {"inference": 2.71}
+    assert row["t_cook_s"] == 4.0
 
 
 def test_writer_phase_is_derived_not_raw_timing(tmp_path: Path) -> None:

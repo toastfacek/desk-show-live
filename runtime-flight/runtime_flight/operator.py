@@ -253,6 +253,29 @@ def cmd_stage(
         raise OperatorError(str(error)) from error
 
 
+def cmd_time_fal(
+    config: RuntimeConfig,
+    *,
+    confirm_spend: str | None,
+    takes: int,
+    duration_s: int,
+    run_time_fal,
+    out_dir: Path | None = None,
+) -> dict[str, Any]:
+    require_paid_flag()
+    require_confirm_spend(config, confirm_spend)
+    if takes < 1 or takes > 3:
+        raise OperatorError("time-fal --takes must be 1 to 3")
+    if duration_s != 5:
+        raise OperatorError("time-fal --duration must be 5")
+    return run_time_fal(
+        config=config,
+        takes=takes,
+        duration_s=duration_s,
+        out_dir=out_dir,
+    )
+
+
 def cmd_replay(bundle: Path, *, network_call: Callable[..., Any] | None = None) -> dict[str, Any]:
     if network_call is not None:
         raise OperatorError("replay performs no network calls")

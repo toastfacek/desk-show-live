@@ -31,10 +31,12 @@ from runtime_flight.operator import (
     cmd_segment,
     cmd_setup_obs,
     cmd_stage,
+    cmd_time_fal,
     cmd_verify_flight,
     latest_bundle,
     load_validated_config,
 )
+from runtime_flight.time_fal import run_time_fal
 from runtime_flight.segment import run_segment
 from runtime_flight.preflight import (
     PreflightError,
@@ -60,6 +62,7 @@ def main(
     segment_runner=None,
     discuss_runner=None,
     stage_runner=None,
+    time_fal_runner=None,
     http_get=None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="runtime_flight")
@@ -169,6 +172,20 @@ def main(
     _add_paid_args(live_parser)
     live_parser.add_argument("--max-text-requests", type=int, default=24)
 
+    time_fal_parser = subparsers.add_parser(
+        "time-fal",
+        help="Paid sequential 5s H3 cooks. Logs fal timings.inference. No OBS.",
+    )
+    _add_paid_args(time_fal_parser)
+    time_fal_parser.add_argument("--takes", type=int, default=3)
+    time_fal_parser.add_argument("--duration", type=int, default=5)
+    time_fal_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("out"),
+        help="Directory that receives time-fal/<run-id>/.",
+    )
+
     replay_parser = subparsers.add_parser("replay", help="Read a finished evidence bundle. No network.")
     _add_bundle_args(replay_parser)
 
@@ -251,6 +268,18 @@ def main(
             )
             work_dir = Path(payload["work_dir"])
             print((work_dir / "transcript.txt").read_text(encoding="utf-8"), end="")
+            return 0
+        if args.command == "time-fal":
+            config = load_validated_config(args.config, require_obs=False)
+            payload = cmd_time_fal(
+                config,
+                confirm_spend=args.confirm_spend,
+                takes=args.takes,
+                duration_s=args.duration,
+                run_time_fal=time_fal_runner or run_time_fal,
+                out_dir=args.out,
+            )
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
             return 0
         if args.command in {"smoke", "live"}:
             config = _config_with_source(args.config, getattr(args, "source_dir", None))

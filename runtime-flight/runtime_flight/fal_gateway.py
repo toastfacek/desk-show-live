@@ -59,6 +59,8 @@ class QueueResult:
     remote_state: str
     payload: dict[str, Any] | None
     unknown_submission: bool
+    t_first_progress_s: float | None = None
+    t_completed_s: float | None = None
 
 
 def poll_interval(elapsed_s: float) -> float:
@@ -194,6 +196,7 @@ class FalGateway:
     ) -> QueueResult:
         start = self._now()
         last_state = "IN_QUEUE"
+        first_progress_s: float | None = None
         while True:
             elapsed = self._now() - start
             if elapsed >= limit_s:
@@ -201,6 +204,8 @@ class FalGateway:
             status = await self._read_status(handle.status_url)
             if status is not None:
                 last_state = status
+            if last_state == "IN_PROGRESS" and first_progress_s is None:
+                first_progress_s = elapsed
             if last_state == "COMPLETED":
                 payload = await self._read_result(handle.response_url) if fetch_result else None
                 return QueueResult(
@@ -208,6 +213,8 @@ class FalGateway:
                     remote_state="COMPLETED",
                     payload=payload,
                     unknown_submission=False,
+                    t_first_progress_s=first_progress_s,
+                    t_completed_s=self._now() - start,
                 )
             if last_state == "CANCELED":
                 return QueueResult(

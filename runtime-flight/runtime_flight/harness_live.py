@@ -604,6 +604,7 @@ class LiveHarness:
             row["frame_url"] = ready.frame_url
             row["anchor"] = ready.anchor
             row["request_id"] = ready.request_id
+            _copy_cook(row, ready.cook)
             self.events.append({"t": self.t, "kind": "ready", "take": take})
 
     async def _handle_422(self, ready: ReadyTake) -> None:
@@ -832,6 +833,30 @@ class LiveHarness:
             "frame_url": None,
             "prompt": None,
             "request_id": None,
+            "t_inference_s": None,
+            "fal_timings": None,
+            "t_submit_s": None,
+            "t_poll_s": None,
+            "t_first_progress_s": None,
+            "t_completed_s": None,
+            "t_download_s": None,
+            "t_post_s": None,
+            "t_cook_s": None,
         }
         self.log.append(row)
         return row
+
+
+def _copy_cook(row: dict[str, Any], cook: Any) -> None:
+    if cook is None:
+        return
+    payload = cook.as_dict() if hasattr(cook, "as_dict") else {}
+    row["t_inference_s"] = payload.get("t_inference_s")
+    row["fal_timings"] = payload.get("timings")
+    row["t_submit_s"] = payload.get("t_submit_s")
+    row["t_poll_s"] = payload.get("t_poll_s")
+    row["t_first_progress_s"] = payload.get("t_first_progress_s")
+    row["t_completed_s"] = payload.get("t_completed_s")
+    row["t_download_s"] = payload.get("t_download_s")
+    row["t_post_s"] = payload.get("t_post_s")
+    row["t_cook_s"] = payload.get("t_cook_s")

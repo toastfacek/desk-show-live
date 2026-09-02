@@ -209,6 +209,9 @@ def test_reconcile_polls_status_with_auth_and_fetches_result_once_on_completed()
     assert result.remote_state == "COMPLETED"
     assert result.payload == {"video": {"url": "https://v3.fal.media/files/out.mp4"}}
     assert result.unknown_submission is False
+    assert result.t_first_progress_s is None
+    assert result.t_completed_s is not None
+    assert result.t_completed_s >= 0.0
     status_gets = [c for c in calls if c == ("GET", STATUS_URL)]
     response_gets = [c for c in calls if c == ("GET", RESPONSE_URL)]
     assert status_gets
