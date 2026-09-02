@@ -5,6 +5,8 @@ from __future__ import annotations
 import ast
 import asyncio
 from decimal import Decimal
+
+import pytest
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Literal
@@ -313,6 +315,7 @@ def _harness(
     target_duration_s: float = 90.0,
     delay_s: float = 4.0,
     forced_late_takes: tuple[int, ...] = (),
+    forced_late_delay_s: float = 8.0,
     fail_takes: tuple[int, ...] = (),
     drop_422_takes: tuple[int, ...] = (),
     reanchor_every: int = 60,
@@ -328,6 +331,7 @@ def _harness(
         tmp_path,
         delay_s=delay_s,
         forced_late_takes=forced_late_takes,
+        forced_late_delay_s=forced_late_delay_s,
         fail_takes=fail_takes,
         drop_422_takes=drop_422_takes,
     )
@@ -430,20 +434,68 @@ def test_same_speaker_chains_the_exact_frame_url(tmp_path: Path) -> None:
     assert take2["t_submit"] <= take1["t_on_air"]
 
 
-def test_late_take_uses_card_or_hold(tmp_path: Path) -> None:
-    harness, _, performer, _ = _harness(
-        tmp_path, writer=ContinuingWriter(), forced_late_takes=(2,)
+def test_same_speaker_holds_first_take_until_successor_ready(tmp_path: Path) -> None:
+    harness, _, _, _ = _harness(tmp_path, writer=ContinuingWriter(), delay_s=4.0)
+
+    async def run() -> None:
+        await harness.run_simulated(until_aired=1, max_t=20)
+
+    _run(run())
+    take1 = next(row for row in harness.log if row["take"] == 1)
+    take2 = next(row for row in harness.log if row["take"] == 2)
+    assert take1["t_ready"] is not None
+    assert take2["t_ready"] is not None
+    assert take1["t_on_air"] == take2["t_ready"]
+    assert take2["t_on_air"] is None
+
+
+def test_successor_airs_on_the_cut_without_a_hole(tmp_path: Path) -> None:
+    harness, _, _, _ = _harness(tmp_path, writer=ContinuingWriter(), delay_s=4.0)
+
+    async def run() -> None:
+        await harness.run_simulated(until_aired=2, max_t=30)
+
+    _run(run())
+    take1 = next(row for row in harness.log if row["take"] == 1)
+    take2 = next(row for row in harness.log if row["take"] == 2)
+    assert take2["t_on_air"] == pytest.approx(take1["t_on_air"] + CLIP_DURATION_S)
+
+
+def test_blocked_later_ready_does_not_recut_every_poll(tmp_path: Path) -> None:
+    harness, _, _, _ = _harness(
+        tmp_path, delay_s=2.0, forced_late_takes=(1,), forced_late_delay_s=8.0
     )
 
     async def run() -> None:
-        await harness.run_simulated(until_aired=2)
+        await harness.run_simulated(until_aired=1, max_t=20)
+
+    _run(run())
+    wait_beats = [
+        beat
+        for beat in harness.beats
+        if beat.get("host_source") is None
+        and beat["layout"] in {"card_full", "split", "hold"}
+    ]
+    assert len(wait_beats) <= 3
+
+
+def test_late_take_uses_card_or_hold(tmp_path: Path) -> None:
+    harness, _, performer, _ = _harness(
+        tmp_path,
+        writer=ContinuingWriter(),
+        delay_s=4.0,
+        forced_late_takes=(3,),
+        forced_late_delay_s=12.0,
+    )
+
+    async def run() -> None:
+        await harness.run_simulated(until_aired=3)
 
     _run(run())
     assert any(beat["layout"] in {"card_full", "hold", "split"} for beat in harness.beats)
-    take2 = next(row for row in harness.log if row["take"] == 2)
-    assert take2["status"] == "late"
-    assert take2["t_on_air"] is not None
-    assert take2["anchor"] == "chain"
+    take3 = next(row for row in harness.log if row["take"] == 3)
+    assert take3["status"] == "late"
+    assert take3["t_on_air"] is not None
 
 
 def test_cap_prevents_submit(tmp_path: Path) -> None:

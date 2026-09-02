@@ -186,7 +186,7 @@ class LiveHarness:
                     "line": item.line,
                     "duration_s": self.clip_duration_s,
                 }
-                for item in self._playable_ready()
+                for item in self._airable_now()
             ],
             "cooking": jobs or None,
             "max_inflight": self.max_inflight,
@@ -486,6 +486,37 @@ class LiveHarness:
             return []
         return items
 
+    def _successor_ready(self, take: int) -> bool:
+        return any(item.take == take + 1 for item in self.ready)
+
+    def _must_air_without_successor(self, take: int) -> bool:
+        if self._stop_submits or self.remaining_slots() == 0 or not self._can_reserve():
+            return True
+        if self.pipeline.stopped and self.pipeline.peek_ready() is None:
+            return True
+        return False
+
+    def _airable_now(self) -> list[ReadyTake]:
+        """Clips the director may put on air this beat.
+
+        Play order still waits for a lower take. From standby, hold the first
+        ready take until its successor is also ready so the on-air clip has a
+        hard-cut partner waiting. After a host clip ends, air the successor
+        immediately even if the one after that is still cooking.
+        """
+        playable = self._playable_ready()
+        if not playable:
+            return []
+        first = playable[0]
+        on_air = self.on_air or {}
+        if on_air.get("kind") == "host":
+            return playable
+        if self._successor_ready(first.take) or self._must_air_without_successor(
+            first.take
+        ):
+            return playable
+        return []
+
     def _next_anchor_available(self, thought: Thought | None) -> bool:
         if thought is None:
             return False
@@ -599,14 +630,7 @@ class LiveHarness:
         if ends is not None and self.t + 1e-9 >= ends:
             return True
         if self.on_air.get("kind") != "host":
-            if self.ready:
-                return True
-            if (
-                not self.cooking
-                and self.pipeline.peek_ready() is not None
-                and self.spend_policy == "normal"
-            ):
-                return True
+            return bool(self._airable_now())
         return False
 
     async def _execute(self, beat: dict) -> None:
@@ -667,9 +691,10 @@ class LiveHarness:
             )
         elif beat.get("submit"):
             self.on_air = {
-                "kind": "card" if beat["layout"] == "card_full" else "hold",
+                "kind": "card" if beat["layout"] == "card_full" else "wait",
                 "take": None,
                 "ends_at": None,
+                "layout": beat["layout"],
             }
         else:
             if beat.get("why") == "panic" or (
@@ -679,10 +704,17 @@ class LiveHarness:
                 and self._stop_submits
             ):
                 self.done = True
+            if beat["layout"] in HOST_LAYOUTS:
+                kind = "wait"
+            elif beat["layout"] == "hold":
+                kind = "hold"
+            else:
+                kind = "card"
             self.on_air = {
-                "kind": "hold" if beat["layout"] == "hold" else "card",
+                "kind": kind,
                 "take": None,
                 "ends_at": None,
+                "layout": beat["layout"],
             }
 
         if beat.get("submit"):
