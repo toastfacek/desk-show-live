@@ -19,10 +19,11 @@ def assemble_prompt(
     baseline: BaselineContext,
     speaker: Literal["BOT1", "BOT2"],
     line: str,
+    max_line_chars: int = MAX_LINE_CHARS,
 ) -> str:
     if speaker not in SPEAKERS:
         raise PromptError("speaker must be BOT1 or BOT2")
-    cleaned = _require_line(line)
+    cleaned = _require_line(line, max_line_chars=max_line_chars)
     bot1 = _character(baseline, "BOT1")
     bot2 = _character(baseline, "BOT2")
     active = bot1 if speaker == "BOT1" else bot2
@@ -72,13 +73,13 @@ def _format_palette(value: Any) -> str:
     raise PromptError("palette must be a non-empty string")
 
 
-def _require_line(line: str) -> str:
+def _require_line(line: str, max_line_chars: int = MAX_LINE_CHARS) -> str:
     if not isinstance(line, str) or not line.strip():
         raise PromptError("thought text is empty")
     if any(unicodedata.category(char) == "Cc" for char in line):
         raise PromptError("thought text contains a control character")
-    if len(line) > MAX_LINE_CHARS:
-        raise PromptError("thought text exceeds 120 characters")
+    if len(line) > max_line_chars:
+        raise PromptError(f"thought text exceeds {max_line_chars} characters")
     return line
 
 

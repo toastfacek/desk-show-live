@@ -327,6 +327,43 @@ def test_writer_prompt_targets_four_to_four_point_six_seconds():
     assert captured["user"]["target_duration_s"] == 4.3
 
 
+def test_writer_fifteen_second_take_asks_for_a_longer_spoken_beat():
+    captured: dict[str, Any] = {}
+    line = (
+        "Three societies rose and fell on the same watch, and that is the "
+        "thesis tonight, not the weather around the card, because if this "
+        "loop can keep a world going then the next product is the thing "
+        "that watches it without a human in the cut."
+    )
+    assert 120 < len(line) <= 360
+
+    async def http_post(url, *, headers, json, timeout):
+        captured["system"] = json["messages"][0]["content"]
+        captured["user"] = json_module.loads(json["messages"][1]["content"])
+        return FakeResponse(200, _json_body(_valid_thought_payload(text=line)))
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write(
+            _package(),
+            (),
+            "BOT1",
+            False,
+            "open",
+            clip_duration_s=15,
+        )
+
+    thought = _run(run())
+    assert thought.text == line
+    assert captured["user"]["target_duration_s"] == 14.3
+    assert "14.0" in captured["system"]
+    assert "14.6" in captured["system"]
+    assert "360" in captured["system"]
+    assert "15-second take" in captured["system"]
+    assert "24" in captured["system"]
+    assert "48" in captured["system"]
+
+
 def test_writer_sends_reissue_instruction():
     captured: dict[str, Any] = {}
 

@@ -9,6 +9,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal
 
+from runtime_flight.clip import DEFAULT_VIDEO_DURATION_S, require_clip_duration_s
 from runtime_flight.fal_gateway import FalGateway, FalGatewayError, QueueHandle, QueueResult
 from runtime_flight.media import download_media
 from runtime_flight.post import ProcessedTake, process_take
@@ -60,6 +61,7 @@ class FalPerformer:
         hero_path: Path,
         download: DownloadFn | None = None,
         process_take: ProcessFn | None = None,
+        duration_s: int = DEFAULT_VIDEO_DURATION_S,
     ) -> None:
         self._meter = meter
         self._gateway = gateway
@@ -68,6 +70,7 @@ class FalPerformer:
         self._hero_path = Path(hero_path)
         self._download = download if download is not None else _default_download
         self._process = process_take if process_take is not None else _default_process
+        self.duration_s = require_clip_duration_s(duration_s)
         self._hero_urls: dict[str, str] = {}
         self._lock = asyncio.Lock()
         self._active = 0
@@ -108,7 +111,7 @@ class FalPerformer:
         image_url = await self._resolve_image_url(request)
         arguments = {
             "prompt": request.prompt,
-            "duration": H3_DURATION_S,
+            "duration": self.duration_s,
             "resolution": H3_RESOLUTION,
             "enable_safety_checker": True,
             "prompt_expansion_mode": H3_PROMPT_EXPANSION,
@@ -200,6 +203,7 @@ class FalPerformer:
                 frame_path,
                 ready_path,
                 upload=self._upload,
+                expected_duration_s=self.duration_s,
             )
         except asyncio.CancelledError:
             raise
@@ -318,5 +322,12 @@ async def _default_process(
     ready_path: Path,
     *,
     upload: UploadFn,
+    expected_duration_s: int = H3_DURATION_S,
 ) -> ProcessedTake:
-    return await process_take(raw_path, frame_path, ready_path, upload=upload)
+    return await process_take(
+        raw_path,
+        frame_path,
+        ready_path,
+        upload=upload,
+        expected_duration_s=expected_duration_s,
+    )

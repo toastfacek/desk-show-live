@@ -14,11 +14,12 @@ from typing import Any
 
 from PIL import Image
 
+from runtime_flight.clip import duration_window
+
 logger = logging.getLogger("runtime_flight.media")
 
 MAX_MEDIA_BYTES = 50 * 1024 * 1024
-H3_DURATION_MIN_S = 4.7
-H3_DURATION_MAX_S = 5.3
+H3_DURATION_MIN_S, H3_DURATION_MAX_S = duration_window(5)
 H3_WIDTH = 1344
 H3_HEIGHT = 768
 MAX_VOLUME_MIN_DBFS = -35.0
@@ -118,7 +119,7 @@ async def download_media(
         raise
 
 
-async def validate_media(path: Path) -> MediaProbe:
+async def validate_media(path: Path, expected_duration_s: int = 5) -> MediaProbe:
     path = Path(path)
     _require_mp4_signature(path.read_bytes()[:64])
     payload = await _ffprobe_json(path)
@@ -129,9 +130,10 @@ async def validate_media(path: Path) -> MediaProbe:
     if audio is None:
         raise MediaError("audio stream is missing")
     duration_s = _duration_s(payload, video, audio)
-    if duration_s < H3_DURATION_MIN_S or duration_s > H3_DURATION_MAX_S:
+    minimum_s, maximum_s = duration_window(expected_duration_s)
+    if duration_s < minimum_s or duration_s > maximum_s:
         raise MediaError(
-            f"duration {duration_s:.3f}s is outside {H3_DURATION_MIN_S}–{H3_DURATION_MAX_S}s"
+            f"duration {duration_s:.3f}s is outside {minimum_s}–{maximum_s}s"
         )
     width = int(video.get("width") or 0)
     height = int(video.get("height") or 0)

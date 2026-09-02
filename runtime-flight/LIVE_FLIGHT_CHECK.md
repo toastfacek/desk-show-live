@@ -216,7 +216,9 @@ stays in the scenes and stays hidden. The overlay owns those plates.
   `card_origin=http://127.0.0.1:8765` for `card.json`.
 - Discuss is text-only. `--confirm-text-requests` is required. With
   `--package`, confirm == max-turns. Cap 12 turns.
-- Spoken Writer lines stay at 120 chars / ~4.3s. Discuss lines stay at 220.
+- Spoken Writer lines scale with `video.duration_s` (15s live default:
+  360 chars / ~14.3s). Discuss lines stay at 220. H3 duration must be
+  5, 10, or 15.
 - Scene pack `reanchor_every` stays 5.
 - Label the live inherit model `baseline` in outputs. Treat `TEXT_MODEL` as a
   secret.

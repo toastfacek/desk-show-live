@@ -14,6 +14,7 @@ from runtime_flight.baseline import BaselineContext
 from runtime_flight.models import SegmentPackage, Thought
 from runtime_flight.performer_fal import ReadyTake, TakeRequest
 from runtime_flight.topic_map import discussion_phase, resolve_topic_map
+from runtime_flight.clip import max_thought_chars
 from runtime_flight.prompt import assemble_prompt
 from runtime_flight.spend import SpendMeter
 from runtime_flight.writer_pipeline import WriterPipeline, WriterPipelineStopped
@@ -27,8 +28,12 @@ DEFAULT_LAYOUT_PLAN = ("split",)
 DEFAULT_MAX_INFLIGHT = 4
 
 
-def remaining_submit_slots(target_duration_s: float, elapsed_s: float) -> int:
-    return max(0, math.floor((target_duration_s - elapsed_s) / CLIP_DURATION_S) - 1)
+def remaining_submit_slots(
+    target_duration_s: float,
+    elapsed_s: float,
+    clip_duration_s: float = CLIP_DURATION_S,
+) -> int:
+    return max(0, math.floor((target_duration_s - elapsed_s) / clip_duration_s) - 1)
 
 
 def writer_phase(
@@ -154,7 +159,9 @@ class LiveHarness:
         return sum(1 for row in self.log if row.get("t_on_air") is not None)
 
     def remaining_slots(self) -> int:
-        budget = remaining_submit_slots(self.target_duration_s, 0.0)
+        budget = remaining_submit_slots(
+            self.target_duration_s, 0.0, clip_duration_s=self.clip_duration_s
+        )
         return max(0, budget - len(self.requests))
 
     def current_writer_phase(self) -> Literal["open", "develop", "close"]:
@@ -779,7 +786,12 @@ class LiveHarness:
             take=take,
             speaker=speaker,
             line=line,
-            prompt=assemble_prompt(self.baseline, speaker, line),
+            prompt=assemble_prompt(
+                self.baseline,
+                speaker,
+                line,
+                max_line_chars=max_thought_chars(int(self.clip_duration_s)),
+            ),
             anchor=anchor,
             image_url=image_url,
             baseline_id=self.baseline_id,

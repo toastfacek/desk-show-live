@@ -204,6 +204,7 @@ def _performer(
     process: Any = None,
     hero_path: Path | None = None,
     trace: list[str] | None = None,
+    duration_s: int = 5,
 ):
     from runtime_flight.performer_fal import FalPerformer
 
@@ -226,7 +227,9 @@ def _performer(
         dest.write_bytes(b"raw-h3")
         return dest
 
-    async def default_process(raw: Path, frame: Path, ready: Path, *, upload: Any) -> ProcessedTake:
+    async def default_process(
+        raw: Path, frame: Path, ready: Path, *, upload: Any, **_kwargs: Any
+    ) -> ProcessedTake:
         if trace is not None:
             trace.extend(["validate", "final_frame", "upload_frame"])
         return _processed(tmp_path, int(ready.stem))
@@ -246,6 +249,7 @@ def _performer(
         hero_path=hero_path or _hero_png(tmp_path / "hero.png"),
         download=download,
         process_take=process,
+        duration_s=duration_s,
     )
     performer._test_uploads = uploads  # type: ignore[attr-defined]
     performer._test_gateway = gateway  # type: ignore[attr-defined]
@@ -343,6 +347,17 @@ def test_h3_arguments_are_exact_and_use_cached_hero_url(tmp_path: Path) -> None:
             "image_url": HERO_UPLOAD_URL,
         }
     ]
+
+
+def test_h3_arguments_use_configured_fifteen_second_duration(tmp_path: Path) -> None:
+    gateway = FakeGateway()
+    performer = _performer(tmp_path, gateway=gateway, duration_s=15)
+
+    async def run() -> None:
+        await performer.start(_request(prompt=PROMPT, anchor="hero"))
+
+    _run(run())
+    assert gateway.submits[0]["duration"] == 15
 
 
 def test_chain_take_uses_exact_anchor_url_without_reupload(tmp_path: Path) -> None:

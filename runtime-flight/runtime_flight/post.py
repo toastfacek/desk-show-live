@@ -72,8 +72,11 @@ async def process_take(
     ready_path: Path,
     *,
     upload: UploadFn,
+    expected_duration_s: int = 5,
 ) -> ProcessedTake:
-    probe = await validate_media(Path(raw_video_path))
+    probe = await validate_media(
+        Path(raw_video_path), expected_duration_s=expected_duration_s
+    )
     timestamp = await extract_final_frame(Path(raw_video_path), Path(frame_path))
     frame_url = await upload_frame(Path(frame_path), upload=upload)
     copied = await copy_to_ready(Path(raw_video_path), Path(ready_path))

@@ -9,6 +9,8 @@ from typing import Any, Literal
 
 import yaml
 
+from runtime_flight.clip import ALLOWED_VIDEO_DURATIONS_S
+
 LIVE_CAP_MAX_USD = Decimal("12.00")
 SMOKE_CAP_MAX_USD = Decimal("2.00")
 REDACTED = "<redacted>"
@@ -199,8 +201,8 @@ def validate_config(config: RuntimeConfig, *, require_obs: bool = True) -> None:
 
     if config.video_endpoint != "minimax/h3-max/image-to-video":
         errors.append("video.endpoint must be minimax/h3-max/image-to-video")
-    if config.video_duration_s != 5:
-        errors.append("video.duration_s must be 5")
+    if config.video_duration_s not in ALLOWED_VIDEO_DURATIONS_S:
+        errors.append("video.duration_s must be 5, 10, or 15")
     if config.video_resolution != "768P":
         errors.append("video.resolution must be 768P")
     if config.video_prompt_expansion_mode != "balanced":

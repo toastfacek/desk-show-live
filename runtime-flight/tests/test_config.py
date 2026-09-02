@@ -279,6 +279,21 @@ def test_secret_redaction_in_repr_errors_and_summary(
         raise AssertionError("expected ConfigError")
 
 
+@pytest.mark.parametrize("duration_s", [10, 15])
+def test_validate_config_accepts_ten_and_fifteen_second_clips(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    duration_s: int,
+) -> None:
+    video = _minimal_config()["video"] | {"duration_s": duration_s}
+    config_path = _write_config(tmp_path, _minimal_config(video=video))
+    _set_complete_env(monkeypatch, cap="12.00")
+
+    loaded = load_config(config_path)
+    validate_config(loaded)
+    assert loaded.video_duration_s == duration_s
+
+
 def test_validate_config_accepts_complete_live_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
