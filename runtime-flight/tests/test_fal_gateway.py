@@ -231,7 +231,9 @@ def test_poll_interval_schedule_250ms_then_500ms_then_2s() -> None:
             return FakeResponse(200, {"ok": True})
         raise AssertionError(f"unexpected {method} {url}")
 
-    _run(_gateway(http_request, clock).reconcile(_handle()))
+    result = _run(_gateway(http_request, clock).reconcile(_handle()))
+    assert result.t_first_progress_s == 0.0
+    assert result.t_completed_s is not None
     early = [s for s, t in _sleeps_at(clock) if t < 2.0]
     mid = [s for s, t in _sleeps_at(clock) if 2.0 <= t < 10.0]
     late = [s for s, t in _sleeps_at(clock) if t >= 10.0]

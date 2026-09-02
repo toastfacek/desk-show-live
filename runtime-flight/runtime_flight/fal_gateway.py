@@ -205,7 +205,7 @@ class FalGateway:
             if status is not None:
                 last_state = status
             if last_state == "IN_PROGRESS" and first_progress_s is None:
-                first_progress_s = elapsed
+                first_progress_s = self._now() - start
             if last_state == "COMPLETED":
                 payload = await self._read_result(handle.response_url) if fetch_result else None
                 return QueueResult(
