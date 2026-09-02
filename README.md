@@ -2,6 +2,8 @@
 
 **Current `main` is two-host Runtime.** Pictures for PHASEONE[lol] and deb live in Pack Manager, not in git. See [`ASSETS.md`](ASSETS.md).
 
+**Live-path proposal (2 Sep 2026):** fal as the live performer is a dead end. Hosts become chat agents with a face UI and TTS; the desk frame stays. See [`Desk Show — Embodied Agent Podcast.md`](<Desk Show — Embodied Agent Podcast.md>).
+
 | Piece | Path |
 | :---- | :---- |
 | Hosts, scenes, locked hero | `pack-manager/` (`data/` is gitignored; seed still is `pack-manager/fixtures/hero_wide.png`) |
