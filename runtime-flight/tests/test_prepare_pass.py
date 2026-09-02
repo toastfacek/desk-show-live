@@ -15,6 +15,8 @@ from runtime_flight.fal_gateway import H3_MAX_TURBO_ENDPOINT
 from runtime_flight.performer_fal import FalCookTimings, ReadyTake, TakeRequest
 from runtime_flight.prepare_pass import (
     PREPARE_PASS_LINES,
+    PreparedSegment,
+    PreparedTurn,
     apply_prepare_overrides,
     run_prepare_pass,
 )
@@ -43,10 +45,13 @@ def flight_setup(tmp_path: Path) -> dict:
 
 
 class BarrierPerformer:
-    def __init__(self, meter: SpendMeter, work_dir: Path, baseline) -> None:
+    def __init__(
+        self, meter: SpendMeter, work_dir: Path, baseline, *, expected: int = 3
+    ) -> None:
         self.meter = meter
         self.work_dir = Path(work_dir)
         self.baseline = baseline
+        self.expected = expected
         self.started: list[TakeRequest] = []
         self.ready_order: list[int] = []
         self.stop_requested = False
@@ -60,7 +65,7 @@ class BarrierPerformer:
     def start(self, request: TakeRequest) -> asyncio.Task[ReadyTake]:
         self.started.append(request)
         self._active += 1
-        if len(self.started) == 3:
+        if len(self.started) == self.expected:
             self._gate.set()
         arguments = {
             "prompt": request.prompt,
@@ -144,17 +149,139 @@ def test_prepare_pass_cooks_all_three_before_concat(
     )
     assert summary["endpoint"] == H3_MAX_TURBO_ENDPOINT
     assert summary["duration_s"] == 5
-    assert summary["segments"] == 3
+    assert summary["segments"] == 1
     assert summary["mode"] == "prepare-ahead"
     assert summary["spend_reserved_usd"] == "0.15"
+    assert len(summary["takes"]) == 3
     assert [row["t_inference_s"] for row in summary["takes"]] == [1.51, 1.51, 1.51]
     assert [row["anchor"] for row in summary["takes"]] == ["hero", "hero", "hero"]
     assert [req.line for req in seen[0].started] == [line for _, line in PREPARE_PASS_LINES]
     assert [req.speaker for req in seen[0].started] == [speaker for speaker, _ in PREPARE_PASS_LINES]
-    assert concat_after == [3]
+    assert concat_after == [3, 3]
     assert Path(summary["recording"]).read_bytes() == b"concat"
     assert Path(summary["timeline_html"]).is_file()
     assert (tmp_path / "out" / "prepare-pass" / summary["run_id"] / "summary.json").is_file()
+
+
+def test_prepare_pass_fires_six_tweet_segments_then_queues_concat(
+    tmp_path: Path,
+    flight_setup: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _complete_env(monkeypatch, flight_setup)
+    monkeypatch.setenv("RUNTIME_ALLOW_PAID", "1")
+    config_path = _write_flight_config(tmp_path, flight_setup)
+    config = apply_prepare_overrides(
+        load_config(config_path),
+        endpoint=H3_MAX_TURBO_ENDPOINT,
+        duration_s=5,
+        rate_768p_usd_per_s=Decimal("0.01"),
+    )
+    validate_config(config, require_obs=False)
+    segments = tuple(
+        PreparedSegment(
+            tweet_id=f"tw{index}",
+            chyron=f"chyron {index}",
+            turns=(
+                PreparedTurn("BOT1", f"open {index}"),
+                PreparedTurn("BOT2", f"yes-and {index}"),
+            ),
+        )
+        for index in range(1, 7)
+    )
+    seen: list[BarrierPerformer] = []
+    concat_calls: list[tuple[int, str]] = []
+
+    def factory(meter, work_dir, baseline):
+        performer = BarrierPerformer(meter, work_dir, baseline, expected=12)
+        seen.append(performer)
+        return performer
+
+    async def concat_fn(clips, dest: Path) -> None:
+        concat_calls.append((len(seen[0].ready_order), dest.name))
+        dest.write_bytes(b"concat")
+
+    summary = run_prepare_pass(
+        config=config,
+        out_dir=tmp_path / "out",
+        performer_factory=factory,
+        concat_fn=concat_fn,
+        segments=segments,
+    )
+    assert summary["mode"] == "tweet-queue"
+    assert summary["segments"] == 6
+    assert [item["tweet_id"] for item in summary["queue"]] == [
+        "tw1",
+        "tw2",
+        "tw3",
+        "tw4",
+        "tw5",
+        "tw6",
+    ]
+    assert len(summary["takes"]) == 12
+    assert summary["spend_reserved_usd"] == "0.60"
+    assert all(ready == 12 for ready, _name in concat_calls)
+    assert concat_calls[-1][1] == "prepare.mp4"
+    assert [req.line for req in seen[0].started] == [
+        f"{kind} {index}" for index in range(1, 7) for kind in ("open", "yes-and")
+    ]
+
+
+def test_prepare_pass_queue_requires_text_budget(
+    tmp_path: Path,
+    flight_setup: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _complete_env(monkeypatch, flight_setup)
+    monkeypatch.setenv("RUNTIME_ALLOW_PAID", "1")
+    config_path = _write_flight_config(tmp_path, flight_setup)
+    code = main(
+        [
+            "prepare-pass",
+            "--config",
+            str(config_path),
+            "--confirm-spend",
+            "12.00",
+            "--queue",
+            str(tmp_path / "a"),
+            str(tmp_path / "b"),
+            str(tmp_path / "c"),
+        ],
+        prepare_queue_runner=lambda **kwargs: {"ok": True},
+    )
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "confirm-text-requests" in captured.err
+
+
+def test_prepare_pass_queue_refuses_two_directories(
+    tmp_path: Path,
+    flight_setup: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _complete_env(monkeypatch, flight_setup)
+    monkeypatch.setenv("RUNTIME_ALLOW_PAID", "1")
+    config_path = _write_flight_config(tmp_path, flight_setup)
+    code = main(
+        [
+            "prepare-pass",
+            "--config",
+            str(config_path),
+            "--confirm-spend",
+            "12.00",
+            "--queue",
+            str(tmp_path / "a"),
+            str(tmp_path / "b"),
+            "--confirm-text-requests",
+            "6",
+        ],
+        prepare_queue_runner=lambda **kwargs: {"ok": True},
+    )
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "3 to 6" in captured.err
 
 
 def test_prepare_pass_refuses_without_paid_flag(

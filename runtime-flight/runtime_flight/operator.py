@@ -286,8 +286,19 @@ def cmd_prepare_pass(
     rate: str,
     run_prepare_pass,
     out_dir: Path | None = None,
+    queue: list[Path] | None = None,
+    turns: int = 3,
+    confirm_text_requests: int = 0,
+    run_prepare_queue=None,
+    http_post=None,
 ) -> dict[str, Any]:
-    from runtime_flight.prepare_pass import apply_prepare_overrides, parse_prepare_rate
+    from runtime_flight.prepare_pass import (
+        PREPARE_PASS_SEGMENTS_MAX,
+        PREPARE_PASS_SEGMENTS_MIN,
+        PREPARE_PASS_TURNS,
+        apply_prepare_overrides,
+        parse_prepare_rate,
+    )
 
     require_paid_flag()
     require_confirm_spend(config, confirm_spend)
@@ -300,6 +311,29 @@ def cmd_prepare_pass(
         rate_768p_usd_per_s=parse_prepare_rate(rate),
     )
     validate_config(updated, require_obs=False)
+    if queue:
+        if not (PREPARE_PASS_SEGMENTS_MIN <= len(queue) <= PREPARE_PASS_SEGMENTS_MAX):
+            raise OperatorError("prepare-pass --queue must be 3 to 6 staged tweet directories")
+        if turns not in PREPARE_PASS_TURNS:
+            raise OperatorError("prepare-pass --turns must be 2 or 3")
+        if confirm_text_requests < len(queue):
+            raise OperatorError(
+                "prepare-pass --confirm-text-requests must be at least the queue length"
+            )
+        require_text_request_limit(updated.mode, confirm_text_requests)
+        runner = run_prepare_queue
+        if runner is None:
+            from runtime_flight.prepare_queue import run_prepare_queue as runner
+        return runner(
+            config=updated,
+            source_dirs=list(queue),
+            turns=turns,
+            max_text_requests=confirm_text_requests,
+            out_dir=out_dir,
+            http_post=http_post,
+        )
+    if confirm_text_requests:
+        raise OperatorError("prepare-pass text requests are only used with --queue")
     return run_prepare_pass(config=updated, out_dir=out_dir)
 
 

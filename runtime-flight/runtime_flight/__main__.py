@@ -68,6 +68,7 @@ def main(
     stage_runner=None,
     time_fal_runner=None,
     prepare_pass_runner=None,
+    prepare_queue_runner=None,
     http_get=None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="runtime_flight")
@@ -193,7 +194,7 @@ def main(
 
     prepare_parser = subparsers.add_parser(
         "prepare-pass",
-        help="Cook three prepared 5s segments, then concat. No play during cook.",
+        help="Cook prepared 5s segments, then concat. No play during cook.",
     )
     _add_paid_args(prepare_parser)
     prepare_parser.add_argument(
@@ -212,6 +213,25 @@ def main(
         type=Path,
         default=Path("out"),
         help="Directory that receives prepare-pass/<run-id>/.",
+    )
+    prepare_parser.add_argument(
+        "--queue",
+        nargs="+",
+        type=Path,
+        metavar="DIR",
+        help="3 to 6 staged tweet directories, in show order. Write each, then cook all takes.",
+    )
+    prepare_parser.add_argument(
+        "--turns",
+        type=int,
+        default=3,
+        help="Spoken takes per tweet. 2 or 3. Only used with --queue.",
+    )
+    prepare_parser.add_argument(
+        "--confirm-text-requests",
+        type=int,
+        default=0,
+        help="Writer budget for --queue. Must be at least the queue length.",
     )
 
     timeline_parser = subparsers.add_parser(
@@ -334,6 +354,11 @@ def main(
                 rate=args.rate,
                 run_prepare_pass=prepare_pass_runner or run_prepare_pass,
                 out_dir=args.out,
+                queue=args.queue,
+                turns=args.turns,
+                confirm_text_requests=args.confirm_text_requests,
+                run_prepare_queue=prepare_queue_runner,
+                http_post=http_post,
             )
             print(yaml.safe_dump(payload, sort_keys=False), end="")
             return 0
