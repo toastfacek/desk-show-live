@@ -26,8 +26,12 @@ def prepare_obs_clip(path: str | Path) -> Path:
 
     Fal's ready files are valid media; this box's OBS source goes black on
     them. Evidence keeps the original. Playback uses a sibling `.obs.mp4`.
+    OBS cwd is not the flight work dir, so the path we return is always
+    absolute.
     """
-    src = Path(path)
+    src = Path(path).expanduser()
+    if src.exists():
+        src = src.resolve()
     dest = src.with_name(f"{src.stem}.obs{src.suffix}")
     if (
         dest.is_file()
@@ -175,7 +179,7 @@ class ObsPlayer:
 
     def play_clip(self, path: str) -> None:
         client = self._req()
-        playable = str(prepare_obs_clip(path))
+        playable = str(prepare_obs_clip(path).resolve())
         client.set_input_settings(
             name="HOST_WIDE",
             settings={"local_file": playable, **HOST_WIDE_PLAYBACK},
