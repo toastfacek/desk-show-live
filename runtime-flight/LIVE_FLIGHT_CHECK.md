@@ -32,8 +32,11 @@ Named shows stay in research. They never enter Writer, HostMind, or H3 prompts.
 | Aired | 8 takes (2 and 4 failed on fal). Writer stayed on BOT1. |
 
 Automated `verify-flight` was **F-FAIL**: it wants 10 aired and both hosts.
-Overlapping fal (submit next while current is on air) is intended cook/play,
-not a bug.
+Overlapping fal is intended. The harness keeps up to four H3 jobs in flight.
+A speaker change or reanchor is a hero take and can start while another job
+cooks. Same-speaker chain still waits for that host's last frame. The two
+wells are crops of one two-shot; the ready buffer is a queue of those
+two-shots, not two generators.
 
 The first programme recording looked wrong in three ways that are easy to
 misread: silent audio, cameras fading in and out, hosts pinned to the sides

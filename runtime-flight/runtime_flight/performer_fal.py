@@ -1,4 +1,4 @@
-"""Reservation-owned fal H3 performer. One active request; no unreserved retry."""
+"""Reservation-owned fal H3 performer. Concurrent requests; no unreserved retry."""
 
 from __future__ import annotations
 
@@ -98,9 +98,10 @@ class FalPerformer:
     async def _run(self, request: TakeRequest) -> ReadyTake:
         async with self._lock:
             self._active += 1
-            try:
-                return await self._perform(request)
-            finally:
+        try:
+            return await self._perform(request)
+        finally:
+            async with self._lock:
                 self._active -= 1
 
     async def _perform(self, request: TakeRequest) -> ReadyTake:
@@ -113,11 +114,12 @@ class FalPerformer:
             "prompt_expansion_mode": H3_PROMPT_EXPANSION,
             "image_url": image_url,
         }
-        reservation = self._meter.reserve_attempt(
-            request.take,
-            1,
-            arguments_sha256(arguments),
-        )
+        async with self._lock:
+            reservation = self._meter.reserve_attempt(
+                request.take,
+                1,
+                arguments_sha256(arguments),
+            )
         handle, submit_status = await self._submit_once(arguments)
         if submit_status == "dropped_422":
             self._meter.ledger.mark_finished(reservation.id, "dropped_422")

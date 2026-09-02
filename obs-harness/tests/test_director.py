@@ -138,6 +138,23 @@ def test_t5_cold_start_submits_take_1():
     assert beat["submit"]["line"] == NEXT_LINE["text"]
 
 
+def test_t6b_free_buffer_slot_submits_while_cooking():
+    beat = decide(
+        base_snapshot(
+            cooking=[{"take": 3, "submitted_at": 10.1}],
+            ready=[],
+            chain_ready=True,
+            max_inflight=4,
+            next_take=4,
+        )
+    )
+    assert beat["layout"] == "split"
+    assert beat["host_source"] is None
+    assert beat["submit"] is not None
+    assert beat["submit"]["take"] == 4
+    assert beat["why"] == "buffer slot free; submit next line"
+
+
 def test_t6_script_ended_hold_no_submit():
     beat = decide(
         base_snapshot(

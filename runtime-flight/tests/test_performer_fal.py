@@ -433,32 +433,33 @@ def test_reserve_happens_immediately_before_the_single_queue_post(tmp_path: Path
     assert row.arguments_sha256 == arguments_sha256(expected)
 
 
-def test_exactly_one_fal_request_may_be_active(tmp_path: Path) -> None:
+def test_multiple_fal_requests_may_be_active(tmp_path: Path) -> None:
     release = asyncio.Event()
-    entered = asyncio.Event()
+    both_in_submit = asyncio.Event()
+    entered = 0
 
     async def submit(arguments: dict[str, Any]) -> QueueHandle:
-        entered.set()
+        nonlocal entered
+        entered += 1
+        if entered >= 2:
+            both_in_submit.set()
         await release.wait()
         return _handle()
 
     gateway = FakeGateway(submit=submit)
     performer = _performer(tmp_path, gateway=gateway)
-    observed: list[int] = []
 
     async def run() -> None:
         first = performer.start(_request(take=1))
-        await entered.wait()
         second = performer.start(_request(take=2))
-        await asyncio.sleep(0)
-        observed.append(performer.active_requests)
-        observed.append(len(gateway.submits))
+        await both_in_submit.wait()
+        assert performer.active_requests == 2
+        assert gateway.max_inflight == 2
+        assert len(gateway.submits) == 2
         release.set()
         await asyncio.gather(first, second)
 
     _run(run())
-    assert observed == [1, 1]
-    assert gateway.max_inflight == 1
     assert len(gateway.submits) == 2
 
 

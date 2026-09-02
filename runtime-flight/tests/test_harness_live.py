@@ -366,25 +366,30 @@ def test_play_current_while_next_cooks(tmp_path: Path) -> None:
         await harness.run_simulated(until_aired=2)
 
     _run(run())
-    play_and_submit = [
-        beat
-        for beat in harness.beats
-        if beat.get("host_source") == "ready:1" and beat.get("submit") is not None
+    play_take_1 = [
+        beat for beat in harness.beats if beat.get("host_source") == "ready:1"
     ]
-    assert play_and_submit
-    assert play_and_submit[0]["submit"]["take"] == 2
-    assert performer.max_inflight == 1
+    assert play_take_1
+    take1 = next(row for row in harness.log if row["take"] == 1)
+    take2 = next(row for row in harness.log if row["take"] == 2)
+    assert take2["t_submit"] is not None
+    assert take1["t_on_air"] is not None
+    assert take2["t_submit"] <= take1["t_on_air"]
+    assert performer.max_inflight >= 2
     assert {req.baseline_id for req in performer.started} == {BASELINE_ID}
 
 
-def test_one_performer_request_max(tmp_path: Path) -> None:
+def test_alternating_hosts_cook_in_parallel(tmp_path: Path) -> None:
     harness, _, performer, _ = _harness(tmp_path)
 
     async def run() -> None:
         await harness.run_simulated(until_aired=3)
 
     _run(run())
-    assert performer.max_inflight == 1
+    assert performer.max_inflight >= 2
+    heroes = [req for req in performer.started if req.anchor == "hero"]
+    assert len(heroes) >= 2
+    assert {req.speaker for req in heroes[:2]} == {"BOT1", "BOT2"}
     assert all(req.speaker in {"BOT1", "BOT2"} for req in performer.started)
 
 
@@ -419,20 +424,26 @@ def test_same_speaker_chains_the_exact_frame_url(tmp_path: Path) -> None:
     assert performer.started[1].speaker == "BOT1"
     assert performer.started[1].anchor == "chain"
     assert performer.started[1].image_url == FRAME_URL.format(take=1)
+    take1 = next(row for row in harness.log if row["take"] == 1)
+    take2 = next(row for row in harness.log if row["take"] == 2)
+    assert take2["t_submit"] >= take1["t_ready"]
+    assert performer.max_inflight == 1
 
 
 def test_late_take_uses_card_or_hold(tmp_path: Path) -> None:
-    harness, _, performer, _ = _harness(tmp_path, forced_late_takes=(2,))
+    harness, _, performer, _ = _harness(
+        tmp_path, writer=ContinuingWriter(), forced_late_takes=(2,)
+    )
 
     async def run() -> None:
         await harness.run_simulated(until_aired=2)
 
     _run(run())
-    assert any(beat["layout"] in {"card_full", "hold"} for beat in harness.beats)
+    assert any(beat["layout"] in {"card_full", "hold", "split"} for beat in harness.beats)
     take2 = next(row for row in harness.log if row["take"] == 2)
     assert take2["status"] == "late"
     assert take2["t_on_air"] is not None
-    assert performer.max_inflight == 1
+    assert take2["anchor"] == "chain"
 
 
 def test_cap_prevents_submit(tmp_path: Path) -> None:

@@ -50,7 +50,7 @@ RUNTIME_ALLOW_PAID=1 python3 -m runtime_flight live \
 The default stage path is planner plus two Writer look-ahead lines
 (`--confirm-text-requests 3`). Named shows never enter those prompts.
 
-No-OBS paid segment (planner + writer + fal takes). Hero on take 1 and on a speaker cut; same-host runs chain the last frame. Human-gated.
+No-OBS paid segment (planner + writer + fal takes). Hero on take 1 and on a speaker cut; same-host runs chain the last frame. Up to four H3 jobs can cook at once; a speaker cut does not wait for the other host. Human-gated.
 Does not connect to OBS.
 
 ```bash
