@@ -15,6 +15,7 @@ from runtime_flight.fal_gateway import H3_MAX_TURBO_ENDPOINT
 from runtime_flight.models import Thought
 from runtime_flight.prepare_pass import apply_prepare_overrides
 from runtime_flight.prepare_queue import run_prepare_queue
+from runtime_flight.writer import WriterError
 from runtime_flight.source import STAGED_BINDING
 from test_prepare_pass import BarrierPerformer
 from test_preflight import _complete_env, _make_flight_setup, _write_flight_config
@@ -34,13 +35,17 @@ def flight_setup(tmp_path: Path) -> dict:
 
 
 class ScriptWriter:
-    def __init__(self, client) -> None:
+    def __init__(self, client, *, fail_first: int = 0) -> None:
         del client
         self.calls: list[str] = []
+        self.fail_first = fail_first
 
     async def write_point(self, package, planned, next_speaker, *args, **kwargs):
         del args, kwargs
         self.calls.append(package.item_id)
+        if self.fail_first > 0:
+            self.fail_first -= 1
+            raise WriterError("chunks must contain 1 to 4 spoken lines")
         index = len(planned)
         speaker = next_speaker
         return (
@@ -192,6 +197,53 @@ def test_prepare_queue_writes_all_segments_before_any_cook(
         "333 turn 1",
         "333 turn 2",
     ]
+
+
+def test_prepare_queue_retries_empty_writer_batch(
+    tmp_path: Path,
+    flight_setup: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _complete_env(monkeypatch, flight_setup)
+    monkeypatch.setenv("RUNTIME_ALLOW_PAID", "1")
+    config_path = _write_flight_config(tmp_path, flight_setup)
+    config = apply_prepare_overrides(
+        load_config(config_path),
+        endpoint=H3_MAX_TURBO_ENDPOINT,
+        duration_s=5,
+        rate_768p_usd_per_s=Decimal("0.01"),
+    )
+    validate_config(config, require_obs=False)
+    dirs = [
+        _write_staged(tmp_path, "111", "one"),
+        _write_staged(tmp_path, "222", "two"),
+        _write_staged(tmp_path, "333", "three"),
+    ]
+    writer = ScriptWriter(None, fail_first=1)
+
+    def writer_factory(client):
+        del client
+        return writer
+
+    def factory(meter, work_dir, baseline):
+        return BarrierPerformer(meter, work_dir, baseline, expected=6)
+
+    async def concat_fn(clips, dest: Path) -> None:
+        dest.write_bytes(b"concat")
+
+    summary = run_prepare_queue(
+        config=config,
+        source_dirs=dirs,
+        turns=2,
+        max_text_requests=7,
+        out_dir=tmp_path / "out",
+        performer_factory=factory,
+        concat_fn=concat_fn,
+        writer_factory=writer_factory,
+    )
+    assert writer.calls[0] == "111"
+    assert writer.calls[1] == "111"
+    assert summary["queue"][0]["tweet_id"] == "111"
 
 
 def test_prepare_queue_module_stays_isolated_from_obs() -> None:

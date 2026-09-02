@@ -27,7 +27,9 @@ from runtime_flight.topic_map import (
     host_voices_from_baseline,
     resolve_topic_map,
 )
-from runtime_flight.writer import Writer
+from runtime_flight.writer import Writer, WriterError
+
+WRITE_RETRIES = 2
 
 PACKET_NAME = "source_packet.local.json"
 LOCK_NAME = "source_packet.lock.json"
@@ -157,7 +159,8 @@ async def _write_one(
         if pending:
             thought = pending.pop(0)
         else:
-            batch = await writer.write_point(
+            batch = await _write_point_retry(
+                writer,
                 package,
                 tuple(planned),
                 next_speaker,
@@ -181,3 +184,35 @@ async def _write_one(
     if not planned:
         raise OperatorError(coverage.stop_reason or TOPIC_EXHAUSTED)
     return planned
+
+
+async def _write_point_retry(
+    writer: Writer,
+    package,
+    planned,
+    next_speaker,
+    thought_open,
+    phase,
+    *,
+    voices,
+    coverage,
+    clip_duration_s: int,
+):
+    last_error: Exception | None = None
+    for attempt in range(WRITE_RETRIES + 1):
+        try:
+            return await writer.write_point(
+                package,
+                planned,
+                next_speaker,
+                thought_open,
+                phase,
+                voices=voices,
+                coverage=coverage,
+                clip_duration_s=clip_duration_s,
+            )
+        except WriterError as error:
+            last_error = error
+            if attempt >= WRITE_RETRIES:
+                break
+    raise OperatorError(f"writer failed for {package.item_id}: {last_error}") from last_error
