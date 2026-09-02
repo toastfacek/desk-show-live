@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tweet embed</title>
+<style>
+html,body{margin:0;width:100%;height:100%;background:#15130F;overflow:hidden}
+.twitter-tweet{margin:0 !important}
+</style>
+</head>
+<body>
+<blockquote class="twitter-tweet" data-dnt="true" data-theme="dark" data-conversation="none">
+<a id="tweet-link" href="https://twitter.com/i/status/0"></a>
+</blockquote>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var id = params.get("id") || "";
+  if (!/^\d{5,25}$/.test(id)) {
+    return;
+  }
+  var theme = params.get("theme") === "light" ? "light" : "dark";
+  var quote = document.querySelector(".twitter-tweet");
+  if (quote) {
+    quote.setAttribute("data-theme", theme);
+  }
+  document.getElementById("tweet-link").href =
+    "https://twitter.com/i/status/" + id;
+  var script = document.createElement("script");
+  script.src = "https://platform.twitter.com/widgets.js";
+  script.async = true;
+  document.body.appendChild(script);
+})();
+</script>
+</body>
+</html>

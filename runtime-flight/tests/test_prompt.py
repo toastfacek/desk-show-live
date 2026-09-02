@@ -31,6 +31,7 @@ BOT2_VOICE = "Bright, curious, clipped, with playful lift."
 BOT1_NAME = "PHASEONE[lol]"
 BOT2_NAME = "deb"
 PERSONA = "Calm, dry, optimistic technical anchor."
+SOUL = "You would rather be bored than impressed about secret keys."
 TTS_PROVIDER = "elevenlabs"
 TTS_VOICE = "voice-clone-id-xyz"
 
@@ -47,6 +48,7 @@ def _character(slot: str, *, voice: str, name: str, color: str) -> CharacterPack
         "visual_invariants": invariants,
         "voice_direction": voice,
         "persona": PERSONA,
+        "soul": SOUL,
         "tts": {
             **manifest["tts"],
             "provider": TTS_PROVIDER,
@@ -127,6 +129,7 @@ def test_prompt_excludes_display_names_persona_tts_source_paths_and_secrets():
         BOT1_NAME,
         BOT2_NAME,
         PERSONA,
+        SOUL,
         TTS_PROVIDER,
         TTS_VOICE,
         SOURCE_TEXT,

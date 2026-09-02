@@ -1,4 +1,4 @@
-"""No-OBS segment loop: hero then chain, paid gates, no OBS import."""
+"""No-OBS segment loop: persist on cuts, playhead concat, paid gates, no OBS import."""
 
 from __future__ import annotations
 
@@ -222,7 +222,7 @@ def test_live_segment_cli_refuses_nineteen_takes(
     assert "90s hard cap" in captured.err
 
 
-def test_run_segment_hero_then_exact_chain(
+def test_run_segment_speaker_cut_rebases_to_hero(
     tmp_path: Path,
     flight_setup: dict,
     monkeypatch: pytest.MonkeyPatch,
@@ -256,8 +256,8 @@ def test_run_segment_hero_then_exact_chain(
     assert [req.take for req in performer.started] == [1, 2]
     assert performer.started[0].anchor == "hero"
     assert performer.started[0].image_url == "hero"
-    assert performer.started[1].anchor == "chain"
-    assert performer.started[1].image_url == FRAME.format(take=1)
+    assert performer.started[1].anchor == "hero"
+    assert performer.started[1].image_url == "hero"
     assert performer.started[0].speaker == "BOT1"
     assert performer.started[1].speaker == "BOT2"
     bundles = list((tmp_path / "out" / "flights").iterdir())
@@ -265,14 +265,14 @@ def test_run_segment_hero_then_exact_chain(
     flight = json.loads((bundles[0] / "flight.json").read_text(encoding="utf-8"))
     assert flight["stop_reason"] == "segment complete"
     assert flight["anchors"][0]["anchor"] == "hero"
-    assert flight["anchors"][1]["image_url"] == FRAME.format(take=1)
+    assert flight["anchors"][1]["anchor"] == "hero"
     recording = json.loads((bundles[0] / "recording.json").read_text(encoding="utf-8"))
     assert recording["path"]
     assert Path(recording["path"]).is_file()
     assert Path(recording["path"]).stat().st_size > 0
 
 
-def test_run_segment_stops_when_both_hosts_exhaust_the_topic(
+def test_run_segment_same_speaker_chains_then_playhead_concats(
     tmp_path: Path,
     flight_setup: dict,
     monkeypatch: pytest.MonkeyPatch,
@@ -295,15 +295,55 @@ def test_run_segment_stops_when_both_hosts_exhaust_the_topic(
 
     code = run_segment(
         config=config,
-        max_text_requests=8,
-        max_fal_submissions=4,
+        max_text_requests=4,
+        max_fal_submissions=2,
+        out_dir=tmp_path / "out" / "flights",
+        http_post=_planner_writer_http_open_thought,
+        performer_factory=factory,
+    )
+    assert code == 0
+    performer = performer_holder[0]
+    assert [req.speaker for req in performer.started] == ["BOT1", "BOT1"]
+    assert performer.started[0].anchor == "hero"
+    assert performer.started[1].anchor == "chain"
+    assert performer.started[1].image_url == FRAME.format(take=1)
+    bundles = list((tmp_path / "out" / "flights").iterdir())
+    recording = json.loads((bundles[0] / "recording.json").read_text(encoding="utf-8"))
+    assert Path(recording["path"]).is_file()
+
+
+def test_run_segment_stops_when_both_hosts_exhaust_the_topic(
+    tmp_path: Path,
+    flight_setup: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _complete_env(monkeypatch, flight_setup)
+    monkeypatch.setenv("RUNTIME_ALLOW_PAID", "1")
+    monkeypatch.setenv("RUNTIME_SPEND_CAP_USD", "8.00")
+    config_path = _write_flight_config(tmp_path, flight_setup)
+    from runtime_flight.config import load_config, validate_config
+
+    config = load_config(config_path)
+    validate_config(config, require_obs=False)
+    monkeypatch.chdir(tmp_path)
+    performer_holder: list[SegmentPerformer] = []
+
+    def factory(meter, work_dir):
+        performer = SegmentPerformer(meter, work_dir)
+        performer_holder.append(performer)
+        return performer
+
+    code = run_segment(
+        config=config,
+        max_text_requests=12,
+        max_fal_submissions=8,
         out_dir=tmp_path / "out" / "flights",
         http_post=_planner_writer_http_exhausts,
         performer_factory=factory,
     )
     assert code == 0
     performer = performer_holder[0]
-    assert [req.take for req in performer.started] == [1, 2]
+    assert [req.take for req in performer.started] == [1, 2, 3, 4, 5, 6, 7, 8]
     bundles = list((tmp_path / "out" / "flights").iterdir())
     flight = json.loads((bundles[0] / "flight.json").read_text(encoding="utf-8"))
     assert flight["stop_reason"] == "topic exhausted"
@@ -350,6 +390,50 @@ async def _planner_writer_http(url, *, headers, json, timeout):
             "speaker": speaker,
             "text": f"{speaker} names the wiped-out civilizations.",
             "thought_open": False,
+            "angle_used": package["angles"][0],
+        }
+
+    class Response:
+        status_code = 200
+
+        def json(self):
+            return {
+                "choices": [{"message": {"content": codec.dumps(content)}}],
+                "usage": {},
+            }
+
+    return Response()
+
+
+async def _planner_writer_http_open_thought(url, *, headers, json, timeout):
+    del url, headers, timeout
+    codec = __import__("json")
+    payload = codec.loads(json["messages"][1]["content"])
+    if "untrusted_data" in payload:
+        tweet = payload["untrusted_data"]["tweet"]
+        content = {
+            "item_id": tweet["id"],
+            "question": "What happened to the secret AI civilizations?",
+            "framing": "A reviewed account of three wiped-out agent societies.",
+            "angles": ["scope", "takeover"],
+            "facts": [
+                {
+                    "id": "f1",
+                    "text": "Three secret AI civilizations started and were wiped out.",
+                    "source_url": tweet["url"],
+                }
+            ],
+            "chyron": "Secret AI civilizations",
+            "chyron_fact_ids": ["f1"],
+        }
+    else:
+        package = payload["package"]
+        speaker = payload["next_speaker"]
+        planned = payload.get("planned_transcript") or []
+        content = {
+            "speaker": speaker,
+            "text": f"{speaker} keeps the thought going {len(planned) + 1}.",
+            "thought_open": not planned,
             "angle_used": package["angles"][0],
         }
 

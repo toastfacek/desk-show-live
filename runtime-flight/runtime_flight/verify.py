@@ -10,6 +10,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Callable, Iterable, Literal, Mapping
 
+from runtime_flight.anchor import persist_anchor
 from runtime_flight.evidence import (
     HOLD_LAYOUTS,
     HOST_LAYOUTS,
@@ -273,24 +274,45 @@ def verify_bundle(
     if take1 is None or take1.get("anchor") != "hero":
         fail("chain", "take 1 must use anchor hero")
     else:
-        chained = False
+        hero_url = take1.get("image_url") or "hero"
+        reanchor_every = 0
+        if isinstance(manifest, dict):
+            raw_interval = manifest.get("reanchor_every")
+            if isinstance(raw_interval, int):
+                reanchor_every = raw_interval
         by_take = {row.get("take"): row for row in takes}
+        persist_ok = True
         for row in takes:
             take = row.get("take")
             if not isinstance(take, int) or take <= 1:
                 continue
             previous = by_take.get(take - 1)
-            if (
-                row.get("anchor") == "chain"
-                and previous
-                and row.get("image_url")
-                and row.get("image_url") == previous.get("frame_url")
-            ):
-                chained = True
+            expected_anchor, expected_url = persist_anchor(
+                take=take,
+                speaker=str(row.get("speaker") or ""),
+                previous_speaker=(
+                    str(previous.get("speaker"))
+                    if previous and previous.get("speaker")
+                    else None
+                ),
+                previous_frame_url=(
+                    previous.get("frame_url") if previous else None
+                ),
+                reanchor_every=reanchor_every,
+                hero_url=str(hero_url),
+            )
+            if row.get("anchor") != expected_anchor:
+                fail(
+                    "chain",
+                    f"take {take} must use anchor {expected_anchor}",
+                )
+                persist_ok = False
                 break
-        if not chained:
-            fail("chain", "a later take must use the previous exact frame_url")
-        else:
+            if expected_anchor == "chain" and row.get("image_url") != expected_url:
+                fail("chain", "a chained take must use the previous exact frame_url")
+                persist_ok = False
+                break
+        if persist_ok:
             gates.append("chain")
 
     recording_path = recording_meta.get("path")

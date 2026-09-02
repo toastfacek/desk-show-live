@@ -41,16 +41,29 @@ def base_snapshot(**overrides):
     return snap
 
 
-def test_t1_cooking_no_ready_goes_to_card_full():
+def test_t1_cooking_holds_last_host_layout():
     beat = decide(
         base_snapshot(cooking={"take": 3, "submitted_at": 10.1}, ready=[])
     )
-    assert beat["layout"] == "card_full"
+    assert beat["layout"] == "split"
     assert beat["submit"] is None
     assert beat["host_source"] is None
     assert beat["speaking"] is None
     assert beat["center"] == SEGMENT["center"]
     assert beat["chyron"] == SEGMENT["chyron"]
+
+
+def test_t1_cooking_without_a_host_picture_goes_to_card_full():
+    beat = decide(
+        base_snapshot(
+            cooking={"take": 3, "submitted_at": 10.1},
+            ready=[],
+            on_air=None,
+            layout=None,
+        )
+    )
+    assert beat["layout"] == "card_full"
+    assert beat["host_source"] is None
 
 
 def test_t2_ready_clip_plays_and_submits_next():

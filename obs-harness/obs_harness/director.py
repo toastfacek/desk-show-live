@@ -53,7 +53,7 @@ def decide(snapshot: dict) -> dict:
             why="ready clip exists; stub is free" if submit else "ready clip exists",
         )
 
-    wait_layout = "card_full" if center.get("kind") not in (None, "none") else "hold"
+    wait_layout = _wait_layout(snapshot)
 
     if cooking is not None:
         return beat(layout=wait_layout, why="waiting on cooking")
@@ -68,10 +68,26 @@ def decide(snapshot: dict) -> dict:
     return beat(layout="hold", why="script ended or stop")
 
 
+def _wait_layout(snapshot: dict) -> str:
+    """Keep the last two-box on screen while the next take cooks.
+
+    card_full hides HOST_WIDE. Combined with OBS Fade, that is the
+    cameras blinking out between clips. Cold start still uses the card.
+    """
+    current = snapshot.get("layout")
+    if current not in HOST_LAYOUTS:
+        on_air = snapshot.get("on_air") or {}
+        current = on_air.get("layout")
+    if current in HOST_LAYOUTS:
+        return current
+    center = (snapshot.get("segment") or {}).get("center") or {}
+    return "card_full" if center.get("kind") not in (None, "none") else "hold"
+
+
 def _next_host_layout(segment: dict, layout_i: int) -> str:
-    plan = [name for name in (segment.get("layout_plan") or ["wide"]) if name in HOST_LAYOUTS]
+    plan = [name for name in (segment.get("layout_plan") or ["split"]) if name in HOST_LAYOUTS]
     if not plan:
-        return "wide"
+        return "split"
     if layout_i >= len(plan):
         return plan[-1]
     return plan[layout_i]

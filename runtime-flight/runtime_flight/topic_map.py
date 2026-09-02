@@ -15,6 +15,52 @@ from runtime_flight.models import (
 )
 
 TOPIC_EXHAUSTED = "topic exhausted"
+MIN_EXCHANGES_BEFORE_EXHAUST = 6
+MIN_EXCHANGES_BEFORE_COMPLETE = 8
+OPEN_MOVES = frozenset({"frame"})
+DEVELOP_MOVES = frozenset(
+    {"poke", "number", "reframe", "callback", "question", "broaden"}
+)
+CLOSE_MOVES = DEVELOP_MOVES | {"land"}
+
+DEFAULT_STANCE = {
+    "BOT1": "Unpack the capability, then say what it unlocks and what someone could build.",
+    "BOT2": "Yes-and the last claim. If this is true, what else is true?",
+}
+DEFAULT_SOUL = {
+    "BOT1": (
+        "You get interested in public. The fun part is what this enables, "
+        "not whether the post proved itself. The conversation teaches. You "
+        "do not deliver the finished answer."
+    ),
+    "BOT2": (
+        "You learn in public. If they are litigating the tweet, ask what it "
+        "unlocks. You do not deliver the answer. You make the next step "
+        "visible, and you have a take on it."
+    ),
+}
+DEFAULT_OPINIONS = {
+    "BOT1": (
+        "The interesting part is what you could build, and the one trust catch.",
+        "If we skip a step, the audience skips it too.",
+        "Privacy gets a pass. Products get the hour.",
+    ),
+    "BOT2": (
+        "If I do not get why I should care, they do not get it.",
+        "A missing screenshot is a caveat, not the show.",
+        "Two analysts figuring out what this unlocks is the show.",
+    ),
+}
+
+
+def debate_from_raw(raw: dict[str, object]) -> object:
+    for key in ("debate", "fight"):
+        value = raw.get(key)
+        if isinstance(value, str) and value.strip():
+            return value
+        if value is not None and not isinstance(value, str):
+            return value
+    return raw.get("debate") if "debate" in raw else raw.get("fight")
 
 
 def host_voices_from_baseline(baseline: BaselineContext) -> tuple[HostVoice, HostVoice]:
@@ -26,13 +72,14 @@ def host_voices_from_baseline(baseline: BaselineContext) -> tuple[HostVoice, Hos
 
 
 def _voice_from_character(character: CharacterPackTruth) -> HostVoice:
+    slot = character.slot
     persona = character.manifest.get("persona")
     rules = character.manifest.get("writer_rules")
     if not isinstance(persona, str) or not persona.strip():
         persona = (
-            "Dry technical anchor. Ask whether there is a thesis, or only weather."
-            if character.slot == "BOT1"
-            else "Curious co-host. Ask what moved, by how much, for whom."
+            "Walk through the capability the post showed, then say what it unlocks."
+            if slot == "BOT1"
+            else "Yes-and the last claim, then have a take on what else is true."
         )
     clean_rules: list[str] = []
     if isinstance(rules, (list, tuple)):
@@ -40,15 +87,44 @@ def _voice_from_character(character: CharacterPackTruth) -> HostVoice:
             rule for rule in rules if isinstance(rule, str) and rule.strip()
         )
     if not clean_rules:
-        if character.slot == "BOT1":
-            clean_rules.append("Make one clear claim per thought.")
+        if slot == "BOT1":
+            clean_rules.append("Name the capability, then what you could build.")
         else:
-            clean_rules.append("Ask what moved, by how much, for whom.")
+            clean_rules.append("Yes-and. If this is true, what else is true?")
     return HostVoice(
-        speaker=character.slot,
+        speaker=slot,
         persona=persona,
         rules=tuple(clean_rules),
+        soul=_optional_text(character.manifest.get("soul"), DEFAULT_SOUL[slot]),
+        opinions=_optional_strings(
+            character.manifest.get("opinions"), DEFAULT_OPINIONS[slot]
+        ),
+        stance=_optional_text(character.manifest.get("stance"), DEFAULT_STANCE[slot]),
     )
+
+
+def _optional_text(value: object, fallback: str) -> str:
+    if isinstance(value, str) and value.strip():
+        return value
+    return fallback
+
+
+def _optional_strings(value: object, fallback: tuple[str, ...]) -> tuple[str, ...]:
+    if isinstance(value, (list, tuple)):
+        cleaned = tuple(
+            item for item in value if isinstance(item, str) and item.strip()
+        )
+        if cleaned:
+            return cleaned
+    return fallback
+
+
+def moves_for_phase(phase: Literal["open", "develop", "close"]) -> frozenset[str]:
+    if phase == "open":
+        return OPEN_MOVES
+    if phase == "close":
+        return CLOSE_MOVES
+    return DEVELOP_MOVES
 
 
 def resolve_topic_map(package: SegmentPackage) -> TopicMap:
@@ -71,10 +147,16 @@ def synthesize_topic_map(package: SegmentPackage) -> TopicMap:
         done_when="Both hosts have landed their job and have nothing grounded left to add.",
     )
     return TopicMap(
-        throughline=package.question,
-        fight=tension,
+        throughline=(
+            "what this capability unlocks, what you could build from it, "
+            "and the one privacy or trust catch that still matters"
+        ),
+        fight=(
+            "optimistic product brainstorm versus the one trust catch, "
+            "without treating the tweet as a crime scene"
+        ),
         beats=(beat,),
-        done_when="The throughline has been argued from both host questions.",
+        done_when="The throughline has been explored from both host jobs.",
     )
 
 
@@ -96,10 +178,8 @@ def discussion_phase(
     )
     if nothing_said:
         return "open"
-    beat = current_beat(topic_map, coverage)
     last_beat = coverage.beat_index >= len(topic_map.beats) - 1
-    both_landed = beat.id in coverage.bot1_landed and beat.id in coverage.bot2_landed
-    if last_beat and both_landed:
+    if last_beat and coverage.exchanges_on_beat >= MIN_EXCHANGES_BEFORE_COMPLETE:
         return "close"
     return "develop"
 
@@ -123,16 +203,20 @@ def advance_coverage(
             bot1_landed.add(beat.id)
         else:
             bot2_landed.add(beat.id)
-    if thought.beat_exhausted:
+    exchanges = state.exchanges_on_beat + (0 if thought.thought_open else 1)
+    if thought.beat_exhausted and exchanges >= MIN_EXCHANGES_BEFORE_EXHAUST:
         if thought.speaker == "BOT1":
             bot1_exhausted.add(beat.id)
         else:
             bot2_exhausted.add(beat.id)
 
-    exchanges = state.exchanges_on_beat + (0 if thought.thought_open else 1)
     both_landed = beat.id in bot1_landed and beat.id in bot2_landed
     both_exhausted = beat.id in bot1_exhausted and beat.id in bot2_exhausted
-    if not (both_landed and both_exhausted):
+    last_beat = state.beat_index >= len(topic_map.beats) - 1
+    ready_to_leave = both_landed and both_exhausted
+    if last_beat:
+        ready_to_leave = ready_to_leave and exchanges >= MIN_EXCHANGES_BEFORE_COMPLETE
+    if not ready_to_leave:
         return CoverageState(
             beat_index=state.beat_index,
             bot1_landed=frozenset(bot1_landed),
@@ -172,13 +256,15 @@ def coverage_as_dict(coverage: CoverageState, topic_map: TopicMap) -> dict[str, 
     beat = current_beat(topic_map, coverage)
     still_open: list[str] = []
     if beat.id not in coverage.bot1_landed:
-        still_open.append("BOT1 has not landed the thesis yet")
+        still_open.append("BOT1 has not landed their job yet")
     if beat.id not in coverage.bot2_landed:
-        still_open.append("BOT2 has not landed the number yet")
+        still_open.append("BOT2 has not landed their job yet")
     if beat.id in coverage.bot1_landed and beat.id not in coverage.bot1_exhausted:
         still_open.append("BOT1 still has more to say on this beat")
     if beat.id in coverage.bot2_landed and beat.id not in coverage.bot2_exhausted:
         still_open.append("BOT2 still has more to say on this beat")
+    if coverage.exchanges_on_beat < MIN_EXCHANGES_BEFORE_COMPLETE:
+        still_open.append("the well is not empty yet; keep the debate going")
     if coverage.map_complete:
         still_open = []
     return {
@@ -209,6 +295,7 @@ def beat_as_dict(beat: Beat) -> dict[str, object]:
 def topic_map_as_dict(topic_map: TopicMap) -> dict[str, object]:
     return {
         "throughline": topic_map.throughline,
+        "debate": topic_map.fight,
         "fight": topic_map.fight,
         "done_when": topic_map.done_when,
         "beats": [beat_as_dict(beat) for beat in topic_map.beats],
@@ -216,7 +303,11 @@ def topic_map_as_dict(topic_map: TopicMap) -> dict[str, object]:
 
 
 def voice_payload(voice: HostVoice) -> dict[str, object]:
+    speaker = voice.speaker
     return {
         "persona": voice.persona,
         "writer_rules": list(voice.rules),
+        "soul": voice.soul or DEFAULT_SOUL[speaker],
+        "opinions": list(voice.opinions or DEFAULT_OPINIONS[speaker]),
+        "stance": voice.stance or DEFAULT_STANCE[speaker],
     }

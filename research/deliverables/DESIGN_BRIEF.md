@@ -34,7 +34,7 @@ They agree the card is true. They cannot both be satisfied by the same sentence.
 
 High furniture, low conversation. Network pictures, group-chat talk.
 
-- Warm espresso plates, off-white type, and jade as the programme accent in the desk rule and kicker chips only.
+- Warm espresso plates, off-white type, and acid lemon as the programme accent in the desk rule and kicker chips only.
 - Flat 93% panels. No borders, glow, skew, gradient, hairline, or fine texture that a Twitch 480p encode will eat.
 - Archivo for display, Inter for data, and JetBrains Mono for system text. Fit display copy with Archivo's width axis before reducing size.
 - Speaker state is value, not hue: invert exactly one host-name plate when a speaker is known.

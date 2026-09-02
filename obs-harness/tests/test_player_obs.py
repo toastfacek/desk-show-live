@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import pytest
 
-from obs_harness.player_obs import HOST_LAYOUTS, LAYOUTS, ObsPlayer
+from obs_harness.player_obs import HOST_LAYOUTS, LAYOUTS, ObsPlayer, prepare_obs_clip
 
 
 @dataclass
@@ -20,6 +21,11 @@ class FakeSceneItem:
 class FakeObsClient:
     calls: list[tuple] = field(default_factory=list)
     scene_items: dict[str, list[FakeSceneItem]] = field(default_factory=dict)
+    program_scene: str = "split"
+    media_duration: int | None = 5000
+    media_cursor: int | None = 0
+    media_state: str = "OBS_MEDIA_STATE_PLAYING"
+    media_error: Exception | None = None
 
     def get_scene_item_list(self, name: str):
         self.calls.append(("get_scene_item_list", name))
@@ -29,8 +35,40 @@ class FakeObsClient:
     def set_scene_item_enabled(self, scene_name: str, item_id: int, enabled: bool):
         self.calls.append(("set_scene_item_enabled", scene_name, item_id, enabled))
 
+    def set_input_settings(self, name: str, settings: dict, overlay: bool):
+        self.calls.append(("set_input_settings", name, settings, overlay))
+
     def set_input_mute(self, name: str, muted: bool):
         self.calls.append(("set_input_mute", name, muted))
+
+    def trigger_media_input_action(self, name: str, action: str):
+        self.calls.append(("trigger_media_input_action", name, action))
+
+    def set_current_program_scene(self, name: str):
+        self.calls.append(("set_current_program_scene", name))
+        self.program_scene = name
+
+    def get_current_program_scene(self):
+        self.calls.append(("get_current_program_scene",))
+        return type(
+            "ProgramScene",
+            (),
+            {"current_program_scene_name": self.program_scene},
+        )()
+
+    def get_media_input_status(self, name: str):
+        self.calls.append(("get_media_input_status", name))
+        if self.media_error is not None:
+            raise self.media_error
+        return type(
+            "MediaStatus",
+            (),
+            {
+                "media_duration": self.media_duration,
+                "media_cursor": self.media_cursor,
+                "media_state": self.media_state,
+            },
+        )()
 
 
 class ReconnectObsPlayer(ObsPlayer):
@@ -130,3 +168,113 @@ def test_reconnect_refreshes_scene_item_cache_with_replacement_client():
 
     assert player._client is client2
     assert player._scene_item_ids["wide"]["HL_A"] == 99
+
+
+def test_get_program_state_idle_media_is_still_connected():
+    client = FakeObsClient(
+        program_scene="card_full",
+        media_duration=None,
+        media_cursor=None,
+        media_state="OBS_MEDIA_STATE_ENDED",
+    )
+    player = _player_with_client(client)
+    player.t = 12.0
+
+    state = player.get_program_state()
+
+    assert state["connected"] is True
+    assert state["media_ok"] is True
+    assert state["layout"] == "card_full"
+    assert state["on_air"]["kind"] == "card"
+    assert state["on_air"]["ends_at"] == 12.0
+    assert state["on_air"]["media_ok"] is True
+
+
+def test_get_program_state_missing_source_is_not_ok():
+    client = FakeObsClient(media_error=RuntimeError("no such input"))
+    player = _player_with_client(client)
+
+    state = player.get_program_state()
+
+    assert state["connected"] is True
+    assert state["media_ok"] is False
+    assert state["on_air"]["media_ok"] is False
+
+
+def _tiny_clip(path: Path) -> Path:
+    import subprocess
+
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red:s=64x48:d=0.2:r=24",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=32000:cl=stereo",
+            "-shortest",
+            "-c:v",
+            "libx264",
+            "-profile:v",
+            "baseline",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            str(path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    return path
+
+
+def test_prepare_obs_clip_writes_high_profile_sibling(tmp_path: Path):
+    src = _tiny_clip(tmp_path / "001.mp4")
+    dest = prepare_obs_clip(src)
+    assert dest != src
+    assert dest.name == "001.obs.mp4"
+    assert dest.is_file()
+    again = prepare_obs_clip(src)
+    assert again == dest
+
+
+def test_play_clip_points_host_wide_at_obs_playable(tmp_path: Path):
+    src = _tiny_clip(tmp_path / "003.mp4")
+    client = FakeObsClient()
+    player = _player_with_client(client)
+    player.play_clip(str(src))
+    settings = [
+        call for call in client.calls if call[0] == "set_input_settings"
+    ]
+    assert settings[-1][1] == "HOST_WIDE"
+    assert settings[-1][2]["local_file"].endswith("003.obs.mp4")
+    assert settings[-1][2]["looping"] is False
+    assert settings[-1][2]["restart_on_activate"] is False
+    assert settings[-1][2]["clear_on_media_end"] is False
+    mute = [call for call in client.calls if call[0] == "set_input_mute"]
+    assert mute[-1][1] == "HOST_WIDE"
+    assert mute[-1][2] is False
+
+
+def test_set_layout_skips_obs_when_already_on_that_scene():
+    client = FakeObsClient(program_scene="split")
+    player = _player_with_client(client)
+    client.calls.clear()
+    player.set_layout("split")
+    assert [
+        call for call in client.calls if call[0] == "set_current_program_scene"
+    ] == []
+    assert player.layout == "split"
+
+
+def test_set_layout_switches_when_the_scene_changes():
+    client = FakeObsClient(program_scene="card_full")
+    player = _player_with_client(client)
+    player.set_layout("split")
+    assert ("set_current_program_scene", "split") in client.calls
+    assert player.layout == "split"

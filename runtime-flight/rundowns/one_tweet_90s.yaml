@@ -14,5 +14,5 @@ segments:
   - id: dwarkesh_agent_civilizations
     kind: talk
     target_len_s: 90
-    layout_plan: [wide, split, solo_l, solo_r, wide]
+    layout_plan: [split]
     spend_policy: normal

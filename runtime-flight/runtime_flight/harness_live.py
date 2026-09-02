@@ -9,6 +9,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any, Literal, Protocol
 
 from obs_harness.director import decide
+from runtime_flight.anchor import persist_anchor
 from runtime_flight.baseline import BaselineContext
 from runtime_flight.models import SegmentPackage, Thought
 from runtime_flight.performer_fal import ReadyTake, TakeRequest
@@ -22,6 +23,7 @@ POLL_INTERVAL_S = 0.2
 STREAM_POLL_INTERVAL_S = 1.0
 HERO_IMAGE_PLACEHOLDER = "hero"
 HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
+DEFAULT_LAYOUT_PLAN = ("split",)
 
 
 def remaining_submit_slots(target_duration_s: float, elapsed_s: float) -> int:
@@ -106,7 +108,7 @@ class LiveHarness:
         self.package = package
         self.target_duration_s = target_duration_s
         self.clip_duration_s = clip_duration_s
-        self.layout_plan = list(layout_plan or HOST_LAYOUTS)
+        self.layout_plan = list(layout_plan or DEFAULT_LAYOUT_PLAN)
         self.overlay = overlay
         self.producer = producer
         self.obs_session = obs_session
@@ -194,6 +196,8 @@ class LiveHarness:
             ),
             "flags": dict(self.flags),
             "next_take": self.next_take,
+            "layout": getattr(self.player, "layout", None)
+            or (self.on_air or {}).get("layout"),
             "layout_i": self.layout_i,
             "segment": {
                 "layout_plan": self.layout_plan,
@@ -297,6 +301,15 @@ class LiveHarness:
             self.overlay.mark_unhealthy()
         self.events.append({"t": self.t, "kind": "watchdog_unhealthy"})
 
+    def _push_overlay_layout(self, layout: str) -> None:
+        setter = getattr(self.overlay, "set_layout", None)
+        if setter is None:
+            return
+        try:
+            setter(layout)
+        except Exception:
+            return
+
     def _obs_command(self, method: str, *args: Any, **kwargs: Any) -> bool:
         try:
             getattr(self.player, method)(*args, **kwargs)
@@ -351,6 +364,7 @@ class LiveHarness:
             self.player.set_layout("hold")
         except Exception:
             self._mark_unhealthy()
+        self._push_overlay_layout("hold")
         self.events.append({"t": self.t, "kind": "stream_active_abort"})
 
     def _enter_programme_hold(self) -> None:
@@ -362,6 +376,7 @@ class LiveHarness:
         self.flags["hold"] = True
         self.events.append({"t": self.t, "kind": "programme_hold"})
         self._obs_command("set_layout", "hold")
+        self._push_overlay_layout("hold")
 
     async def _post_roll_recording(self) -> None:
         self._enter_programme_hold()
@@ -538,6 +553,7 @@ class LiveHarness:
         self.player.t = self.t
         if not self._obs_command("set_layout", beat["layout"]):
             return
+        self._push_overlay_layout(beat["layout"])
         if not self._obs_command("set_headline", beat.get("chyron") or ""):
             return
         center = beat.get("center") or {"kind": "none"}
@@ -660,7 +676,7 @@ class LiveHarness:
         speaker: Literal["BOT1", "BOT2"] = submit["speaker"]
         line = submit["line"]
         take = int(submit["take"])
-        anchor, image_url = self._anchor_for(take)
+        anchor, image_url = self._anchor_for(take, speaker)
         return TakeRequest(
             take=take,
             speaker=speaker,
@@ -671,16 +687,18 @@ class LiveHarness:
             baseline_id=self.baseline_id,
         )
 
-    def _anchor_for(self, take: int) -> tuple[Literal["hero", "chain"], str]:
-        if take == 1:
-            return "hero", HERO_IMAGE_PLACEHOLDER
-        interval = self.baseline.reanchor_every
-        if interval and (take - 1) % interval == 0:
-            return "hero", HERO_IMAGE_PLACEHOLDER
+    def _anchor_for(
+        self, take: int, speaker: str
+    ) -> tuple[Literal["hero", "chain"], str]:
         previous = self._completed.get(take - 1)
-        if previous is not None and previous.frame_url:
-            return "chain", previous.frame_url
-        return "hero", HERO_IMAGE_PLACEHOLDER
+        return persist_anchor(
+            take=take,
+            speaker=speaker,
+            previous_speaker=previous.speaker if previous is not None else None,
+            previous_frame_url=previous.frame_url if previous is not None else None,
+            reanchor_every=self.baseline.reanchor_every,
+            hero_url=HERO_IMAGE_PLACEHOLDER,
+        )
 
     def _mapped_speaking(self, speaker: str | None) -> str | None:
         if speaker is None:

@@ -3,20 +3,24 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
 from pathlib import Path
 
 import yaml
 
 from runtime_flight.discuss import DiscussError, run_discuss
+from runtime_flight.stage import StageError
 from runtime_flight.config import (
     ConfigError,
     REDACTED,
+    apply_source_dir,
     load_config,
     redacted_summary,
     validate_config,
     validate_obs_config,
 )
 from runtime_flight.flight import run_paid_flight, run_rehearsal
+from runtime_flight.stage import run_stage
 from runtime_flight.obs_session import ObsSession
 from runtime_flight.obs_setup import DEFAULT_WATCHDOG_URL
 from runtime_flight.operator import (
@@ -26,6 +30,7 @@ from runtime_flight.operator import (
     cmd_replay,
     cmd_segment,
     cmd_setup_obs,
+    cmd_stage,
     cmd_verify_flight,
     latest_bundle,
     load_validated_config,
@@ -55,6 +60,8 @@ def main(
     network_call=None,
     segment_runner=None,
     discuss_runner=None,
+    stage_runner=None,
+    http_get=None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="runtime_flight")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -64,6 +71,7 @@ def main(
         help="Validate flight configuration and run no-video preflight probes.",
     )
     _add_config_arg(check_parser)
+    _add_source_dir_arg(check_parser)
     check_parser.add_argument(
         "--probe-text",
         action="store_true",
@@ -86,6 +94,7 @@ def main(
 
     rehearse_parser = subparsers.add_parser("rehearse", help="Run a zero-cost rehearsal.")
     _add_config_arg(rehearse_parser)
+    _add_source_dir_arg(rehearse_parser)
     rehearse_parser.add_argument(
         "--rundown",
         type=Path,
@@ -113,6 +122,7 @@ def main(
         help="Text-only host bounce inspect. No fal. Human-gated text budget.",
     )
     _add_config_arg(discuss_parser)
+    _add_source_dir_arg(discuss_parser)
     discuss_parser.add_argument("--confirm-text-requests", type=int, required=True)
     discuss_parser.add_argument("--max-turns", type=int, default=12)
     discuss_parser.add_argument(
@@ -120,6 +130,41 @@ def main(
         type=Path,
         help="Reuse a planned segment package and skip the planner call.",
     )
+
+    stage_parser = subparsers.add_parser(
+        "stage",
+        help="Tweet URL → tweet image, producer card, planner, and writer preview.",
+    )
+    _add_config_arg(stage_parser)
+    stage_parser.add_argument("--tweet-url", required=True)
+    stage_parser.add_argument(
+        "--fixture",
+        type=Path,
+        help="Offline fetched-tweet JSON. Skips the live tweet HTTP fetch.",
+    )
+    stage_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("out/staged"),
+        help="Directory that receives one folder per tweet id.",
+    )
+    stage_parser.add_argument("--confirm-text-requests", type=int, default=0)
+    stage_parser.add_argument(
+        "--ingest-only",
+        action="store_true",
+        help="Write packet, lock, tweet.png, and card. No text model.",
+    )
+    stage_parser.add_argument(
+        "--plan-only",
+        action="store_true",
+        help="Ingest and planner. Skip the two writer look-ahead lines.",
+    )
+    stage_parser.add_argument(
+        "--keep-overlay",
+        action="store_true",
+        help="Leave OverlayServer running on --overlay-port after stage.",
+    )
+    stage_parser.add_argument("--overlay-port", type=int, default=8765)
 
     live_parser = subparsers.add_parser("live", help="Paid 90-second live flight. Human-gated.")
     _add_paid_args(live_parser)
@@ -150,6 +195,7 @@ def main(
                 confirm_text_requests=args.confirm_text_requests,
                 obs_session=obs_session,
                 http_post=http_post,
+                source_dir=getattr(args, "source_dir", None),
             )
         if args.command == "setup-obs":
             config = load_config(args.config)
@@ -161,10 +207,38 @@ def main(
         if args.command == "rehearse":
             if rehearsal_runner is not None:
                 return rehearsal_runner(args.rundown)
-            config = load_validated_config(args.config)
+            config = _config_with_source(args.config, getattr(args, "source_dir", None))
             return run_rehearsal(config=config, rundown=args.rundown)
+        if args.command == "stage":
+            plan = not args.ingest_only
+            write = plan and not args.plan_only
+            config = (
+                load_config(args.config)
+                if args.ingest_only
+                else load_validated_config(args.config, require_obs=False)
+            )
+            payload = cmd_stage(
+                config,
+                tweet_url=args.tweet_url,
+                out_dir=args.out,
+                confirm_text_requests=args.confirm_text_requests,
+                plan=plan,
+                write=write,
+                keep_overlay=args.keep_overlay,
+                overlay_port=args.overlay_port,
+                fixture_path=args.fixture,
+                run_stage_fn=stage_runner or run_stage,
+                http_get=http_get,
+                http_post=http_post,
+            )
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            if args.keep_overlay:
+                _hold_overlay()
+            return 0
         if args.command == "segment":
-            config = load_validated_config(args.config, require_obs=False)
+            config = _config_with_source(
+                args.config, getattr(args, "source_dir", None), require_obs=False
+            )
             return cmd_segment(
                 config,
                 confirm_spend=args.confirm_spend,
@@ -173,7 +247,9 @@ def main(
                 run_segment=segment_runner or run_segment,
             )
         if args.command == "discuss":
-            config = load_validated_config(args.config, require_obs=False)
+            config = _config_with_source(
+                args.config, getattr(args, "source_dir", None), require_obs=False
+            )
             payload = cmd_discuss(
                 config,
                 confirm_text_requests=args.confirm_text_requests,
@@ -185,7 +261,7 @@ def main(
             print((work_dir / "transcript.txt").read_text(encoding="utf-8"), end="")
             return 0
         if args.command in {"smoke", "live"}:
-            config = load_validated_config(args.config)
+            config = _config_with_source(args.config, getattr(args, "source_dir", None))
             session = _session(config, obs_session)
 
             def _cleanup() -> None:
@@ -222,7 +298,7 @@ def main(
                 verify=verify or verify_bundle,
             )
         raise AssertionError(f"unhandled command: {args.command}")
-    except (ConfigError, PreflightError, OperatorError, DiscussError) as error:
+    except (ConfigError, PreflightError, OperatorError, DiscussError, StageError) as error:
         config = None
         try:
             if hasattr(args, "config"):
@@ -242,8 +318,29 @@ def _add_config_arg(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_source_dir_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--source-dir",
+        type=Path,
+        help="Staged tweet directory with source_packet.local.json and lock.",
+    )
+
+
+def _config_with_source(
+    config_path: Path,
+    source_dir: Path | None,
+    *,
+    require_obs: bool = True,
+):
+    config = load_validated_config(config_path, require_obs=require_obs)
+    if source_dir is None:
+        return config
+    return apply_source_dir(config, source_dir)
+
+
 def _add_paid_args(parser: argparse.ArgumentParser) -> None:
     _add_config_arg(parser)
+    _add_source_dir_arg(parser)
     parser.add_argument("--confirm-spend", required=True)
 
 
@@ -261,6 +358,14 @@ def _resolve_bundle(args) -> Path:
     raise OperatorError("pass --dir or --latest")
 
 
+def _hold_overlay() -> None:
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        return
+
+
 def _session(config, obs_session: ObsSession | None) -> ObsSession:
     if obs_session is not None:
         return obs_session
@@ -274,10 +379,13 @@ def _cmd_check(
     confirm_text_requests: int,
     obs_session: ObsSession | None,
     http_post,
+    source_dir: Path | None = None,
 ) -> int:
     config = None
     try:
         config = load_config(config_path)
+        if source_dir is not None:
+            config = apply_source_dir(config, source_dir)
         validate_config(config)
         summary = redacted_summary(config)
         print(yaml.safe_dump(summary, sort_keys=False), end="")

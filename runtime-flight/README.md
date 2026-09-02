@@ -3,6 +3,9 @@
 Zero-cost operator commands for the Dwarkesh Patel one-tweet live test. Paid
 `smoke` and `live` are human-gated and are not implied by a passing test suite.
 
+Programme learnings from the first paid OBS live (decode, audio, fade, crop,
+overlay port): [LIVE_FLIGHT_CHECK.md](LIVE_FLIGHT_CHECK.md).
+
 `board` is the visual producer harness: a loopback control room with program
 preview, live state, writer/story/queue tabs, and operator buttons. It runs a
 zero-cost demo clock. `check`, `setup-obs`, `rehearse`, `replay`, and
@@ -27,7 +30,30 @@ python3 -m runtime_flight verify-flight --automated --latest --out out/flights
 python3 -m runtime_flight verify-flight --final --latest --out out/flights
 ```
 
-No-OBS paid segment (planner + writer + two fal takes, hero then chain). Human-gated.
+Tweet link → tweet image + dynamic producer card + writer look-ahead (no fal):
+
+```bash
+python3 -m runtime_flight stage \
+  --config config.local.yaml \
+  --tweet-url 'https://x.com/<user>/status/<id>' \
+  --confirm-text-requests 3 \
+  --keep-overlay
+
+python3 scripts/load-design-preview.py \
+  --card-origin http://127.0.0.1:8765
+
+RUNTIME_ALLOW_PAID=1 python3 -m runtime_flight live \
+  --config config.local.yaml \
+  --source-dir out/staged/<id> \
+  --confirm-spend 12.00
+```
+
+`--ingest-only` writes the packet, lock, and `tweet.png` with no text model.
+`--plan-only` stops after the planner (`--confirm-text-requests 1`).
+The default stage path is planner plus two Writer look-ahead lines
+(`--confirm-text-requests 3`). Named shows never enter those prompts.
+
+No-OBS paid segment (planner + writer + fal takes). Hero on take 1 and on a speaker cut; same-host runs chain the last frame. Human-gated.
 Does not connect to OBS.
 
 ```bash
