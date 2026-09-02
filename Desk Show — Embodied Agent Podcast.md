@@ -221,13 +221,28 @@ Three bodies, one brain. Ranked for *this* show:
 
 | | Direction | When |
 | :---- | :---- | :---- |
-| **C. Living UI (ship this)** | Eyes, waveform mouth, antenna, CRT, type, particles. Rive / canvas / CSS / a Spline scene we drive. | First face. Matches cartoon hosts, cheap in a 620×700 well, survives 480p, looks like software that talks — not a person we faked. |
+| **C. Living UI (ship this)** | Broderick / ROAM geometry: primitive body, two pill eyes, **no mouth**. Talk is squash-stretch + eye pulse. Rive / SVG / CSS. | First face. Cute, fast, no visemes. Mock: `research/mocks/grokbots.html`. |
 | **A. Live2D** | Illustrated host, Open-LLM-VTuber-style expression API. | If C feels too abstract and we have art. License is a real cost (`LICENSE-Live2D.md` on that repo). |
 | **B. Stylized 3D / VRM** | TalkingHead, body language, props. | Later, if a well needs shoulders. Not the first proof. |
 
-C is the unexplored design territory the share named (“Pee-wee’s Playhouse meets a desktop OS”). It is also the only direction that makes **tool use** first-class: a search is a panel, not a facial twitch we hope the video model invented.
+C is now locked to a specific steal, not a vibe board.
 
-The locked hosts stay PHASEONE[lol] (amber, left) and deb (teal, right). The face runtime must be able to sit in the existing wells without type on the generated-looking plate. Furniture still draws names, chyron, card, LIVE, clock.
+**Reference:** [Jeff Broderick, 1 Sep 2026](https://x.com/brdrck/status/2094896591144403001) — “cute little animated vector characters,” Opacity → Zoah. The tape is a vector editor constructing **ROAM** as four mouthless creatures. The one we want is the **O**: a sphere with two vertical pill eyes. The M is twin capsules. Construction lines and anchors are part of the charm. There is no official SDK. Do not ship their wordmark or their files.
+
+**Talk without a mouth:** squash the whole body at speech rate, pulse the pills, blink, tilt. Amplitude can drive squash depth. No jaw, no visemes, no waveform teeth. That is faster than lip sync and reads as cartoon, not broken anatomy.
+
+**Closest reusable code, ranked:**
+
+| Thing | Use |
+| :---- | :---- |
+| `research/mocks/grokbots.html` | Ours. Two hosts, `talking` / `listening` / `thinking` / `laugh`, click-to-talk. |
+| [FluxGarage/RoboEyes](https://github.com/FluxGarage/RoboEyes) | Steal the **eye-mood API** (blink, idle look, laugh-shake, curious). Arduino/OLED, not a renderer we embed. |
+| [tanmaywankar/Grobot_Animations](https://github.com/tanmaywankar/Grobot_Animations) | Same idea, plus a web mood tinkerer. |
+| [Eyuvaraj/Interactive-Avatar-Rive](https://github.com/Eyuvaraj/Interactive-Avatar-Rive) | The `isTalking` boolean → Rive input. Drop their lip-sync art; keep the wiring. |
+| [metafizzy/zdog](https://github.com/metafizzy/zdog) | If the sphere needs a real equator / 3D turn. Cute, designer-friendly, still no mouth. |
+| Rive community mascots | Production path once a designer rigs PHASEONE + deb to the same inputs. |
+
+The locked hosts stay PHASEONE[lol] (amber pills on a charcoal sphere, left) and deb (teal pills on a cream capsule, right). Furniture still draws names, chyron, card, LIVE, clock. The face plate has no type.
 
 ---
 
