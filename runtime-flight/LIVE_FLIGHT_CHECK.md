@@ -48,8 +48,12 @@ hero or previous last-frame URL
         → ready/{take}.mp4          (evidence; Constrained Baseline)
         → prepare_obs_clip()
         → ready/{take}.obs.mp4      (programme; High@3.2, yuv420p, AAC)
-        → HOST_WIDE local_file
+        → HOST_WIDE local_file      (absolute path; OBS cwd is /workspace)
 ```
+
+`play_clip` must send an absolute file. A relative `out/live-work/...` path is
+resolved from OBS's cwd (`/workspace`), not from `runtime-flight/`, so the
+source ends ENDED with empty wells.
 
 Persist/chain uses the locked hero or the previous take's last-frame URL from
 the H3 clip. The wash and overlay are OBS layers only. If you send program-out
