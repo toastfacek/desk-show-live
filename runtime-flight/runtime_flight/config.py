@@ -11,6 +11,13 @@ import yaml
 
 from runtime_flight.clip import ALLOWED_VIDEO_DURATIONS_S
 
+ALLOWED_VIDEO_ENDPOINTS = frozenset(
+    {
+        "minimax/h3-max/image-to-video",
+        "minimax/h3-max-turbo/image-to-video",
+    }
+)
+
 LIVE_CAP_MAX_USD = Decimal("12.00")
 SMOKE_CAP_MAX_USD = Decimal("2.00")
 REDACTED = "<redacted>"
@@ -199,8 +206,11 @@ def validate_config(config: RuntimeConfig, *, require_obs: bool = True) -> None:
     if config.target_duration_s < 90:
         errors.append("target_duration_s must be at least 90")
 
-    if config.video_endpoint != "minimax/h3-max/image-to-video":
-        errors.append("video.endpoint must be minimax/h3-max/image-to-video")
+    if config.video_endpoint not in ALLOWED_VIDEO_ENDPOINTS:
+        errors.append(
+            "video.endpoint must be minimax/h3-max/image-to-video "
+            "or minimax/h3-max-turbo/image-to-video"
+        )
     if config.video_duration_s not in ALLOWED_VIDEO_DURATIONS_S:
         errors.append("video.duration_s must be 5, 10, or 15")
     if config.video_resolution != "768P":

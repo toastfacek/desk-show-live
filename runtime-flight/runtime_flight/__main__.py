@@ -23,10 +23,12 @@ from runtime_flight.flight import run_paid_flight, run_rehearsal
 from runtime_flight.stage import run_stage
 from runtime_flight.obs_session import ObsSession
 from runtime_flight.obs_setup import DEFAULT_WATCHDOG_URL
+from runtime_flight.fal_gateway import H3_MAX_TURBO_ENDPOINT
 from runtime_flight.operator import (
     OperatorError,
     cmd_discuss,
     cmd_paid_flight,
+    cmd_prepare_pass,
     cmd_replay,
     cmd_segment,
     cmd_setup_obs,
@@ -36,6 +38,7 @@ from runtime_flight.operator import (
     latest_bundle,
     load_validated_config,
 )
+from runtime_flight.prepare_pass import PREPARE_PASS_RATE_USD_PER_S, run_prepare_pass
 from runtime_flight.time_fal import run_time_fal
 from runtime_flight.timeline import write_timeline
 from runtime_flight.segment import run_segment
@@ -64,6 +67,7 @@ def main(
     discuss_runner=None,
     stage_runner=None,
     time_fal_runner=None,
+    prepare_pass_runner=None,
     http_get=None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="runtime_flight")
@@ -187,6 +191,29 @@ def main(
         help="Directory that receives time-fal/<run-id>/.",
     )
 
+    prepare_parser = subparsers.add_parser(
+        "prepare-pass",
+        help="Cook three prepared 5s segments, then concat. No play during cook.",
+    )
+    _add_paid_args(prepare_parser)
+    prepare_parser.add_argument(
+        "--endpoint",
+        default=H3_MAX_TURBO_ENDPOINT,
+        help="H3 image-to-video endpoint. Defaults to H3 Max Turbo.",
+    )
+    prepare_parser.add_argument("--duration", type=int, default=5)
+    prepare_parser.add_argument(
+        "--rate",
+        default=str(PREPARE_PASS_RATE_USD_PER_S),
+        help="768P USD per second. Turbo promo default is 0.01.",
+    )
+    prepare_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("out"),
+        help="Directory that receives prepare-pass/<run-id>/.",
+    )
+
     timeline_parser = subparsers.add_parser(
         "timeline",
         help="Render cook waterfall and flame graph HTML from a run directory.",
@@ -293,6 +320,19 @@ def main(
                 takes=args.takes,
                 duration_s=args.duration,
                 run_time_fal=time_fal_runner or run_time_fal,
+                out_dir=args.out,
+            )
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            return 0
+        if args.command == "prepare-pass":
+            config = load_validated_config(args.config, require_obs=False)
+            payload = cmd_prepare_pass(
+                config,
+                confirm_spend=args.confirm_spend,
+                endpoint=args.endpoint,
+                duration_s=args.duration,
+                rate=args.rate,
+                run_prepare_pass=prepare_pass_runner or run_prepare_pass,
                 out_dir=args.out,
             )
             print(yaml.safe_dump(payload, sort_keys=False), end="")

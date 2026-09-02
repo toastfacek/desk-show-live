@@ -15,6 +15,7 @@ from runtime_flight.config import (
     load_config,
     validate_config,
 )
+from runtime_flight.fal_gateway import H3_MAX_TURBO_ENDPOINT
 from runtime_flight.obs_session import ObsSession
 from runtime_flight.obs_setup import setup_obs
 from runtime_flight.source import SourceError, load_source_packet
@@ -274,6 +275,32 @@ def cmd_time_fal(
         duration_s=duration_s,
         out_dir=out_dir,
     )
+
+
+def cmd_prepare_pass(
+    config: RuntimeConfig,
+    *,
+    confirm_spend: str | None,
+    endpoint: str,
+    duration_s: int,
+    rate: str,
+    run_prepare_pass,
+    out_dir: Path | None = None,
+) -> dict[str, Any]:
+    from runtime_flight.prepare_pass import apply_prepare_overrides, parse_prepare_rate
+
+    require_paid_flag()
+    require_confirm_spend(config, confirm_spend)
+    if duration_s != 5:
+        raise OperatorError("prepare-pass --duration must be 5")
+    updated = apply_prepare_overrides(
+        config,
+        endpoint=endpoint or H3_MAX_TURBO_ENDPOINT,
+        duration_s=duration_s,
+        rate_768p_usd_per_s=parse_prepare_rate(rate),
+    )
+    validate_config(updated, require_obs=False)
+    return run_prepare_pass(config=updated, out_dir=out_dir)
 
 
 def cmd_replay(bundle: Path, *, network_call: Callable[..., Any] | None = None) -> dict[str, Any]:

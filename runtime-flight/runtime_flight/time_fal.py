@@ -134,13 +134,12 @@ def _build_performer(
     hero_path: Path,
     duration_s: int,
 ) -> FalPerformer:
-    del config
     fal_key = os.environ.get("FAL_KEY")
     if not fal_key:
         raise OperatorError("missing required environment variable: FAL_KEY")
     return FalPerformer(
         meter=meter,
-        gateway=FalGateway(fal_key=fal_key),
+        gateway=FalGateway(fal_key=fal_key, endpoint=config.video_endpoint),
         upload=_fal_upload,
         work_dir=work_dir,
         hero_path=hero_path,

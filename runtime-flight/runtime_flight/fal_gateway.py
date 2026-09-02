@@ -11,8 +11,11 @@ from urllib.parse import urlparse
 
 import httpx2
 
-QUEUE_SUBMIT_URL = "https://queue.fal.run/minimax/h3-max/image-to-video"
+H3_MAX_ENDPOINT = "minimax/h3-max/image-to-video"
+H3_MAX_TURBO_ENDPOINT = "minimax/h3-max-turbo/image-to-video"
+ALLOWED_VIDEO_ENDPOINTS = frozenset({H3_MAX_ENDPOINT, H3_MAX_TURBO_ENDPOINT})
 QUEUE_HOST = "queue.fal.run"
+QUEUE_SUBMIT_URL = f"https://{QUEUE_HOST}/{H3_MAX_ENDPOINT}"
 RECONCILE_LIMIT_S = 120.0
 CANCEL_POLL_LIMIT_S = 10.0
 POST_TIMEOUT_S = 30.0
@@ -73,16 +76,24 @@ def poll_interval(elapsed_s: float) -> float:
     return 2.0
 
 
+def queue_submit_url(endpoint: str) -> str:
+    if endpoint not in ALLOWED_VIDEO_ENDPOINTS:
+        raise FalGatewayError("video endpoint is not allowed")
+    return f"https://{QUEUE_HOST}/{endpoint}"
+
+
 class FalGateway:
     def __init__(
         self,
         *,
         fal_key: str,
+        endpoint: str = H3_MAX_ENDPOINT,
         http_request: HttpRequest | None = None,
         sleep: SleepFn | None = None,
         monotonic: MonotonicFn | None = None,
     ) -> None:
         self._fal_key = fal_key
+        self._submit_url = queue_submit_url(endpoint)
         self._http_request = http_request
         self._sleep = sleep
         self._monotonic_fn = monotonic
@@ -104,7 +115,7 @@ class FalGateway:
         try:
             response = await self._request(
                 "POST",
-                QUEUE_SUBMIT_URL,
+                self._submit_url,
                 json=arguments,
                 timeout=POST_TIMEOUT_S,
             )
