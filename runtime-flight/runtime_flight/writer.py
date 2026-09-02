@@ -403,6 +403,20 @@ def _chunks_from_model(
     return chunks, overflow
 
 
+def _resolve_angle(
+    angle_used: Any,
+    package: SegmentPackage,
+    speaker: Literal["BOT1", "BOT2"],
+) -> str:
+    if angle_used in package.angles:
+        return str(angle_used)
+    prefix = f"{speaker}:"
+    return next(
+        (item for item in package.angles if item.startswith(prefix)),
+        package.angles[0],
+    )
+
+
 def _thoughts_from_model(
     raw: dict[str, Any],
     package: SegmentPackage,
@@ -425,9 +439,7 @@ def _thoughts_from_model(
     if overflow:
         thought_open = True
 
-    angle_used = raw.get("angle_used")
-    if angle_used not in package.angles:
-        raise WriterError("angle_used is not a package angle")
+    angle_used = _resolve_angle(raw.get("angle_used"), package, speaker)
 
     topic_map = resolve_topic_map(package)
     state = coverage or CoverageState.initial()

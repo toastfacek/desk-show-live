@@ -393,7 +393,7 @@ def test_wrong_speaker_is_rejected():
         _run(run())
 
 
-def test_invented_angle_is_rejected():
+def test_invented_angle_falls_back_to_package_angle():
     async def http_post(url, *, headers, json, timeout):
         return FakeResponse(200, _json_body(_valid_thought_payload(angle_used="invented")))
 
@@ -401,8 +401,60 @@ def test_invented_angle_is_rejected():
         writer = Writer(_client(http_post))
         return await _write(writer)
 
-    with pytest.raises(WriterError, match="angle"):
-        _run(run())
+    thought = _run(run())
+    assert thought.angle_used == "scope"
+
+
+def test_unknown_angle_prefers_speaker_prefixed_package_angle():
+    package = SegmentPackage(
+        item_id=EXPECTED_TWEET_ID,
+        question="What happened to the secret AI civilizations?",
+        framing="A reviewed account of three wiped-out agent societies.",
+        angles=(
+            "BOT1: Real-time branching video powered by AI",
+            "BOT2: Personalized entertainment—what could this mean?",
+            "BOT2: Trust catch—how is my data handled?",
+        ),
+        facts=(
+            Fact(
+                id="f1",
+                text="Three secret AI civilizations started and were wiped out.",
+                source_url=EXPECTED_TWEET_URL,
+            ),
+            Fact(
+                id="f2",
+                text="The article retells the OpenAI and Hugging Face story.",
+                source_url=EXPECTED_LINKED_URL,
+            ),
+        ),
+        chyron="Secret AI civilizations",
+        chyron_fact_ids=("f1",),
+        center=TweetCard(
+            author=EXPECTED_AUTHOR,
+            text="Hello café\nworld",
+            url=EXPECTED_TWEET_URL,
+        ),
+    )
+
+    async def http_post(url, *, headers, json, timeout):
+        return FakeResponse(
+            200,
+            _json_body(_valid_thought_payload(speaker="BOT2", angle_used="branching")),
+        )
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write(
+            package,
+            (),
+            "BOT2",
+            False,
+            "open",
+            4.3,
+        )
+
+    thought = _run(run())
+    assert thought.angle_used == "BOT2: Personalized entertainment—what could this mean?"
 
 
 def test_empty_text_is_rejected():
