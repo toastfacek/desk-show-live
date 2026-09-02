@@ -10,6 +10,8 @@ import yaml
 
 from runtime_flight.discuss import DiscussError, run_discuss
 from runtime_flight.stage import StageError
+from runtime_flight.sunday import UntilError
+from runtime_flight.tweet_list import TweetListError
 from runtime_flight.config import (
     ConfigError,
     REDACTED,
@@ -29,9 +31,11 @@ from runtime_flight.operator import (
     cmd_cook_queue,
     cmd_discuss,
     cmd_enqueue,
+    cmd_load_list,
     cmd_paid_flight,
     cmd_prepare_pass,
     cmd_replay,
+    cmd_run_list,
     cmd_segment,
     cmd_setup_obs,
     cmd_stage,
@@ -72,6 +76,7 @@ def main(
     prepare_pass_runner=None,
     prepare_queue_runner=None,
     cook_queue_runner=None,
+    run_list_runner=None,
     http_get=None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="runtime_flight")
@@ -287,6 +292,48 @@ def main(
         help="Directory that receives cook-queue/<run-id>/.",
     )
 
+    load_list_parser = subparsers.add_parser(
+        "load-list",
+        help="Login-backed Twitter list → inbox pending. Ingest only, no cook.",
+    )
+    load_list_parser.add_argument("--inbox", type=Path, required=True)
+    load_list_parser.add_argument("--list", dest="list_url", help="https://x.com/i/lists/<id>")
+    load_list_parser.add_argument(
+        "--list-file",
+        type=Path,
+        help="Offline list snapshot: {list_id, tweets:[{url}, ...]}",
+    )
+
+    run_list_parser = subparsers.add_parser(
+        "run-list",
+        help="Load a Twitter list and comment tweet by tweet until Sunday. No OBS.",
+    )
+    _add_paid_args(run_list_parser)
+    run_list_parser.add_argument("--inbox", type=Path, required=True)
+    run_list_parser.add_argument("--list", dest="list_url", help="https://x.com/i/lists/<id>")
+    run_list_parser.add_argument("--list-file", type=Path)
+    run_list_parser.add_argument(
+        "--until",
+        default="sunday",
+        help="Stop at end of Sunday (UTC) or an ISO-8601 timestamp.",
+    )
+    run_list_parser.add_argument("--turns", type=int, default=2)
+    run_list_parser.add_argument("--confirm-text-requests", type=int, required=True)
+    run_list_parser.add_argument(
+        "--endpoint",
+        default=H3_MAX_TURBO_ENDPOINT,
+    )
+    run_list_parser.add_argument("--duration", type=int, default=5)
+    run_list_parser.add_argument(
+        "--rate",
+        default=str(PREPARE_PASS_RATE_USD_PER_S),
+    )
+    run_list_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("out"),
+    )
+
     timeline_parser = subparsers.add_parser(
         "timeline",
         help="Render cook waterfall and flame graph HTML from a run directory.",
@@ -437,6 +484,36 @@ def main(
             )
             print(yaml.safe_dump(payload, sort_keys=False), end="")
             return 0
+        if args.command == "load-list":
+            payload = cmd_load_list(
+                inbox=args.inbox,
+                list_url=args.list_url,
+                list_file=args.list_file,
+                http_get=http_get,
+            )
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            return 0
+        if args.command == "run-list":
+            config = load_validated_config(args.config, require_obs=False)
+            payload = cmd_run_list(
+                config,
+                confirm_spend=args.confirm_spend,
+                inbox=args.inbox,
+                until=args.until,
+                turns=args.turns,
+                confirm_text_requests=args.confirm_text_requests,
+                endpoint=args.endpoint,
+                duration_s=args.duration,
+                rate=args.rate,
+                list_url=args.list_url,
+                list_file=args.list_file,
+                out_dir=args.out,
+                run_orchestrator=run_list_runner,
+                http_get=http_get,
+                http_post=http_post,
+            )
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            return 0
         if args.command in {"smoke", "live"}:
             config = _config_with_source(args.config, getattr(args, "source_dir", None))
             session = _session(config, obs_session)
@@ -471,7 +548,15 @@ def main(
                 verify=verify or verify_bundle,
             )
         raise AssertionError(f"unhandled command: {args.command}")
-    except (ConfigError, PreflightError, OperatorError, DiscussError, StageError) as error:
+    except (
+        ConfigError,
+        PreflightError,
+        OperatorError,
+        DiscussError,
+        StageError,
+        TweetListError,
+        UntilError,
+    ) as error:
         config = None
         try:
             if hasattr(args, "config"):

@@ -32,22 +32,30 @@ FORBIDDEN = {
 
 def test_enqueue_orders_pending_and_skips_undissected(tmp_path: Path) -> None:
     inbox = tmp_path / "inbox"
-    first = enqueue(inbox, _write_staged(tmp_path, "222", "two"))
+    enqueue(inbox, _write_staged(tmp_path, "222", "two"))
     enqueue(inbox, _write_staged(tmp_path, "111", "one"))
     raw = enqueue(inbox, _write_staged(tmp_path, "333", "three"))
     (raw / PACKAGE_NAME).unlink()
-    assert pending_ids(inbox) == ("111", "222", "333")
-    assert cookable_ids(inbox) == ("111", "222")
+    assert pending_ids(inbox) == ("222", "111", "333")
+    assert cookable_ids(inbox) == ("222", "111")
     assert needs_producer(inbox) == ("333",)
     claimed = claim_next(inbox)
     assert claimed is not None
+    assert claimed.name == "222"
+    assert pending_ids(inbox) == ("111", "333")
+    mark_done(inbox, "222")
+    assert not (inbox / "claimed" / "222").exists()
+    assert (inbox / "done" / "222").is_dir()
+    assert (inbox / "pending" / "111").is_dir()
+
+
+def test_claim_next_can_take_undissected_for_the_producer(tmp_path: Path) -> None:
+    inbox = tmp_path / "inbox"
+    raw = enqueue(inbox, _write_staged(tmp_path, "111", "one"))
+    (raw / PACKAGE_NAME).unlink()
+    claimed = claim_next(inbox, dissected=False)
+    assert claimed is not None
     assert claimed.name == "111"
-    assert pending_ids(inbox) == ("222", "333")
-    mark_done(inbox, "111")
-    assert not (inbox / "claimed" / "111").exists()
-    assert (inbox / "done" / "111").is_dir()
-    assert first.is_dir()
-    assert (inbox / "pending" / "222").is_dir()
 
 
 def test_claim_next_is_none_when_only_undissected_remain(tmp_path: Path) -> None:

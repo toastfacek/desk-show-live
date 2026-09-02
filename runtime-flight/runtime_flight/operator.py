@@ -25,6 +25,7 @@ from runtime_flight.signals import install_panic_handler
 PAID_FLAG_ENV = "RUNTIME_ALLOW_PAID"
 SMOKE_MAX_TEXT = 6
 LIVE_MAX_TEXT = 24
+ORCHESTRATOR_MAX_TEXT = 2000
 SMOKE_FAL_ATTEMPTS = frozenset({1, 2})
 LIVE_SEGMENT_MAX_FAL = 18
 DISCUSS_MAX_TURNS = 12
@@ -59,6 +60,13 @@ def require_text_request_limit(mode: Literal["smoke", "live"], count: int) -> No
     if count > limit:
         raise OperatorError(
             f"text request limit exceeded: {count} > {limit} for mode {mode}"
+        )
+
+
+def require_orchestrator_text_limit(count: int) -> None:
+    if count < 1 or count > ORCHESTRATOR_MAX_TEXT:
+        raise OperatorError(
+            f"run-list --confirm-text-requests must be 1 to {ORCHESTRATOR_MAX_TEXT}"
         )
 
 
@@ -397,6 +405,66 @@ def cmd_cook_queue(
         turns=turns,
         max_text_requests=confirm_text_requests,
         out_dir=out_dir,
+        http_post=http_post,
+    )
+
+
+def cmd_load_list(
+    *,
+    inbox: Path,
+    list_url: str | None = None,
+    list_file: Path | None = None,
+    http_get=None,
+) -> dict[str, Any]:
+    from runtime_flight.list_load import load_list
+
+    return load_list(inbox, list_url=list_url, list_file=list_file, http_get=http_get)
+
+
+def cmd_run_list(
+    config: RuntimeConfig,
+    *,
+    confirm_spend: str | None,
+    inbox: Path,
+    until: str,
+    turns: int,
+    confirm_text_requests: int,
+    endpoint: str,
+    duration_s: int,
+    rate: str,
+    list_url: str | None = None,
+    list_file: Path | None = None,
+    out_dir: Path | None = None,
+    run_orchestrator=None,
+    http_get=None,
+    http_post=None,
+) -> dict[str, Any]:
+    from runtime_flight.prepare_pass import apply_prepare_overrides, parse_prepare_rate
+    from runtime_flight.orchestrator import run_orchestrator as default_run
+
+    require_paid_flag()
+    require_confirm_spend(config, confirm_spend)
+    if duration_s != 5:
+        raise OperatorError("run-list --duration must be 5")
+    require_orchestrator_text_limit(confirm_text_requests)
+    updated = apply_prepare_overrides(
+        config,
+        endpoint=endpoint or H3_MAX_TURBO_ENDPOINT,
+        duration_s=duration_s,
+        rate_768p_usd_per_s=parse_prepare_rate(rate),
+    )
+    validate_config(updated, require_obs=False)
+    runner = run_orchestrator if run_orchestrator is not None else default_run
+    return runner(
+        config=updated,
+        inbox=inbox,
+        until=until,
+        turns=turns,
+        max_text_requests=confirm_text_requests,
+        out_dir=out_dir,
+        list_url=list_url,
+        list_file=list_file,
+        http_get=http_get,
         http_post=http_post,
     )
 
