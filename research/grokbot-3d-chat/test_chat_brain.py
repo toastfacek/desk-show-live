@@ -54,6 +54,9 @@ def test_index_is_solo_host() -> None:
     footage = (ROOT / "footage.html").read_text(encoding="utf-8")
     assert "content view" in footage.lower()
     assert "deb" not in footage.lower()
+    app = (ROOT / "js" / "footage-app.js").read_text(encoding="utf-8")
+    assert "StreamerLoop.nextAction" in app
+    assert "dt * speed" in app
 
 
 def test_composer_never_disables_the_input() -> None:

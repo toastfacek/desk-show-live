@@ -36,6 +36,7 @@
 
   const lastT = obj.moments[obj.moments.length - 1].t;
   tEnd.textContent = lastT.toFixed(0) + "s";
+  const speed = Math.max(0.5, Math.min(8, Number(new URLSearchParams(location.search).get("speed") || 1) || 1));
 
   let mediaT = 0;
   let lastStamp = performance.now();
@@ -196,7 +197,7 @@
   function tick(stamp) {
     const dt = Math.min(0.2, (stamp - lastStamp) / 1000);
     lastStamp = stamp;
-    if (!closed) mediaT += dt;
+    if (!closed) mediaT += dt * speed;
     paintMonitor();
     collect();
     drain();
