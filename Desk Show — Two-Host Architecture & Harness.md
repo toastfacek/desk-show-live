@@ -4,7 +4,7 @@
 
 **Status:** Architecture, agreed in conversation 30 Aug 2026 · **Owner:** Jesse
 
-**See also:** `Agentic Live Streaming Harness — Plan.md` — who is in charge if agents run the show. `OBS Harness — TDD.md` — public runner (OBS beside us, fake clips, $0). `Live Sockets — TDD (text API + fal H3).md` — their text key and fal key, later. None of these replace this file.
+**See also:** `Agentic Live Streaming Harness — Plan.md` — who is in charge if agents run the show. `OBS Harness — TDD.md` — public runner (OBS beside us, fake clips, $0). `Live Sockets — TDD (text API + fal H3).md` — their text key and fal key, later. `Desk Show — Embodied Agent Podcast.md` — 2 Sep 2026 proposal to take fal off the live path and put HostMind + face UI in the wells. None of these replace this file until that proposal is accepted.
 
 This supersedes parts of the two earlier docs. Read the amendment list in §1 before trusting anything in "H3 Max Spec + Review + Drift Plan", the "MVP TDD", or the "Conductor Layer Brief". Everything not amended still stands.
 

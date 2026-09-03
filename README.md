@@ -2,6 +2,8 @@
 
 **Current lock: [`SHOW.md`](SHOW.md).** Solo PHASEONE[lol], chat as the other voice, Twitter list until runway. Record only.
 
+**Live-path proposal (2 Sep 2026):** fal as the live performer is a dead end. Hosts become chat agents with a face UI and TTS; the desk frame stays. See [`Desk Show — Embodied Agent Podcast.md`](<Desk Show — Embodied Agent Podcast.md>).
+
 | Piece | Path |
 | :---- | :---- |
 | Current show | [`SHOW.md`](SHOW.md) |

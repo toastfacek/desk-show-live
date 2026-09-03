@@ -10,6 +10,7 @@ Read this first if you have not read the other files. The other files assume you
 
 **Parent docs**
 
+- `Desk Show — Embodied Agent Podcast.md` — 2 Sep 2026 proposal: kill fal on the live path; HostMind + face UI + TTS occupy the host wells. If accepted, that doc amends the clip-camera assumptions in §2.3 / §11.2 for Runtime’s own hosts. The harness types in §17.4 (source / well / layout / hold) stay.
 - `Desk Show — Two-Host Architecture & Harness.md` — current show design. Still in force. This plan sits on top of it.
 - `Desk Show — Conductor Layer Brief.md` — who is allowed to know what. The permission rules here are the same idea, with fewer job titles.
 - `Desk Show — Character & Set Bible.md` and `studio.yaml` — what the hosts and set look like. Not needed to review this plan.
