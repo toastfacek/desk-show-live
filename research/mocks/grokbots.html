@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grokbot faces — mouthless talk mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --paper: #eceaf1;
+    --ink: #2a2740;
+    --mute: #7a7590;
+    --line: #b8b3c9;
+    --amber: #f0a12a;
+    --amber-deep: #c47a10;
+    --teal: #2cb8c2;
+    --teal-deep: #1a7f88;
+    --char: #2c2a36;
+    --cream: #f4f0e6;
+    --well: #f7f6fb;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font: 15px/1.45 "IBM Plex Sans", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 20% 0%, #fff 0, transparent 40%),
+      var(--paper);
+  }
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 28px 24px 64px;
+  }
+  h1 {
+    font: 700 28px/1.1 "IBM Plex Sans", sans-serif;
+    letter-spacing: -0.03em;
+    margin: 0 0 6px;
+  }
+  .lede { color: var(--mute); max-width: 62ch; margin: 0 0 22px; }
+  .stage {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin: 0 0 22px;
+  }
+  .well {
+    background: var(--well);
+    border: 1px dashed var(--line);
+    border-radius: 28px;
+    min-height: 420px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .well:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .tag {
+    position: absolute;
+    top: 16px;
+    left: 18px;
+    font: 600 11px/1 "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mute);
+  }
+  .state {
+    position: absolute;
+    bottom: 16px;
+    left: 18px;
+    font: 500 12px/1 "IBM Plex Mono", ui-monospace, monospace;
+    color: var(--mute);
+  }
+  .bot { width: 220px; height: 260px; overflow: visible; }
+  .rig {
+    transform-box: fill-box;
+    transform-origin: 50% 78%;
+  }
+  .eyes { transform-box: fill-box; transform-origin: 50% 50%; }
+
+  .bot.idle .rig { animation: breathe 3.4s ease-in-out infinite; }
+  .bot.talking .rig { animation: talk 0.16s ease-in-out infinite; }
+  .bot.talking .eyes { animation: talk-eyes 0.16s ease-in-out infinite; }
+  .bot.thinking .rig { animation: think-bob 1.8s ease-in-out infinite; }
+  .bot.listening .rig { animation: breathe 4.2s ease-in-out infinite; }
+  .bot.laugh .rig { animation: laugh 0.28s ease-in-out infinite; }
+
+  .bot.blink .eye { animation: blink 0.16s steps(2, end) 1; }
+
+  .bot.happy .eye { ry: 18; }
+  .bot.skeptical .left-eye { transform: translateY(-6px); }
+  .bot.skeptical .right-eye { transform: translateY(4px) scaleY(0.78); }
+  .bot.thinking .eye { ry: 7; }
+  .bot.laugh .eye { ry: 6; }
+
+  @keyframes breathe {
+    0%, 100% { transform: translateY(0) scale(1, 1); }
+    50% { transform: translateY(-5px) scale(1.015, 0.985); }
+  }
+  @keyframes talk {
+    0%, 100% { transform: translateY(0) scale(1, 1); }
+    35% { transform: translateY(5px) scale(1.055, 0.90); }
+    70% { transform: translateY(-4px) scale(0.97, 1.07); }
+  }
+  @keyframes talk-eyes {
+    0%, 100% { transform: scaleY(1); }
+    40% { transform: scaleY(0.78); }
+    75% { transform: scaleY(1.08); }
+  }
+  @keyframes think-bob {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50% { transform: translateY(-8px) rotate(4deg); }
+  }
+  @keyframes laugh {
+    0%, 100% { transform: rotate(-9deg) scale(1.02, 0.96); }
+    50% { transform: rotate(9deg) scale(0.98, 1.05); }
+  }
+  @keyframes blink {
+    50% { transform: scaleY(0.08); }
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 18px;
+  }
+  button {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font: 600 13px/1 "IBM Plex Sans", sans-serif;
+    cursor: pointer;
+  }
+  button[aria-pressed="true"] {
+    background: var(--char);
+    color: #fff;
+    border-color: var(--char);
+  }
+  code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.92em; }
+  .notes {
+    color: var(--mute);
+    font-size: 14px;
+    max-width: 70ch;
+  }
+  .notes dt { color: var(--ink); font-weight: 650; margin-top: 12px; }
+  .notes dd { margin: 4px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Two mouthless grokbots</h1>
+  <p class="lede">
+    Steal from Broderick’s ROAM characters: primitive bodies, pill eyes, no mouth.
+    Talk is squash-and-stretch plus an eye pulse — not lip sync.
+    Click a well, or run the podcast demo.
+  </p>
+
+  <div class="controls" role="toolbar" aria-label="Performance">
+    <button type="button" data-act="podcast" aria-pressed="false">Podcast demo</button>
+    <button type="button" data-act="idle">Idle</button>
+    <button type="button" data-act="talk-left">PHASEONE talks</button>
+    <button type="button" data-act="talk-right">deb talks</button>
+    <button type="button" data-act="think">Thinking</button>
+    <button type="button" data-act="laugh">Laugh</button>
+    <button type="button" data-act="skeptical">Skeptical</button>
+  </div>
+
+  <div class="stage">
+    <section class="well" id="well-a" tabindex="0" data-who="a">
+      <span class="tag">PHASEONE[lol]</span>
+      <svg class="bot idle" id="bot-a" viewBox="0 0 220 260" aria-hidden="true">
+        <g class="rig">
+          <ellipse class="body" cx="110" cy="148" rx="78" ry="78" fill="#2c2a36"/>
+          <ellipse cx="110" cy="148" rx="78" ry="78" fill="none" stroke="#3d3a4a" stroke-width="2" stroke-dasharray="5 7"/>
+          <g class="eyes">
+            <rect class="eye left-eye" x="74" y="118" width="26" height="52" rx="13" ry="13" fill="#f0a12a"/>
+            <rect class="eye right-eye" x="120" y="118" width="26" height="52" rx="13" ry="13" fill="#f0a12a"/>
+          </g>
+        </g>
+      </svg>
+      <span class="state" id="state-a">idle</span>
+    </section>
+
+    <section class="well" id="well-b" tabindex="0" data-who="b">
+      <span class="tag">deb</span>
+      <svg class="bot idle" id="bot-b" viewBox="0 0 220 260" aria-hidden="true">
+        <g class="rig">
+          <rect class="body" x="68" y="58" width="84" height="168" rx="42" fill="#f4f0e6" stroke="#d9d2c2" stroke-width="2"/>
+          <g class="eyes">
+            <rect class="eye left-eye" x="82" y="92" width="22" height="44" rx="11" ry="11" fill="#2cb8c2"/>
+            <rect class="eye right-eye" x="116" y="92" width="22" height="44" rx="11" ry="11" fill="#2cb8c2"/>
+          </g>
+        </g>
+      </svg>
+      <span class="state" id="state-b">idle</span>
+    </section>
+  </div>
+
+  <dl class="notes">
+    <dt>What this is</dt>
+    <dd>A face runtime sketch, not Broderick’s files. Opacity/Zoah do not ship a character SDK. The tweet is the taste: sphere + tall capsule, two pills for a face, construction-line cuteness, talk without a jaw.</dd>
+    <dt>Talk without lips</dt>
+    <dd>A <code>talking</code> class squash-stretches the body at ~6 Hz and pulses the eyes. Drive it with TTS amplitude or a boolean. No visemes.</dd>
+    <dt>Code we can actually use</dt>
+    <dd>This file. Later: Rive if a designer rigs the same inputs (<code>isTalking</code>, <code>emotion</code>, <code>audioLevel</code>). FluxGarage RoboEyes / Grobot_Animations for the eye-mood API. Zdog if we want a real 3D equator on the sphere. Do not import Open-LLM-VTuber or a photoreal avatar.</dd>
+  </dl>
+</main>
+<script>
+  const bots = {
+    a: document.getElementById("bot-a"),
+    b: document.getElementById("bot-b"),
+  };
+  const labels = {
+    a: document.getElementById("state-a"),
+    b: document.getElementById("state-b"),
+  };
+  const moods = ["idle", "talking", "thinking", "listening", "laugh", "happy", "skeptical"];
+  let podcastTimer = null;
+
+  function clearMood(el) {
+    el.classList.remove(...moods);
+  }
+
+  function setPair(a, b) {
+    clearMood(bots.a);
+    clearMood(bots.b);
+    bots.a.classList.add(a);
+    bots.b.classList.add(b);
+    labels.a.textContent = a;
+    labels.b.textContent = b;
+  }
+
+  function blink(who) {
+    const el = bots[who];
+    el.classList.remove("blink");
+    void el.offsetWidth;
+    el.classList.add("blink");
+  }
+
+  function stopPodcast() {
+    if (podcastTimer) {
+      clearInterval(podcastTimer);
+      podcastTimer = null;
+    }
+    document.querySelector('[data-act="podcast"]').setAttribute("aria-pressed", "false");
+  }
+
+  document.querySelectorAll("[data-act]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const act = button.dataset.act;
+      if (act !== "podcast") stopPodcast();
+      if (act === "idle") setPair("idle", "idle");
+      if (act === "talk-left") setPair("talking", "listening");
+      if (act === "talk-right") setPair("listening", "talking");
+      if (act === "think") setPair("thinking", "listening");
+      if (act === "laugh") setPair("laugh", "laugh");
+      if (act === "skeptical") setPair("skeptical", "happy");
+      if (act === "podcast") {
+        const on = button.getAttribute("aria-pressed") === "true";
+        if (on) {
+          stopPodcast();
+          setPair("idle", "idle");
+          return;
+        }
+        button.setAttribute("aria-pressed", "true");
+        let left = true;
+        setPair("talking", "listening");
+        podcastTimer = setInterval(() => {
+          left = !left;
+          if (left) setPair("talking", "listening");
+          else setPair("listening", "talking");
+        }, 1600);
+      }
+    });
+  });
+
+  document.querySelectorAll(".well").forEach((well) => {
+    well.addEventListener("click", () => {
+      stopPodcast();
+      const who = well.dataset.who;
+      const other = who === "a" ? "b" : "a";
+      const speaking = bots[who].classList.contains("talking");
+      if (speaking) setPair("idle", "idle");
+      else if (who === "a") setPair("talking", "listening");
+      else setPair("listening", "talking");
+      blink(other);
+    });
+  });
+
+  setInterval(() => {
+    blink(Math.random() < 0.5 ? "a" : "b");
+  }, 2800);
+</script>
+</body>
+</html>
