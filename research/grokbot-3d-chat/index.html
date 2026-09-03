@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PHASEONE · 3D grokbot chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root {
+      --ink: #0b0a08;
+      --panel: #15130f;
+      --panel-2: #1e1b16;
+      --line: #2a2620;
+      --bone: #f4f1ea;
+      --bone-2: #ada69a;
+      --bone-3: #6b655c;
+      --lemon: #d4e04a;
+      --amber: #f0a12a;
+      --char: #2c2a36;
+      --display: Archivo, "Helvetica Neue", sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--ink); color: var(--bone); }
+    body {
+      font: 400 15px/1.45 var(--display);
+      letter-spacing: -0.01em;
+    }
+    .desk {
+      height: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+      min-height: 100vh;
+    }
+    .well {
+      position: relative;
+      background:
+        radial-gradient(ellipse at 42% 38%, rgba(240, 161, 42, 0.16), transparent 42%),
+        radial-gradient(ellipse at 50% 100%, rgba(212, 224, 74, 0.06), transparent 40%),
+        linear-gradient(180deg, #17151c 0%, #0c0b10 100%);
+      overflow: hidden;
+      min-height: 420px;
+    }
+    #stage {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+    #stage:active { cursor: grabbing; }
+    .tag, .face-state, .hint {
+      position: absolute;
+      font: 500 11px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--bone-3);
+      pointer-events: none;
+    }
+    .tag { top: 22px; left: 24px; color: var(--bone-2); }
+    .face-state {
+      top: 22px;
+      right: 24px;
+      color: var(--amber);
+    }
+    .face-state[data-emotion="thinking"] { color: var(--lemon); }
+    .face-state[data-emotion="talking"] { color: var(--amber); }
+    .face-state[data-emotion="laugh"] { color: var(--lemon); }
+    .hint { bottom: 88px; left: 24px; letter-spacing: 0.08em; }
+    .spoken {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 24px;
+      margin: 0;
+      font: 500 18px/1.3 var(--display);
+      font-stretch: 90%;
+      max-width: 46ch;
+      color: var(--bone);
+    }
+    .moods {
+      position: absolute;
+      left: 24px;
+      bottom: 118px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: 70%;
+    }
+    .moods button, .samples button, #send, #mute {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--bone);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font: 500 12px/1 var(--mono);
+      letter-spacing: 0.04em;
+      cursor: pointer;
+    }
+    .moods button:hover, .samples button:hover { border-color: var(--bone-3); }
+    #mute { position: absolute; top: 16px; right: 24px; }
+    .chat {
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      border-left: 1px solid var(--line);
+      min-width: 0;
+    }
+    .chat-head {
+      padding: 18px 20px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .chat-head h1 {
+      margin: 0 0 4px;
+      font: 700 15px/1.1 var(--display);
+      font-stretch: 88%;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    .chat-head p, .meta {
+      margin: 0;
+      color: var(--bone-3);
+      font: 400 11px/1.4 var(--mono);
+    }
+    #log {
+      list-style: none;
+      margin: 0;
+      padding: 16px 18px 8px;
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .msg p { margin: 4px 0 0; }
+    .who {
+      font: 600 10px/1 var(--mono);
+      letter-spacing: 0.14em;
+      color: var(--bone-3);
+    }
+    .msg-host .who { color: var(--amber); }
+    .msg-chat .who { color: var(--lemon); }
+    .msg-chat { align-self: stretch; padding-left: 18px; border-left: 2px solid var(--lemon); }
+    .msg-host { padding-left: 18px; border-left: 2px solid var(--amber); }
+    .composer {
+      display: flex;
+      gap: 8px;
+      padding: 14px;
+      border-top: 1px solid var(--line);
+    }
+    #comment {
+      flex: 1;
+      min-width: 0;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--bone);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: 400 14px/1.3 var(--display);
+    }
+    #comment:focus { outline: 1px solid var(--lemon); }
+    #send {
+      background: var(--lemon);
+      color: var(--ink);
+      border-color: var(--lemon);
+      font-weight: 600;
+    }
+    #send:disabled { opacity: 0.45; cursor: wait; }
+    .samples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 0 14px 14px;
+    }
+    .hud {
+      padding: 0 20px 16px;
+      color: var(--bone-3);
+      font: 400 10px/1.45 var(--mono);
+      word-break: break-word;
+    }
+    .note {
+      padding: 0 20px 16px;
+      color: var(--bone-3);
+      font-size: 12px;
+    }
+    @media (max-width: 860px) {
+      .desk { grid-template-columns: 1fr; grid-template-rows: minmax(380px, 52vh) 1fr; }
+      .chat { border-left: 0; border-top: 1px solid var(--line); }
+      .moods { max-width: 90%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="desk">
+    <section class="well" aria-label="Host well">
+      <span class="tag">PHASEONE[lol]</span>
+      <span class="face-state" id="face-state">listening</span>
+      <canvas id="stage" width="840" height="640">3D grokbot</canvas>
+      <div class="moods" role="toolbar" aria-label="Mood">
+        <button type="button" data-mood="idle">idle</button>
+        <button type="button" data-mood="talking">talking</button>
+        <button type="button" data-mood="thinking">thinking</button>
+        <button type="button" data-mood="listening">listening</button>
+        <button type="button" data-mood="laugh">laugh</button>
+        <button type="button" data-mood="happy">happy</button>
+        <button type="button" data-mood="skeptical">skeptical</button>
+      </div>
+      <p class="hint">drag to turn · equator is live</p>
+      <p class="spoken" id="spoken">Chat is the other voice. Type something.</p>
+    </section>
+    <aside class="chat" aria-label="Chat well">
+      <header class="chat-head">
+        <button type="button" id="mute" aria-pressed="false">Sound on</button>
+        <h1>Chat well</h1>
+        <p>Right third. Not a second host.</p>
+        <p class="meta">brain: <span id="brain-source">stub brain</span></p>
+      </header>
+      <ul id="log"></ul>
+      <p class="hud" id="hud" aria-live="polite"></p>
+      <p class="note">Exploration prototype. Fal stays a printer. The show lock is SHOW.md.</p>
+      <div class="samples">
+        <button type="button" data-sample="lol the privacy take is doing too much">lol privacy</button>
+        <button type="button" data-sample="Who actually posted this, and is the number real?">who posted this?</button>
+        <button type="button" data-sample="Nah I doubt the product even ships.">nah doubt</button>
+      </div>
+      <form class="composer" id="composer">
+        <label class="visually-hidden" for="comment" style="position:absolute;left:-9999px">Comment</label>
+        <input id="comment" name="comment" maxlength="280" autocomplete="off" placeholder="Say the thing">
+        <button type="submit" id="send">Send</button>
+      </form>
+    </aside>
+  </div>
+  <script src="vendor/zdog.dist.min.js"></script>
+  <script src="https://unpkg.com/zdog@1.1.3/dist/zdog.dist.min.js"></script>
+  <script src="js/bus.js"></script>
+  <script src="js/grokbot.js"></script>
+  <script src="js/brain.js"></script>
+  <script src="js/voice.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
