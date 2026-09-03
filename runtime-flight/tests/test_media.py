@@ -266,6 +266,18 @@ def test_rejects_duration_longer_than_h3_window(tmp_path: Path) -> None:
         _run(validate_media(path))
 
 
+def test_validate_accepts_fifteen_second_clip_when_expected(tmp_path: Path) -> None:
+    path = write_h3_clip(tmp_path / "long15.mp4", duration_s=15.0)
+    probe = _run(validate_media(path, expected_duration_s=15))
+    assert 14.7 <= probe.duration_s <= 15.3
+
+
+def test_rejects_five_second_clip_when_fifteen_expected(tmp_path: Path) -> None:
+    path = write_h3_clip(tmp_path / "short5.mp4", duration_s=5.0)
+    with pytest.raises(MediaError, match="duration"):
+        _run(validate_media(path, expected_duration_s=15))
+
+
 def test_rejects_dimensions_other_than_1344x768(tmp_path: Path) -> None:
     path = write_h3_clip(tmp_path / "sd.mp4", width=640, height=480)
     with pytest.raises(MediaError, match="1344|768|dimension"):

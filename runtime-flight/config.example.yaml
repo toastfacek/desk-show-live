@@ -18,7 +18,7 @@ text:
   flight_max_requests: 24
 video:
   endpoint: minimax/h3-max/image-to-video
-  duration_s: 5
+  duration_s: 15
   resolution: 768P
   prompt_expansion_mode: balanced
   safety_checker: true

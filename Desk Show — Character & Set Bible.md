@@ -1,5 +1,7 @@
 # Runtime — Character & Set Bible
 
+**Historical.** The live lock is now solo PHASEONE on `pack-manager/fixtures/hero_solo.png`. See `SHOW.md` and `ASSETS.md`.
+
 **Status:** First draft, for reaction · Companion to "Two-Host Architecture & Harness" (§5)
 
 This page preserves the original reasoning and bake prompts. Root `studio.yaml` is its historical machine-readable companion. Flight runtime truth now comes only from approved, locked Character and Scene Pack v2 exports.

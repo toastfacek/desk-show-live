@@ -266,7 +266,7 @@ def test_load_locked_baseline_rejects_invalid_character_slots(flight_data_dir, s
     with pytest.raises(
         (IntegrityError, ValidationError),
         match=(
-            "exactly two character packs|exact character slots|"
+            "one or two character packs|exact character slots|"
             "manifest file references|character pack metadata|display names"
         ),
     ):

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import json
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal
@@ -204,6 +205,7 @@ def _performer(
     process: Any = None,
     hero_path: Path | None = None,
     trace: list[str] | None = None,
+    duration_s: int = 5,
 ):
     from runtime_flight.performer_fal import FalPerformer
 
@@ -226,7 +228,9 @@ def _performer(
         dest.write_bytes(b"raw-h3")
         return dest
 
-    async def default_process(raw: Path, frame: Path, ready: Path, *, upload: Any) -> ProcessedTake:
+    async def default_process(
+        raw: Path, frame: Path, ready: Path, *, upload: Any, **_kwargs: Any
+    ) -> ProcessedTake:
         if trace is not None:
             trace.extend(["validate", "final_frame", "upload_frame"])
         return _processed(tmp_path, int(ready.stem))
@@ -246,6 +250,7 @@ def _performer(
         hero_path=hero_path or _hero_png(tmp_path / "hero.png"),
         download=download,
         process_take=process,
+        duration_s=duration_s,
     )
     performer._test_uploads = uploads  # type: ignore[attr-defined]
     performer._test_gateway = gateway  # type: ignore[attr-defined]
@@ -345,6 +350,17 @@ def test_h3_arguments_are_exact_and_use_cached_hero_url(tmp_path: Path) -> None:
     ]
 
 
+def test_h3_arguments_use_configured_fifteen_second_duration(tmp_path: Path) -> None:
+    gateway = FakeGateway()
+    performer = _performer(tmp_path, gateway=gateway, duration_s=15)
+
+    async def run() -> None:
+        await performer.start(_request(prompt=PROMPT, anchor="hero"))
+
+    _run(run())
+    assert gateway.submits[0]["duration"] == 15
+
+
 def test_chain_take_uses_exact_anchor_url_without_reupload(tmp_path: Path) -> None:
     uploads: list[Path] = []
 
@@ -433,32 +449,33 @@ def test_reserve_happens_immediately_before_the_single_queue_post(tmp_path: Path
     assert row.arguments_sha256 == arguments_sha256(expected)
 
 
-def test_exactly_one_fal_request_may_be_active(tmp_path: Path) -> None:
+def test_multiple_fal_requests_may_be_active(tmp_path: Path) -> None:
     release = asyncio.Event()
-    entered = asyncio.Event()
+    both_in_submit = asyncio.Event()
+    entered = 0
 
     async def submit(arguments: dict[str, Any]) -> QueueHandle:
-        entered.set()
+        nonlocal entered
+        entered += 1
+        if entered >= 2:
+            both_in_submit.set()
         await release.wait()
         return _handle()
 
     gateway = FakeGateway(submit=submit)
     performer = _performer(tmp_path, gateway=gateway)
-    observed: list[int] = []
 
     async def run() -> None:
         first = performer.start(_request(take=1))
-        await entered.wait()
         second = performer.start(_request(take=2))
-        await asyncio.sleep(0)
-        observed.append(performer.active_requests)
-        observed.append(len(gateway.submits))
+        await both_in_submit.wait()
+        assert performer.active_requests == 2
+        assert gateway.max_inflight == 2
+        assert len(gateway.submits) == 2
         release.set()
         await asyncio.gather(first, second)
 
     _run(run())
-    assert observed == [1, 1]
-    assert gateway.max_inflight == 1
     assert len(gateway.submits) == 2
 
 
@@ -659,6 +676,66 @@ def test_media_failure_is_failed_and_never_returns_ready_paths(tmp_path: Path) -
     assert ready.request_id == REQUEST_ID
     assert meter.ledger.records()[0].final_remote_state == "failed"
     assert performer.consecutive_failures == 1
+
+
+def test_ready_take_records_fal_inference_and_cook_clocks(tmp_path: Path) -> None:
+    from runtime_flight.performer_fal import FalCookTimings, parse_fal_timings, inference_seconds
+
+    assert parse_fal_timings({"timings": {"inference": 2.71, "queue": 0.4}}) == {
+        "inference": 2.71,
+        "queue": 0.4,
+    }
+    assert inference_seconds({"inference": 2.71}) == 2.71
+    assert parse_fal_timings({"video": {"url": VIDEO_URL}}) is None
+
+    async def reconcile(handle: QueueHandle) -> QueueResult:
+        del handle
+        return _completed(
+            {
+                "video": {"url": VIDEO_URL},
+                "timings": {"inference": 2.71},
+            }
+        )
+
+    performer = _performer(tmp_path, gateway=FakeGateway(reconcile=reconcile))
+
+    async def run():
+        return await performer.start(_request())
+
+    ready = _run(run())
+    assert ready.status == "ready"
+    assert isinstance(ready.cook, FalCookTimings)
+    assert ready.cook.t_inference_s == 2.71
+    assert ready.cook.timings == {"inference": 2.71}
+    assert ready.cook.t_submit_s is not None
+    assert ready.cook.t_poll_s is not None
+    assert ready.cook.t_completed_s is not None
+    assert ready.cook.t_download_s is not None
+    assert ready.cook.t_post_s is not None
+    assert ready.cook.t_cook_s is not None
+    log = tmp_path / "logs" / "fal_cook.jsonl"
+    assert log.is_file()
+    row = json.loads(log.read_text(encoding="utf-8").splitlines()[0])
+    assert row["t_inference_s"] == 2.71
+    assert row["status"] == "ready"
+    assert row["duration_s"] == 5
+    timeline = tmp_path / "logs" / "timeline.html"
+    assert timeline.is_file()
+    assert "Flame graph" in timeline.read_text(encoding="utf-8")
+
+
+def test_missing_fal_timings_leave_inference_none(tmp_path: Path) -> None:
+    performer = _performer(tmp_path)
+
+    async def run():
+        return await performer.start(_request())
+
+    ready = _run(run())
+    assert ready.status == "ready"
+    assert ready.cook is not None
+    assert ready.cook.t_inference_s is None
+    assert ready.cook.timings is None
+    assert ready.cook.t_cook_s is not None
 
 
 def test_source_does_not_use_harness_level_spend_check_or_root_scaffold() -> None:

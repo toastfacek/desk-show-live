@@ -54,7 +54,7 @@ class BaselineContext:
     display_names: Mapping[str, str]
     reanchor_every: int
     frame: Mapping[str, Any]
-    characters: tuple[CharacterPackTruth, CharacterPackTruth]
+    characters: tuple[CharacterPackTruth, ...]
     scene: ScenePackTruth
 
     @classmethod
@@ -104,7 +104,7 @@ class BaselineContext:
             display_names=_deep_freeze(manifest["display_names"]),
             reanchor_every=manifest["reanchor_every"],
             frame=_deep_freeze(manifest["frame"]),
-            characters=(characters[0], characters[1]),
+            characters=tuple(characters),
             scene=scene,
         )
 

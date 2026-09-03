@@ -10,6 +10,8 @@ import yaml
 
 from runtime_flight.discuss import DiscussError, run_discuss
 from runtime_flight.stage import StageError
+from runtime_flight.runway import UntilError
+from runtime_flight.tweet_list import TweetListError
 from runtime_flight.config import (
     ConfigError,
     REDACTED,
@@ -23,18 +25,28 @@ from runtime_flight.flight import run_paid_flight, run_rehearsal
 from runtime_flight.stage import run_stage
 from runtime_flight.obs_session import ObsSession
 from runtime_flight.obs_setup import DEFAULT_WATCHDOG_URL
+from runtime_flight.fal_gateway import H3_MAX_TURBO_ENDPOINT
 from runtime_flight.operator import (
     OperatorError,
+    cmd_cook_queue,
     cmd_discuss,
+    cmd_enqueue,
+    cmd_load_list,
     cmd_paid_flight,
+    cmd_prepare_pass,
     cmd_replay,
+    cmd_run_list,
     cmd_segment,
     cmd_setup_obs,
     cmd_stage,
+    cmd_time_fal,
     cmd_verify_flight,
     latest_bundle,
     load_validated_config,
 )
+from runtime_flight.prepare_pass import PREPARE_PASS_RATE_USD_PER_S, run_prepare_pass
+from runtime_flight.time_fal import run_time_fal
+from runtime_flight.timeline import write_timeline
 from runtime_flight.segment import run_segment
 from runtime_flight.preflight import (
     PreflightError,
@@ -60,6 +72,11 @@ def main(
     segment_runner=None,
     discuss_runner=None,
     stage_runner=None,
+    time_fal_runner=None,
+    prepare_pass_runner=None,
+    prepare_queue_runner=None,
+    cook_queue_runner=None,
+    run_list_runner=None,
     http_get=None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="runtime_flight")
@@ -169,6 +186,170 @@ def main(
     _add_paid_args(live_parser)
     live_parser.add_argument("--max-text-requests", type=int, default=24)
 
+    time_fal_parser = subparsers.add_parser(
+        "time-fal",
+        help="Paid sequential 5s H3 cooks. Logs fal timings.inference. No OBS.",
+    )
+    _add_paid_args(time_fal_parser)
+    time_fal_parser.add_argument("--takes", type=int, default=3)
+    time_fal_parser.add_argument("--duration", type=int, default=5)
+    time_fal_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("out"),
+        help="Directory that receives time-fal/<run-id>/.",
+    )
+
+    prepare_parser = subparsers.add_parser(
+        "prepare-pass",
+        help="Cook prepared 5s segments, then concat. No play during cook.",
+    )
+    _add_paid_args(prepare_parser)
+    prepare_parser.add_argument(
+        "--endpoint",
+        default=H3_MAX_TURBO_ENDPOINT,
+        help="H3 image-to-video endpoint. Defaults to H3 Max Turbo.",
+    )
+    prepare_parser.add_argument("--duration", type=int, default=5)
+    prepare_parser.add_argument(
+        "--rate",
+        default=str(PREPARE_PASS_RATE_USD_PER_S),
+        help="768P USD per second. Turbo promo default is 0.01.",
+    )
+    prepare_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("out"),
+        help="Directory that receives prepare-pass/<run-id>/.",
+    )
+    prepare_parser.add_argument(
+        "--queue",
+        nargs="+",
+        type=Path,
+        metavar="DIR",
+        help="3 to 6 staged tweet directories, in show order. Write each, then cook all takes.",
+    )
+    prepare_parser.add_argument(
+        "--turns",
+        type=int,
+        default=3,
+        help="Spoken takes per tweet. 2 or 3. Only used with --queue.",
+    )
+    prepare_parser.add_argument(
+        "--confirm-text-requests",
+        type=int,
+        default=0,
+        help="Writer budget for --queue. Must be at least the queue length.",
+    )
+
+    enqueue_parser = subparsers.add_parser(
+        "enqueue",
+        help="Drop staged tweet directories into the content inbox. No cook.",
+    )
+    enqueue_parser.add_argument(
+        "--inbox",
+        type=Path,
+        required=True,
+        help="Inbox root with pending/claimed/done/dropped.",
+    )
+    enqueue_parser.add_argument(
+        "source_dirs",
+        nargs="+",
+        type=Path,
+        metavar="DIR",
+        help="Staged tweet directories. Producers dissect these; cook-queue dequeues them.",
+    )
+
+    cook_parser = subparsers.add_parser(
+        "cook-queue",
+        help="Dequeue the next dissected tweet and cook until a 45-60s ready buffer. No OBS.",
+    )
+    _add_paid_args(cook_parser)
+    cook_parser.add_argument("--inbox", type=Path, required=True)
+    cook_parser.add_argument(
+        "--ready-buffer-s",
+        type=int,
+        default=50,
+        help="Stop claiming new tweets once ready plus in-flight tape hits 45-60s.",
+    )
+    cook_parser.add_argument("--turns", type=int, default=2)
+    cook_parser.add_argument("--confirm-text-requests", type=int, required=True)
+    cook_parser.add_argument(
+        "--endpoint",
+        default=H3_MAX_TURBO_ENDPOINT,
+        help="H3 image-to-video endpoint. Defaults to H3 Max Turbo.",
+    )
+    cook_parser.add_argument("--duration", type=int, default=5)
+    cook_parser.add_argument(
+        "--rate",
+        default=str(PREPARE_PASS_RATE_USD_PER_S),
+        help="768P USD per second. Turbo promo default is 0.01.",
+    )
+    cook_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("out"),
+        help="Directory that receives cook-queue/<run-id>/.",
+    )
+
+    load_list_parser = subparsers.add_parser(
+        "load-list",
+        help="Login-backed Twitter list → inbox pending. Ingest only, no cook.",
+    )
+    load_list_parser.add_argument("--inbox", type=Path, required=True)
+    load_list_parser.add_argument("--list", dest="list_url", help="https://x.com/i/lists/<id>")
+    load_list_parser.add_argument(
+        "--list-file",
+        type=Path,
+        help="Offline list snapshot: {list_id, tweets:[{url}, ...]}",
+    )
+
+    run_list_parser = subparsers.add_parser(
+        "run-list",
+        help="Load a Twitter list and comment tweet by tweet until runway runs out. No OBS.",
+    )
+    _add_paid_args(run_list_parser)
+    run_list_parser.add_argument("--inbox", type=Path, required=True)
+    run_list_parser.add_argument("--list", dest="list_url", help="https://x.com/i/lists/<id>")
+    run_list_parser.add_argument("--list-file", type=Path)
+    run_list_parser.add_argument(
+        "--until",
+        default=None,
+        help="Optional ISO-8601 stop. Default: keep going until runway (spend, text, or empty list).",
+    )
+    run_list_parser.add_argument("--turns", type=int, default=6)
+    run_list_parser.add_argument(
+        "--chat-file",
+        type=Path,
+        help="JSON chat comments: {comments:[{id, author, text},...]}",
+    )
+    run_list_parser.add_argument("--confirm-text-requests", type=int, required=True)
+    run_list_parser.add_argument(
+        "--endpoint",
+        default=H3_MAX_TURBO_ENDPOINT,
+    )
+    run_list_parser.add_argument("--duration", type=int, default=5)
+    run_list_parser.add_argument(
+        "--rate",
+        default=str(PREPARE_PASS_RATE_USD_PER_S),
+    )
+    run_list_parser.add_argument(
+        "--out",
+        type=Path,
+        default=Path("out"),
+    )
+
+    timeline_parser = subparsers.add_parser(
+        "timeline",
+        help="Render cook waterfall and flame graph HTML from a run directory.",
+    )
+    timeline_parser.add_argument(
+        "--dir",
+        type=Path,
+        required=True,
+        help="time-fal or live work directory (or a fal_cook.jsonl / summary.json).",
+    )
+
     replay_parser = subparsers.add_parser("replay", help="Read a finished evidence bundle. No network.")
     _add_bundle_args(replay_parser)
 
@@ -252,6 +433,93 @@ def main(
             work_dir = Path(payload["work_dir"])
             print((work_dir / "transcript.txt").read_text(encoding="utf-8"), end="")
             return 0
+        if args.command == "timeline":
+            path = write_timeline(args.dir)
+            print(yaml.safe_dump({"timeline_html": str(path)}, sort_keys=False), end="")
+            return 0
+        if args.command == "time-fal":
+            config = load_validated_config(args.config, require_obs=False)
+            payload = cmd_time_fal(
+                config,
+                confirm_spend=args.confirm_spend,
+                takes=args.takes,
+                duration_s=args.duration,
+                run_time_fal=time_fal_runner or run_time_fal,
+                out_dir=args.out,
+            )
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            return 0
+        if args.command == "prepare-pass":
+            config = load_validated_config(args.config, require_obs=False)
+            payload = cmd_prepare_pass(
+                config,
+                confirm_spend=args.confirm_spend,
+                endpoint=args.endpoint,
+                duration_s=args.duration,
+                rate=args.rate,
+                run_prepare_pass=prepare_pass_runner or run_prepare_pass,
+                out_dir=args.out,
+                queue=args.queue,
+                turns=args.turns,
+                confirm_text_requests=args.confirm_text_requests,
+                run_prepare_queue=prepare_queue_runner,
+                http_post=http_post,
+            )
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            return 0
+        if args.command == "enqueue":
+            payload = cmd_enqueue(inbox=args.inbox, source_dirs=list(args.source_dirs))
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            return 0
+        if args.command == "cook-queue":
+            config = load_validated_config(args.config, require_obs=False)
+            payload = cmd_cook_queue(
+                config,
+                confirm_spend=args.confirm_spend,
+                inbox=args.inbox,
+                ready_buffer_s=args.ready_buffer_s,
+                turns=args.turns,
+                confirm_text_requests=args.confirm_text_requests,
+                endpoint=args.endpoint,
+                duration_s=args.duration,
+                rate=args.rate,
+                out_dir=args.out,
+                run_cook_queue=cook_queue_runner,
+                http_post=http_post,
+            )
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            return 0
+        if args.command == "load-list":
+            payload = cmd_load_list(
+                inbox=args.inbox,
+                list_url=args.list_url,
+                list_file=args.list_file,
+                http_get=http_get,
+            )
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            return 0
+        if args.command == "run-list":
+            config = load_validated_config(args.config, require_obs=False)
+            payload = cmd_run_list(
+                config,
+                confirm_spend=args.confirm_spend,
+                inbox=args.inbox,
+                until=args.until,
+                turns=args.turns,
+                confirm_text_requests=args.confirm_text_requests,
+                endpoint=args.endpoint,
+                duration_s=args.duration,
+                rate=args.rate,
+                list_url=args.list_url,
+                list_file=args.list_file,
+                chat_file=args.chat_file,
+                out_dir=args.out,
+                run_orchestrator=run_list_runner,
+                http_get=http_get,
+                http_post=http_post,
+            )
+            print(yaml.safe_dump(payload, sort_keys=False), end="")
+            return 0
         if args.command in {"smoke", "live"}:
             config = _config_with_source(args.config, getattr(args, "source_dir", None))
             session = _session(config, obs_session)
@@ -286,7 +554,15 @@ def main(
                 verify=verify or verify_bundle,
             )
         raise AssertionError(f"unhandled command: {args.command}")
-    except (ConfigError, PreflightError, OperatorError, DiscussError, StageError) as error:
+    except (
+        ConfigError,
+        PreflightError,
+        OperatorError,
+        DiscussError,
+        StageError,
+        TweetListError,
+        UntilError,
+    ) as error:
         config = None
         try:
             if hasattr(args, "config"):

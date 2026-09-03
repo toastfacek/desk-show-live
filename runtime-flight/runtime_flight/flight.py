@@ -18,7 +18,7 @@ from runtime_flight.baseline import BaselineContext
 from runtime_flight.config import RuntimeConfig
 from runtime_flight.evidence import FlightEvidence, write_evidence_bundle
 from runtime_flight.fal_gateway import FalGateway
-from runtime_flight.harness_live import CLIP_DURATION_S, FakeClock, LiveHarness, WallClock
+from runtime_flight.harness_live import FakeClock, LiveHarness, WallClock
 from runtime_flight.obs_session import ObsSession
 from runtime_flight.obs_setup import WATCHDOG_PORT
 from runtime_flight.operator import OperatorError
@@ -57,7 +57,7 @@ class RehearsalPerformer:
         self._active += 1
         arguments = {
             "prompt": request.prompt,
-            "duration": 5,
+            "duration": self.meter.duration_s,
             "resolution": "768P",
             "enable_safety_checker": True,
             "prompt_expansion_mode": "balanced",
@@ -160,16 +160,19 @@ async def _run_rehearsal_async(config: RuntimeConfig, *, out_dir: Path | None) -
     )
     clock = FakeClock()
     player = FakePlayer()
-    player.set_clip_duration(CLIP_DURATION_S)
+    player.set_clip_duration(float(config.video_duration_s))
     harness = LiveHarness(
         clock=clock,
         player=player,
-        pipeline=WriterPipeline(writer, voices=voices),
+        pipeline=WriterPipeline(
+            writer, voices=voices, clip_duration_s=config.video_duration_s
+        ),
         performer=RehearsalPerformer(clock, meter, work_dir),
         meter=meter,
         baseline=baseline,
         package=package,
         target_duration_s=float(config.target_duration_s),
+        clip_duration_s=float(config.video_duration_s),
     )
     await harness.run_simulated(max_t=float(config.target_duration_s))
     write_evidence_bundle(
@@ -269,19 +272,23 @@ async def _run_paid_async(
         harness = LiveHarness(
             clock=live_clock,
             player=live_player,
-            pipeline=WriterPipeline(writer, voices=voices),
+            pipeline=WriterPipeline(
+                writer, voices=voices, clip_duration_s=config.video_duration_s
+            ),
             performer=performer,
             meter=meter,
             baseline=baseline,
             package=package,
             target_duration_s=float(config.target_duration_s),
+            clip_duration_s=float(config.video_duration_s),
             overlay=overlay_server,
             obs_session=session,
             max_attempts=max_fal_submissions,
             sleep=sleep,
         )
         live_player.set_name_bar("host_a", baseline.display_names["BOT1"], "")
-        live_player.set_name_bar("host_b", baseline.display_names["BOT2"], "")
+        if "BOT2" in baseline.display_names:
+            live_player.set_name_bar("host_b", baseline.display_names["BOT2"], "")
         await harness.run_with_obs(max_t=float(config.target_duration_s))
         write_evidence_bundle(
             Path(out_dir or "out/flights"),
@@ -400,13 +407,14 @@ def _build_fal_performer(
     fal_key = os.environ.get("FAL_KEY")
     if not fal_key:
         raise OperatorError("missing required environment variable: FAL_KEY")
-    gateway = FalGateway(fal_key=fal_key)
+    gateway = FalGateway(fal_key=fal_key, endpoint=config.video_endpoint)
     return FalPerformer(
         meter=meter,
         gateway=gateway,
         upload=_fal_upload,
         work_dir=work_dir,
         hero_path=hero_path,
+        duration_s=config.video_duration_s,
     )
 
 

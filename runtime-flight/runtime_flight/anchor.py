@@ -30,3 +30,27 @@ def persist_anchor(
     if previous_frame_url:
         return "chain", previous_frame_url
     return "hero", hero_url
+
+
+def planned_anchor(
+    *,
+    take: int,
+    speaker: str,
+    previous_speaker: str | None,
+    previous_frame_url: str | None,
+    previous_complete: bool,
+    reanchor_every: int,
+    hero_url: str,
+) -> tuple[Anchor, str, bool]:
+    """Plan the next take's picture. available is False while a chain waits."""
+    if take <= 1:
+        return "hero", hero_url, True
+    if previous_speaker is not None and speaker != previous_speaker:
+        return "hero", hero_url, True
+    if reanchor_every > 0 and (take - 1) % reanchor_every == 0:
+        return "hero", hero_url, True
+    if previous_frame_url:
+        return "chain", previous_frame_url, True
+    if not previous_complete:
+        return "chain", "", False
+    return "hero", hero_url, True

@@ -1,5 +1,7 @@
 # TDD — Desk Show MVP (one robot host, fal H3 Max)
 
+**Historical.** Abandoned `run_live.py` prototype. Current lock: `SHOW.md`.
+
 **Status:** Draft for build · **Date:** 29 Aug 2026 · **Owner:** Jesse · **Author:** Claude (from Forge spec \+ 29 Aug Q\&A)
 
 **Parent docs:** "Desk Show — H3 Max Spec \+ Review \+ Drift Plan" (Drive \+ project). This TDD covers only the confirmed first-build slice (one host, simple player, real fal).

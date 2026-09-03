@@ -427,21 +427,35 @@ def test_candidate_requires_existing_versions_and_hero(candidate_setup):
         )
 
 
-@pytest.mark.parametrize(
-    "character_versions",
-    [
-        {"BOT1": ("bot1", 1)},
-        {"BOT2": ("bot2", 1)},
-        {"BOT1": ("bot1", 1), "HOST2": ("bot2", 1)},
-        {
-            "BOT1": ("bot1", 1),
-            "BOT2": ("bot2", 1),
-            "BOT3": ("bot2", 1),
+def test_candidate_accepts_bot1_only(candidate_setup):
+    created = candidate_setup["candidate_service"].create(
+        character_versions={
+            "BOT1": (candidate_setup["bot1"].pack_id, 1),
         },
+        scene_pack_id=candidate_setup["scene"].pack_id,
+        scene_version=1,
+        hero_asset_id=candidate_setup["hero"].id,
+    )
+    assert [item.slot for item in created.character_versions] == ["BOT1"]
+
+
+@pytest.mark.parametrize(
+    ("character_versions", "match"),
+    [
+        ({"BOT2": ("bot2", 1)}, "must contain BOT1"),
+        ({"BOT1": ("bot1", 1), "HOST2": ("bot2", 1)}, "BOT1 and BOT2"),
+        (
+            {
+                "BOT1": ("bot1", 1),
+                "BOT2": ("bot2", 1),
+                "BOT3": ("bot2", 1),
+            },
+            "BOT1 and BOT2",
+        ),
     ],
 )
-def test_candidate_requires_exactly_bot1_and_bot2_slots(
-    candidate_setup, character_versions
+def test_candidate_requires_bot1_and_allows_optional_bot2(
+    candidate_setup, character_versions, match
 ):
     references = {
         "bot1": candidate_setup["bot1"].pack_id,
@@ -452,7 +466,7 @@ def test_candidate_requires_exactly_bot1_and_bot2_slots(
         for slot, (pack_id, version) in character_versions.items()
     }
 
-    with pytest.raises(ValidationError, match="BOT1 and BOT2"):
+    with pytest.raises(ValidationError, match=match):
         candidate_setup["candidate_service"].create(
             character_versions=supplied,
             scene_pack_id=candidate_setup["scene"].pack_id,

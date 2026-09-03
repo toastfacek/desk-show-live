@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Literal, Mapping
 
 from runtime_flight.anchor import persist_anchor
+from runtime_flight.harness_live import DEFAULT_MAX_INFLIGHT
 from runtime_flight.evidence import (
     HOLD_LAYOUTS,
     HOST_LAYOUTS,
@@ -152,6 +153,24 @@ def parse_freeze_intervals(text: str) -> list[tuple[float, float]]:
     return intervals
 
 
+def _max_request_inflight(intervals: Iterable[Mapping[str, Any]]) -> int:
+    events: list[tuple[float, int]] = []
+    for item in intervals:
+        start = item.get("t_start")
+        if start is None:
+            continue
+        events.append((float(start), 1))
+        end = item.get("t_end")
+        events.append((float(end) if end is not None else float("inf"), -1))
+    events.sort(key=lambda item: (item[0], item[1]))
+    current = 0
+    peak = 0
+    for _time, delta in events:
+        current += delta
+        peak = max(peak, current)
+    return peak
+
+
 def interval_overlap(
     start: float, end: float, windows: Iterable[Mapping[str, Any]]
 ) -> bool:
@@ -265,8 +284,16 @@ def verify_bundle(
         fail("aired", f"need at least {MIN_AIRED} aired clips, found {len(aired)}")
     else:
         gates.append("aired_count")
-    if "BOT1" not in speakers or "BOT2" not in speakers:
-        fail("hosts", "both BOT1 and BOT2 must air")
+    required_speakers = {"BOT1"}
+    if isinstance(manifest, dict):
+        host_map = manifest.get("host_map") or {}
+        if isinstance(host_map, dict) and "BOT2" in host_map:
+            required_speakers.add("BOT2")
+    if not required_speakers.issubset(speakers):
+        if required_speakers == {"BOT1"}:
+            fail("hosts", "BOT1 must air")
+        else:
+            fail("hosts", "both BOT1 and BOT2 must air")
     else:
         gates.append("hosts")
 
@@ -369,21 +396,9 @@ def verify_bundle(
         gates.append("hold")
 
     request_intervals = list(flight.get("request_intervals") or [])
-    overlapping = False
-    ordered = sorted(
-        (item for item in request_intervals if item.get("t_start") is not None),
-        key=lambda item: float(item["t_start"]),
-    )
-    for previous, current in zip(ordered, ordered[1:]):
-        prev_end = previous.get("t_end")
-        if prev_end is None:
-            overlapping = True
-            break
-        if float(current["t_start"]) < float(prev_end) - 1e-9:
-            overlapping = True
-            break
-    if overlapping:
-        fail("fal", "fal requests overlapped")
+    peak = _max_request_inflight(request_intervals)
+    if peak > DEFAULT_MAX_INFLIGHT:
+        fail("fal", f"fal inflight peaked at {peak}, cap is {DEFAULT_MAX_INFLIGHT}")
     else:
         gates.append("fal_overlap")
 

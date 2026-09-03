@@ -7,14 +7,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 export PYTHONPATH="$ROOT/pack-manager${PYTHONPATH:+:$PYTHONPATH}"
 
-if [[ ! -f pack-manager/fixtures/hero_wide.png ]]; then
-  echo "missing pack-manager/fixtures/hero_wide.png" >&2
+if [[ ! -f pack-manager/fixtures/hero_solo.png ]]; then
+  echo "missing pack-manager/fixtures/hero_solo.png" >&2
   exit 1
 fi
 
 python3 -m pack_manager.hosts \
   --data-dir pack-manager/data \
-  --hero pack-manager/fixtures/hero_wide.png \
+  --hero pack-manager/fixtures/hero_solo.png \
   | tee /tmp/desk-show-lock-hosts.out
 
 BASELINE_ID="$(head -n1 /tmp/desk-show-lock-hosts.out)"

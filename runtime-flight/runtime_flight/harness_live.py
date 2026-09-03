@@ -9,11 +9,12 @@ from collections.abc import Awaitable, Callable
 from typing import Any, Literal, Protocol
 
 from obs_harness.director import decide
-from runtime_flight.anchor import persist_anchor
+from runtime_flight.anchor import planned_anchor
 from runtime_flight.baseline import BaselineContext
 from runtime_flight.models import SegmentPackage, Thought
 from runtime_flight.performer_fal import ReadyTake, TakeRequest
 from runtime_flight.topic_map import discussion_phase, resolve_topic_map
+from runtime_flight.clip import max_thought_chars
 from runtime_flight.prompt import assemble_prompt
 from runtime_flight.spend import SpendMeter
 from runtime_flight.writer_pipeline import WriterPipeline, WriterPipelineStopped
@@ -24,10 +25,15 @@ STREAM_POLL_INTERVAL_S = 1.0
 HERO_IMAGE_PLACEHOLDER = "hero"
 HOST_LAYOUTS = ("wide", "split", "solo_l", "solo_r")
 DEFAULT_LAYOUT_PLAN = ("split",)
+DEFAULT_MAX_INFLIGHT = 4
 
 
-def remaining_submit_slots(target_duration_s: float, elapsed_s: float) -> int:
-    return max(0, math.floor((target_duration_s - elapsed_s) / CLIP_DURATION_S) - 1)
+def remaining_submit_slots(
+    target_duration_s: float,
+    elapsed_s: float,
+    clip_duration_s: float = CLIP_DURATION_S,
+) -> int:
+    return max(0, math.floor((target_duration_s - elapsed_s) / clip_duration_s) - 1)
 
 
 def writer_phase(
@@ -96,6 +102,7 @@ class LiveHarness:
         overlay: Any | None = None,
         obs_session: Any | None = None,
         max_attempts: int | None = None,
+        max_inflight: int = DEFAULT_MAX_INFLIGHT,
         sleep: SleepFn | None = None,
     ) -> None:
         self.clock = clock
@@ -111,6 +118,9 @@ class LiveHarness:
         self.overlay = overlay
         self.obs_session = obs_session
         self.max_attempts = max_attempts
+        if max_inflight < 1:
+            raise ValueError("max_inflight must be at least 1")
+        self.max_inflight = max_inflight
         self._sleep = sleep
         self.started_at = clock.monotonic()
         self.baseline_id = baseline.baseline_id
@@ -124,7 +134,7 @@ class LiveHarness:
         self.after_step = None
         self.flags = {"hold": False, "panic": False}
         self.ready: list[ReadyTake] = []
-        self.cooking: dict[str, Any] | None = None
+        self.cooking: list[dict[str, Any]] = []
         self.on_air: dict[str, Any] | None = None
         self.next_take = 1
         self.layout_i = 0
@@ -149,7 +159,10 @@ class LiveHarness:
         return sum(1 for row in self.log if row.get("t_on_air") is not None)
 
     def remaining_slots(self) -> int:
-        return remaining_submit_slots(self.target_duration_s, self.elapsed_s)
+        budget = remaining_submit_slots(
+            self.target_duration_s, 0.0, clip_duration_s=self.clip_duration_s
+        )
+        return max(0, budget - len(self.requests))
 
     def current_writer_phase(self) -> Literal["open", "develop", "close"]:
         topic_map = resolve_topic_map(self.package)
@@ -165,6 +178,10 @@ class LiveHarness:
 
     def snapshot(self) -> dict:
         thought = self.pipeline.peek_ready()
+        jobs = [
+            {"take": job["take"], "submitted_at": job["submitted_at"]}
+            for job in self.cooking
+        ]
         return {
             "t": self.t,
             "on_air": self.on_air,
@@ -176,17 +193,11 @@ class LiveHarness:
                     "line": item.line,
                     "duration_s": self.clip_duration_s,
                 }
-                for item in self.ready
+                for item in self._airable_now()
             ],
-            "cooking": (
-                {
-                    "take": self.cooking["take"],
-                    "submitted_at": self.cooking["submitted_at"],
-                }
-                if self.cooking
-                else None
-            ),
-            "chain_ready": self.cooking is None,
+            "cooking": jobs or None,
+            "max_inflight": self.max_inflight,
+            "chain_ready": self._next_anchor_available(thought),
             "next_line": (
                 {"speaker": thought.speaker, "text": thought.text}
                 if thought is not None
@@ -220,6 +231,7 @@ class LiveHarness:
             beat = decide(self.snapshot())
             self.beats.append(beat)
             await self._execute(beat)
+        await self._fill_buffer()
         if self.after_step is not None:
             self.after_step()
 
@@ -276,8 +288,8 @@ class LiveHarness:
     def _next_event_t(self) -> float:
         now = self.t
         next_t = now + POLL_INTERVAL_S
-        if self.cooking is not None:
-            ready_at = self.cooking.get("ready_at")
+        for job in self.cooking:
+            ready_at = job.get("ready_at")
             if ready_at is not None:
                 next_t = min(next_t, float(ready_at))
         if self.on_air is not None:
@@ -442,47 +454,158 @@ class LiveHarness:
             if self.pipeline.stopped:
                 self._stop_safely("writer down")
 
-    async def _collect_cooking(self) -> None:
-        if self.cooking is None:
-            return
-        task: asyncio.Task[ReadyTake] = self.cooking["task"]
-        if not task.done():
-            await asyncio.sleep(0)
-        if not task.done():
-            if self.on_air and self.on_air.get("kind") == "host":
-                ends = self.on_air.get("ends_at")
-                if ends is not None and self.t + 1e-9 >= ends:
-                    self.cooking["missed_cut"] = True
-            return
-        ready = task.result()
-        take = self.cooking["take"]
-        missed = bool(self.cooking.get("missed_cut"))
-        self.cooking = None
-        if ready.status == "dropped_422":
-            await self._handle_422(ready)
-            return
-        if ready.status != "ready":
-            self.events.append(
+    async def _fill_buffer(self) -> None:
+        while self._can_queue_another():
+            thought = self.pipeline.peek_ready()
+            if thought is None:
+                await self._ensure_writer_ahead()
+                thought = self.pipeline.peek_ready()
+            if thought is None:
+                return
+            if not self._next_anchor_available(thought):
+                return
+            await self._submit(
                 {
-                    "t": self.t,
-                    "kind": "performer_failed",
-                    "take": take,
-                    "status": ready.status,
+                    "take": self.next_take,
+                    "line": thought.text,
+                    "speaker": thought.speaker,
                 }
             )
-            if self.performer.stop_requested:
-                self._stop_safely("performer down")
+
+    def _can_queue_another(self) -> bool:
+        if self._stop_submits or self.spend_policy != "normal":
+            return False
+        if len(self.cooking) >= self.max_inflight:
+            return False
+        if self.remaining_slots() == 0 or not self._can_reserve():
+            return False
+        thought = self.pipeline.peek_ready()
+        if thought is None:
+            return not self.pipeline.stopped
+        return self._next_anchor_available(thought)
+
+    def _playable_ready(self) -> list[ReadyTake]:
+        items = sorted(self.ready, key=lambda item: item.take)
+        if not items:
+            return []
+        first = items[0]
+        if any(job["take"] < first.take for job in self.cooking):
+            return []
+        return items
+
+    def _successor_ready(self, take: int) -> bool:
+        return any(item.take == take + 1 for item in self.ready)
+
+    def _must_air_without_successor(self, take: int) -> bool:
+        if self._stop_submits or self.remaining_slots() == 0 or not self._can_reserve():
+            return True
+        if self.pipeline.stopped and self.pipeline.peek_ready() is None:
+            return True
+        return False
+
+    def _airable_now(self) -> list[ReadyTake]:
+        """Clips the director may put on air this beat.
+
+        Play order still waits for a lower take. From standby, hold the first
+        ready take until its successor is also ready so the on-air clip has a
+        hard-cut partner waiting. After a host clip ends, air the successor
+        immediately even if the one after that is still cooking.
+        """
+        playable = self._playable_ready()
+        if not playable:
+            return []
+        first = playable[0]
+        on_air = self.on_air or {}
+        if on_air.get("kind") == "host":
+            return playable
+        if self._successor_ready(first.take) or self._must_air_without_successor(
+            first.take
+        ):
+            return playable
+        return []
+
+    def _next_anchor_available(self, thought: Thought | None) -> bool:
+        if thought is None:
+            return False
+        _anchor, _url, available = self._plan_anchor(self.next_take, thought.speaker)
+        return available
+
+    def _plan_anchor(
+        self, take: int, speaker: str
+    ) -> tuple[Literal["hero", "chain"], str, bool]:
+        previous_speaker, previous_frame_url, previous_complete = self._previous_picture(
+            take
+        )
+        return planned_anchor(
+            take=take,
+            speaker=speaker,
+            previous_speaker=previous_speaker,
+            previous_frame_url=previous_frame_url,
+            previous_complete=previous_complete,
+            reanchor_every=self.baseline.reanchor_every,
+            hero_url=HERO_IMAGE_PLACEHOLDER,
+        )
+
+    def _previous_picture(
+        self, take: int
+    ) -> tuple[str | None, str | None, bool]:
+        completed = self._completed.get(take - 1)
+        if completed is not None:
+            return completed.speaker, completed.frame_url, True
+        submitted = next((req for req in self.requests if req.take == take - 1), None)
+        if submitted is not None:
+            return submitted.speaker, None, False
+        return None, None, False
+
+    async def _collect_cooking(self) -> None:
+        if not self.cooking:
             return
-        self._completed[take] = ready
-        self.ready.append(ready)
-        row = self._row(take)
-        row["t_ready"] = self.t
-        row["status"] = "late" if missed else "ready"
-        row["clip"] = str(ready.clip_path) if ready.clip_path else None
-        row["frame_url"] = ready.frame_url
-        row["anchor"] = ready.anchor
-        row["request_id"] = ready.request_id
-        self.events.append({"t": self.t, "kind": "ready", "take": take})
+        await asyncio.sleep(0)
+        still: list[dict[str, Any]] = []
+        finished: list[dict[str, Any]] = []
+        host_ended = False
+        if self.on_air and self.on_air.get("kind") == "host":
+            ends = self.on_air.get("ends_at")
+            host_ended = ends is not None and self.t + 1e-9 >= ends
+        for job in self.cooking:
+            task: asyncio.Task[ReadyTake] = job["task"]
+            if not task.done():
+                if host_ended:
+                    job["missed_cut"] = True
+                still.append(job)
+                continue
+            finished.append(job)
+        self.cooking = still
+        for job in finished:
+            ready = job["task"].result()
+            take = job["take"]
+            missed = bool(job.get("missed_cut"))
+            if ready.status == "dropped_422":
+                await self._handle_422(ready)
+                continue
+            if ready.status != "ready":
+                self.events.append(
+                    {
+                        "t": self.t,
+                        "kind": "performer_failed",
+                        "take": take,
+                        "status": ready.status,
+                    }
+                )
+                if self.performer.stop_requested:
+                    self._stop_safely("performer down")
+                continue
+            self._completed[take] = ready
+            self.ready.append(ready)
+            row = self._row(take)
+            row["t_ready"] = self.t
+            row["status"] = "late" if missed else "ready"
+            row["clip"] = str(ready.clip_path) if ready.clip_path else None
+            row["frame_url"] = ready.frame_url
+            row["anchor"] = ready.anchor
+            row["request_id"] = ready.request_id
+            _copy_cook(row, ready.cook)
+            self.events.append({"t": self.t, "kind": "ready", "take": take})
 
     async def _handle_422(self, ready: ReadyTake) -> None:
         thought = self._thought_by_take.get(ready.take)
@@ -515,14 +638,7 @@ class LiveHarness:
         if ends is not None and self.t + 1e-9 >= ends:
             return True
         if self.on_air.get("kind") != "host":
-            if self.ready:
-                return True
-            if (
-                self.cooking is None
-                and self.pipeline.peek_ready() is not None
-                and self.spend_policy == "normal"
-            ):
-                return True
+            return bool(self._airable_now())
         return False
 
     async def _execute(self, beat: dict) -> None:
@@ -583,30 +699,38 @@ class LiveHarness:
             )
         elif beat.get("submit"):
             self.on_air = {
-                "kind": "card" if beat["layout"] == "card_full" else "hold",
+                "kind": "card" if beat["layout"] == "card_full" else "wait",
                 "take": None,
                 "ends_at": None,
+                "layout": beat["layout"],
             }
         else:
             if beat.get("why") == "panic" or (
                 beat["layout"] == "hold"
                 and not self.ready
-                and self.cooking is None
+                and not self.cooking
                 and self._stop_submits
             ):
                 self.done = True
+            if beat["layout"] in HOST_LAYOUTS:
+                kind = "wait"
+            elif beat["layout"] == "hold":
+                kind = "hold"
+            else:
+                kind = "card"
             self.on_air = {
-                "kind": "hold" if beat["layout"] == "hold" else "card",
+                "kind": kind,
                 "take": None,
                 "ends_at": None,
+                "layout": beat["layout"],
             }
 
         if beat.get("submit"):
             await self._submit(beat["submit"])
 
     async def _submit(self, submit: dict) -> None:
-        if self.cooking is not None:
-            raise RuntimeError("one performer request max")
+        if len(self.cooking) >= self.max_inflight:
+            raise RuntimeError("performer inflight cap")
         if submit.get("take") != self.next_take:
             raise RuntimeError("director take drifted from harness next_take")
         thought = self.pipeline.ready.get_nowait()
@@ -622,18 +746,18 @@ class LiveHarness:
         if callable(delay_for):
             delay = float(delay_for(request.take))
         task = self.performer.start(request)
-        if self.performer.active_requests > 1:
-            raise RuntimeError("one performer request max")
         self.requests.append(request)
         self._thought_by_take[request.take] = thought
-        self.cooking = {
-            "take": request.take,
-            "task": task,
-            "submitted_at": self.t,
-            "ready_at": self.t + delay,
-            "missed_cut": False,
-            "request": request,
-        }
+        self.cooking.append(
+            {
+                "take": request.take,
+                "task": task,
+                "submitted_at": self.t,
+                "ready_at": self.t + delay,
+                "missed_cut": False,
+                "request": request,
+            }
+        )
         row = self._row(request.take)
         row["line"] = request.line
         row["speaker"] = request.speaker
@@ -656,28 +780,22 @@ class LiveHarness:
         speaker: Literal["BOT1", "BOT2"] = submit["speaker"]
         line = submit["line"]
         take = int(submit["take"])
-        anchor, image_url = self._anchor_for(take, speaker)
+        anchor, image_url, available = self._plan_anchor(take, speaker)
+        if not available:
+            raise RuntimeError("chain take submitted before the previous frame existed")
         return TakeRequest(
             take=take,
             speaker=speaker,
             line=line,
-            prompt=assemble_prompt(self.baseline, speaker, line),
+            prompt=assemble_prompt(
+                self.baseline,
+                speaker,
+                line,
+                max_line_chars=max_thought_chars(int(self.clip_duration_s)),
+            ),
             anchor=anchor,
             image_url=image_url,
             baseline_id=self.baseline_id,
-        )
-
-    def _anchor_for(
-        self, take: int, speaker: str
-    ) -> tuple[Literal["hero", "chain"], str]:
-        previous = self._completed.get(take - 1)
-        return persist_anchor(
-            take=take,
-            speaker=speaker,
-            previous_speaker=previous.speaker if previous is not None else None,
-            previous_frame_url=previous.frame_url if previous is not None else None,
-            reanchor_every=self.baseline.reanchor_every,
-            hero_url=HERO_IMAGE_PLACEHOLDER,
         )
 
     def _mapped_speaking(self, speaker: str | None) -> str | None:
@@ -715,6 +833,44 @@ class LiveHarness:
             "frame_url": None,
             "prompt": None,
             "request_id": None,
+            "t_inference_s": None,
+            "fal_timings": None,
+            "t_submit_s": None,
+            "t_poll_s": None,
+            "t_first_progress_s": None,
+            "t_completed_s": None,
+            "t_download_s": None,
+            "t_post_s": None,
+            "t_cook_s": None,
+            "t_hero_s": None,
+            "t_result_s": None,
+            "t_validate_s": None,
+            "t_extract_s": None,
+            "t_upload_frame_s": None,
+            "t_copy_s": None,
+            "status_samples": None,
         }
         self.log.append(row)
         return row
+
+
+def _copy_cook(row: dict[str, Any], cook: Any) -> None:
+    if cook is None:
+        return
+    payload = cook.as_dict() if hasattr(cook, "as_dict") else {}
+    row["t_inference_s"] = payload.get("t_inference_s")
+    row["fal_timings"] = payload.get("timings")
+    row["t_submit_s"] = payload.get("t_submit_s")
+    row["t_poll_s"] = payload.get("t_poll_s")
+    row["t_first_progress_s"] = payload.get("t_first_progress_s")
+    row["t_completed_s"] = payload.get("t_completed_s")
+    row["t_download_s"] = payload.get("t_download_s")
+    row["t_post_s"] = payload.get("t_post_s")
+    row["t_cook_s"] = payload.get("t_cook_s")
+    row["t_hero_s"] = payload.get("t_hero_s")
+    row["t_result_s"] = payload.get("t_result_s")
+    row["t_validate_s"] = payload.get("t_validate_s")
+    row["t_extract_s"] = payload.get("t_extract_s")
+    row["t_upload_frame_s"] = payload.get("t_upload_frame_s")
+    row["t_copy_s"] = payload.get("t_copy_s")
+    row["status_samples"] = payload.get("status_samples")

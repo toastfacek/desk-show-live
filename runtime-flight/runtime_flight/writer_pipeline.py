@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import Literal
 
+from runtime_flight.clip import speech_target_s
 from runtime_flight.models import CoverageState, HostVoice, SegmentPackage, Thought
 from runtime_flight.topic_map import advance_coverage, resolve_topic_map
 from runtime_flight.writer import Writer, WriterError
@@ -22,9 +23,11 @@ class WriterPipeline:
         self,
         writer: Writer,
         voices: tuple[HostVoice, ...] | None = None,
+        clip_duration_s: int = 5,
     ) -> None:
         self._writer = writer
         self._voices = voices
+        self.clip_duration_s = clip_duration_s
         self._ready: asyncio.Queue[Thought] = asyncio.Queue(maxsize=2)
         self._planned: list[Thought] = []
         self._aired: list[Thought] = []
@@ -144,9 +147,11 @@ class WriterPipeline:
                     self._next_speaker,
                     self._thought_open,
                     segment_phase,
+                    speech_target_s(self.clip_duration_s),
                     reissue=reissue,
                     voices=self._voices,
                     coverage=self._coverage,
+                    clip_duration_s=self.clip_duration_s,
                 )
             else:
                 thoughts = (
@@ -156,9 +161,11 @@ class WriterPipeline:
                         self._next_speaker,
                         self._thought_open,
                         segment_phase,
+                        speech_target_s(self.clip_duration_s),
                         reissue=reissue,
                         voices=self._voices,
                         coverage=self._coverage,
+                        clip_duration_s=self.clip_duration_s,
                     ),
                 )
         except asyncio.CancelledError:
