@@ -100,8 +100,9 @@
       cursor: pointer;
     }
     .moods button:hover, .samples button:hover { border-color: var(--bone-3); }
-    #mute { position: absolute; top: 16px; right: 24px; }
+    #mute { position: absolute; top: 16px; right: 16px; z-index: 2; }
     .chat {
+      position: relative;
       display: flex;
       flex-direction: column;
       background: var(--panel);

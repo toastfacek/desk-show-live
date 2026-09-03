@@ -62,6 +62,7 @@ def test_renderer_has_no_llm() -> None:
     assert "openai" not in grokbot.lower()
     assert "TEXT_API" not in grokbot
     assert "Hemisphere" in grokbot
+    assert "RoundedRect" in grokbot
     assert "equator" in grokbot
 
 

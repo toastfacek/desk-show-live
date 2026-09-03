@@ -4,7 +4,6 @@
   const CHAR_BACK = "#221f2a";
   const EQUATOR = "#8a849c";
   const AMBER = "#f0a12a";
-  const AMBER_DEEP = "#c47a10";
   const DEG = Math.PI / 180;
 
   function lerp(a, b, t) {
@@ -73,20 +72,19 @@
     }
 
     function pill(x) {
-      return new Zdog.Cylinder({
+      return new Zdog.RoundedRect({
         addTo: eyes,
-        diameter: 15,
-        length: 34,
-        translate: { x },
-        rotate: { x: Zdog.TAU / 4 },
-        stroke: false,
+        width: 16,
+        height: 38,
+        cornerRadius: 8,
+        fill: true,
+        stroke: 0,
         color: AMBER,
-        frontFace: AMBER,
-        backface: AMBER_DEEP,
+        translate: { x, z: 2 },
       });
     }
-    const leftEye = pill(-16);
-    const rightEye = pill(16);
+    const leftEye = pill(-17);
+    const rightEye = pill(17);
 
     new Zdog.Ellipse({
       addTo: illo,
@@ -204,9 +202,9 @@
       let eyeSy = 1;
       let leftY = 0;
       let rightY = 0;
-      let leftLen = 34;
-      let rightLen = 34;
-      let eyeDia = 15;
+      let leftH = 38;
+      let rightH = 38;
+      let eyeW = 16;
 
       if (talking) {
         const t = (now / 160) * Zdog.TAU;
@@ -217,33 +215,35 @@
       }
 
       if (emotion === "happy") {
-        leftLen = rightLen = 22;
-        eyeDia = 18;
+        leftH = rightH = 24;
+        eyeW = 20;
         eyeSy = 1.05;
       } else if (emotion === "thinking") {
-        leftLen = rightLen = 18;
+        leftH = rightH = 20;
         eyeSy = 0.72;
       } else if (emotion === "laugh") {
-        leftLen = rightLen = 16;
+        leftH = rightH = 16;
         eyeSy = 0.62;
       } else if (emotion === "skeptical") {
         leftY = -6;
         rightY = 4;
-        rightLen = 26;
+        rightH = 28;
         eyeSy = 0.92;
       }
 
       if (blinking) eyeSy = 0.08;
 
       eyes.scale.y = eyeSy;
-      leftEye.translate.x = -16;
-      rightEye.translate.x = 16;
+      leftEye.translate.x = -17;
+      rightEye.translate.x = 17;
       leftEye.translate.y = leftY;
       rightEye.translate.y = rightY;
-      leftEye.length = leftLen;
-      rightEye.length = rightLen;
-      leftEye.diameter = eyeDia;
-      rightEye.diameter = eyeDia;
+      leftEye.height = leftH;
+      rightEye.height = rightH;
+      leftEye.width = eyeW;
+      rightEye.width = eyeW;
+      leftEye.cornerRadius = eyeW / 2;
+      rightEye.cornerRadius = eyeW / 2;
 
       const w = canvasEl.clientWidth || 640;
       const h = canvasEl.clientHeight || 520;
