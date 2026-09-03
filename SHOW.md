@@ -18,6 +18,7 @@ There is no second host. **deb** is not in the canonical lock. Chat is the other
 | Live bytes | `pack-manager/data/` (gitignored). Lock with `python3 -m pack_manager.hosts` |
 | Display names | Pack Manager only. Writer, discuss, chat picker, and H3 prompts never see `PHASEONE` or `deb` |
 | Accent | Acid lemon `#D4E04A` on furniture / CG. Fal never sees program-out |
+| HostMind model | `text.model` in `runtime-flight/config.local.yaml`. Slug is not a secret. Key stays in `TEXT_API_KEY`. |
 
 BOT2 is still a valid optional slot so old two-host test fixtures lock. The live show does not use it.
 

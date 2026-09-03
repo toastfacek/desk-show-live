@@ -16,6 +16,8 @@ target_duration_s: 90
 text:
   base_url_env: TEXT_BASE_URL
   api_key_env: TEXT_API_KEY
+  # Visible HostMind slug. Not a secret. YAML wins over TEXT_MODEL.
+  model:
   model_env: TEXT_MODEL
   timeout_s: 60
   smoke_max_requests: 6

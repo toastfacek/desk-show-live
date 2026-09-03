@@ -224,8 +224,9 @@ stays in the scenes and stays hidden. The overlay owns those plates.
   360 chars / ~14.3s). Discuss lines stay at 220. H3 duration must be
   5, 10, or 15.
 - Scene pack `reanchor_every` stays 5.
-- Label the live inherit model `baseline` in outputs. Treat `TEXT_MODEL` as a
-  secret.
+- Label the live inherit model `baseline` in outputs. The HostMind slug lives
+  in `text.model` (yaml). That slug is not a secret. `TEXT_API_KEY` and
+  `TEXT_BASE_URL` stay secrets. `TEXT_MODEL` is only a fallback if yaml is empty.
 
 ## Next-flight checklist
 

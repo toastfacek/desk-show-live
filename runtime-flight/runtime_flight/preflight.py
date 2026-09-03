@@ -385,10 +385,11 @@ def _probe_text_configuration(config: RuntimeConfig) -> None:
     for env_name, value in (
         (config.text_base_url_env, config.text_base_url),
         (config.text_api_key_env, config.text_api_key),
-        (config.text_model_env, config.text_model),
     ):
         if not value:
             raise PreflightError(f"text configuration missing: {env_name}")
+    if not config.text_model:
+        raise PreflightError("text.model missing (set text.model in yaml or TEXT_MODEL)")
 
 
 def _probe_fal_key_present() -> None:
