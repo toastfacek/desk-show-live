@@ -1,4 +1,4 @@
-"""Writer: one spoken point for BOT1 or BOT2, batched into clip-length chunks."""
+"""Writer: one spoken point for the solo host, batched into clip-length chunks."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def writer_system(clip_duration_s: int = 5) -> str:
     high = round(speech + 0.3, 1)
     chars = max_thought_chars(clip_duration_s)
     words_lo, words_hi = writer_word_range(clip_duration_s)
-    return f"""You are the Writer for a two-host live show (BOT1 and BOT2).
+    return f"""You are the Writer for a solo live host.
 Return one JSON object and nothing else. Do not wrap it in markdown fences.
 
 Write one spoken point for next_speaker. Honor next_speaker exactly.
@@ -51,23 +51,32 @@ A point is the claim this host wants to make. The {clip_duration_s}-second take 
 file. If the point is a rant, batch it. Do not shrink an interesting point
 to one shrug.
 
-Honor that host's persona and writer_rules. Both hosts are AI analysts
-and the voice of the audience. They are software, not drivers and not
-users of the product. Speak about drivers, cars, people, shops,
+Honor that host's persona and writer_rules. The host is an AI analyst
+and the voice of the audience. They are software, not a driver and not
+a user of the product. Speak about drivers, cars, people, shops,
 products. Never "my tires," "I never clicked yes," "when I drive."
 The tweet is the door. This is an optimistic show. Privacy gets one
 honest pass. The rest of the time is what this enables and what you
-could build. They have points of view. When something is actually
-interesting, they get into it. Neither has the finished answer. The discussion teaches. BOT1 unpacks the capability and has a lean. BOT2
-yes-ands: if this is true, what else is true? They agree the card is
-real. If a picture or number is missing, say so once and move on. Do
-not litigate whether the tweet proved itself.
+could build. They have a point of view. When something is actually
+interesting, they get into it. They do not have the finished answer.
+The discussion teaches. If a picture or number is missing, say so once
+and move on. Do not litigate whether the tweet proved itself.
 
-This is a discussion, not a recap. Stay on current_beat until both jobs have
-landed and coverage.still_open is empty. Do not empty the well on the first
-bounce. Do not restate the card, the chyron, or the previous line. React to
-it: poke, number, reframe, callback, broaden, or land. Do not invent a new
-topic. Do not read the card aloud. Honor that host's soul and opinions when
+Walk the post in this order, one point at a time:
+1. Read the load-bearing bit. Do not read the card aloud.
+2. Say who posted it and what they are actually talking about.
+3. Dissect the idea.
+4. Name one broader theme.
+5. Take a side.
+After that spine, you may answer one selected chat comment from the
+chat array. Chat is context, not a second host. Do not invent chat.
+If chat is empty or omitted, do not mention chat.
+
+This is a discussion, not a recap. Stay on current_beat until the beat
+jobs have landed and coverage.still_open is empty. Do not empty the well
+on the first bounce. Do not restate the card, the chyron, or the previous
+line. React to it: poke, number, reframe, callback, broaden, or land. Do
+not invent a new topic. Honor that host's soul and opinions when
 present. [broaden] means take the last claim as true and name the next
 consequence or the next product.
 
@@ -148,6 +157,7 @@ class Writer:
         voices: tuple[HostVoice, ...] | None = None,
         coverage: CoverageState | None = None,
         clip_duration_s: int | None = None,
+        chat: tuple[dict[str, str], ...] | None = None,
     ) -> Thought:
         if next_speaker not in SPEAKERS:
             raise WriterError("next_speaker must be BOT1 or BOT2")
@@ -167,6 +177,7 @@ class Writer:
             voices=voices,
             coverage=coverage,
             clip_duration_s=clip_duration_s,
+            chat=chat,
         )
         return thoughts[0]
 
@@ -182,6 +193,7 @@ class Writer:
         voices: tuple[HostVoice, ...] | None = None,
         coverage: CoverageState | None = None,
         clip_duration_s: int | None = None,
+        chat: tuple[dict[str, str], ...] | None = None,
     ) -> tuple[Thought, ...]:
         if next_speaker not in SPEAKERS:
             raise WriterError("next_speaker must be BOT1 or BOT2")
@@ -204,6 +216,7 @@ class Writer:
                 voices=voices,
                 coverage=coverage,
                 clip_duration_s=clip_duration_s,
+                chat=chat,
             )
 
     async def _complete(
@@ -220,6 +233,7 @@ class Writer:
         voices: tuple[HostVoice, ...] | None,
         coverage: CoverageState | None,
         clip_duration_s: int | None,
+        chat: tuple[dict[str, str], ...] | None,
     ) -> tuple[Thought, ...]:
         clip, speech, max_chars = _clip_limits(clip_duration_s, target_duration_s)
         user = _user_payload(
@@ -233,6 +247,7 @@ class Writer:
             previous_text,
             voices,
             coverage,
+            chat,
         )
         raw = await self._client.complete_json(system=writer_system(clip), user=user)
         try:
@@ -256,6 +271,7 @@ class Writer:
                 voices=voices,
                 coverage=coverage,
                 clip_duration_s=clip,
+                chat=chat,
             )
 
 
@@ -270,6 +286,7 @@ def _user_payload(
     previous_text: str | None,
     voices: tuple[HostVoice, ...] | None,
     coverage: CoverageState | None,
+    chat: tuple[dict[str, str], ...] | None,
 ) -> dict[str, Any]:
     topic_map = resolve_topic_map(package)
     state = coverage or CoverageState.initial()
@@ -312,9 +329,24 @@ def _user_payload(
     }
     if voices:
         payload["hosts"] = {voice.speaker: voice_payload(voice) for voice in voices}
+    rows = _chat_rows(chat)
+    if rows:
+        payload["chat"] = rows
     if previous_text is not None:
         payload["previous_text"] = previous_text
     return payload
+
+
+def _chat_rows(chat: tuple[dict[str, str], ...] | None) -> list[dict[str, str]]:
+    if not chat:
+        return []
+    rows: list[dict[str, str]] = []
+    for item in chat:
+        text = str(item.get("text") or "").strip()
+        why = str(item.get("why") or "").strip()
+        if text and why:
+            rows.append({"text": text, "why": why})
+    return rows
 
 
 def _clip_limits(

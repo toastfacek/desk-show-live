@@ -38,11 +38,15 @@ class ScriptWriter:
     def __init__(self, client, *, fail_first: int = 0) -> None:
         del client
         self.calls: list[str] = []
+        self.speakers: list[str] = []
+        self.chats: list[object] = []
         self.fail_first = fail_first
 
     async def write_point(self, package, planned, next_speaker, *args, **kwargs):
-        del args, kwargs
+        del args
         self.calls.append(package.item_id)
+        self.speakers.append(next_speaker)
+        self.chats.append(kwargs.get("chat"))
         if self.fail_first > 0:
             self.fail_first -= 1
             raise WriterError("chunks must contain 1 to 4 spoken lines")
@@ -244,6 +248,35 @@ def test_prepare_queue_retries_empty_writer_batch(
     assert writer.calls[0] == "111"
     assert writer.calls[1] == "111"
     assert summary["queue"][0]["tweet_id"] == "111"
+
+
+@pytest.mark.asyncio
+async def test_write_one_stays_on_bot1() -> None:
+    from runtime_flight.models import Fact, SegmentPackage, TweetCard
+    from runtime_flight.prepare_queue import _write_one
+
+    package = SegmentPackage(
+        item_id="111",
+        question="What does this unlock?",
+        framing="A public note about shipping a workflow.",
+        angles=("unlock", "catch"),
+        facts=(Fact(id="f1", text="A public workflow note.", source_url="https://x.com/a/status/111"),),
+        chyron="Unlock 111",
+        chyron_fact_ids=("f1",),
+        center=TweetCard(author="one", text="A public workflow note.", url="https://x.com/a/status/111"),
+    )
+    writer = ScriptWriter(None)
+    thoughts = await _write_one(
+        writer,
+        package,
+        turns=3,
+        voices=(),
+        clip_duration_s=5,
+        chat=({"text": "Who posted this?", "why": "asks who wrote it"},),
+    )
+    assert [thought.speaker for thought in thoughts] == ["BOT1", "BOT1", "BOT1"]
+    assert writer.speakers == ["BOT1", "BOT1", "BOT1"]
+    assert writer.chats[0] == ({"text": "Who posted this?", "why": "asks who wrote it"},)
 
 
 def test_prepare_queue_module_stays_isolated_from_obs() -> None:

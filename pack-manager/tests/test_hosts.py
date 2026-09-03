@@ -5,8 +5,6 @@ import pytest
 from pack_manager.hosts import (
     BOT1_MANIFEST,
     BOT1_NAME,
-    BOT2_MANIFEST,
-    BOT2_NAME,
     HERO_HEIGHT,
     HERO_WIDTH,
     SCENE_MANIFEST,
@@ -16,45 +14,36 @@ from pack_manager.hosts import (
 from pack_manager.runtime import load_locked_baseline
 from pack_manager.errors import ValidationError
 
-FIXTURE_HERO = Path(__file__).resolve().parents[1] / "fixtures" / "hero_wide.png"
+FIXTURE_HERO = Path(__file__).resolve().parents[1] / "fixtures" / "hero_solo.png"
 
 
-def test_canonical_copy_is_light_broadcast_sprites():
-    assert SCENE_NAME == "Light Media Club"
-    assert "live media clubhouse" in SCENE_MANIFEST["set"]
-    assert "pill-shaped desk" in SCENE_MANIFEST["set"]
+def test_canonical_copy_is_solo_stream_desk():
+    assert SCENE_NAME == "Solo Stream Desk"
+    assert "solo livestream desk" in SCENE_MANIFEST["set"]
+    assert "No second host" in SCENE_MANIFEST["set"]
     assert SCENE_MANIFEST["palette"] == [
-        "warm white",
-        "forest green",
-        "cobalt",
+        "charcoal",
+        "walnut",
         "signal orange",
+        "acid lemon",
     ]
     assert BOT1_MANIFEST["visual_invariants"]["silhouette"] == (
         "Broad rounded orange software sprite."
-    )
-    assert BOT2_MANIFEST["visual_invariants"]["silhouette"] == (
-        "Tall cobalt software sprite."
     )
     assert BOT1_MANIFEST["voice_direction"] == (
         "Low chest voice, dry and even, then a lift when something is "
         "actually interesting. No lift at the end of a shrug."
     )
-    assert BOT2_MANIFEST["voice_direction"] == (
-        "Higher thinner voice, quick and clipped, bright, slightly nasal, "
-        "restless upward energy. Gets into it when something is good."
-    )
     assert "conversation teaches" in BOT1_MANIFEST["soul"]
-    assert "learn in public" in BOT2_MANIFEST["soul"]
     assert "point of view" in BOT1_MANIFEST["persona"]
     assert "voice of the audience" in BOT1_MANIFEST["persona"]
-    assert "have a take" in BOT2_MANIFEST["persona"]
-    assert "does to people" in BOT1_MANIFEST["persona"]
+    assert "load-bearing" in BOT1_MANIFEST["persona"]
+    assert "selected chat" in BOT1_MANIFEST["writer_rules"][2]
     assert "AI analyst" in BOT1_MANIFEST["persona"]
     assert "not a driver" in BOT1_MANIFEST["persona"]
-    assert "Yes-and" in BOT2_MANIFEST["persona"]
-    assert "missing screenshot is a caveat" in BOT2_MANIFEST["opinions"][1]
     assert BOT1_MANIFEST["opinions"]
-    assert BOT2_MANIFEST["opinions"]
+    assert "deb" not in BOT1_MANIFEST["persona"]
+    assert "deb" not in SCENE_MANIFEST["set"]
 
 
 def test_fixture_hero_is_flight_png():
@@ -67,18 +56,20 @@ def test_fixture_hero_is_flight_png():
     assert (width, height) == (HERO_WIDTH, HERO_HEIGHT)
 
 
-def test_lock_canonical_hosts_exports_phaseone_and_deb(tmp_path: Path):
+def test_lock_canonical_hosts_exports_phaseone_only(tmp_path: Path):
     data_dir = tmp_path / "data"
     locked = lock_canonical_hosts(data_dir, FIXTURE_HERO)
     loaded = load_locked_baseline(data_dir, locked.id)
     manifest = loaded.manifest
 
-    assert manifest["display_names"] == {"BOT1": BOT1_NAME, "BOT2": BOT2_NAME}
-    assert manifest["host_map"] == {"BOT1": "host_a", "BOT2": "host_b"}
+    assert manifest["display_names"] == {"BOT1": BOT1_NAME}
+    assert manifest["host_map"] == {"BOT1": "host_a"}
     assert manifest["frame"] == {"w": HERO_WIDTH, "h": HERO_HEIGHT, "fps": 24}
     assert manifest["reanchor_every"] == 5
     assert locked.hero_path.read_bytes() == FIXTURE_HERO.read_bytes()
     assert loaded.hero_path == locked.hero_path
+    slots = [row["slot"] for row in manifest["packs"]["characters"]]
+    assert slots == ["BOT1"]
 
     again = lock_canonical_hosts(data_dir, FIXTURE_HERO)
     assert again.id == locked.id

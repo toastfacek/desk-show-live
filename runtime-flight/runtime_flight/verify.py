@@ -284,8 +284,16 @@ def verify_bundle(
         fail("aired", f"need at least {MIN_AIRED} aired clips, found {len(aired)}")
     else:
         gates.append("aired_count")
-    if "BOT1" not in speakers or "BOT2" not in speakers:
-        fail("hosts", "both BOT1 and BOT2 must air")
+    required_speakers = {"BOT1"}
+    if isinstance(manifest, dict):
+        host_map = manifest.get("host_map") or {}
+        if isinstance(host_map, dict) and "BOT2" in host_map:
+            required_speakers.add("BOT2")
+    if not required_speakers.issubset(speakers):
+        if required_speakers == {"BOT1"}:
+            fail("hosts", "BOT1 must air")
+        else:
+            fail("hosts", "both BOT1 and BOT2 must air")
     else:
         gates.append("hosts")
 

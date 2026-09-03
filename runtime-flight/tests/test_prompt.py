@@ -170,6 +170,27 @@ def test_assemble_prompt_allows_longer_line_for_fifteen_second_take():
     assert f'Dialogue: "{line}"' in prompt
 
 
+def test_solo_baseline_uses_single_shot_and_rejects_bot2():
+    baseline = _baseline()
+    solo = BaselineContext(
+        baseline_id=baseline.baseline_id,
+        hero_path=baseline.hero_path,
+        hero_sha256=baseline.hero_sha256,
+        host_map={"BOT1": "host_a"},
+        display_names={"BOT1": BOT1_NAME},
+        reanchor_every=baseline.reanchor_every,
+        frame=baseline.frame,
+        characters=(baseline.characters[0],),
+        scene=baseline.scene,
+    )
+    prompt = assemble_prompt(solo, "BOT1", "Three civilizations rose and fell.")
+    assert "single-shot" in prompt
+    assert "No second host" in prompt
+    assert "BOT2:" not in prompt
+    with pytest.raises(PromptError, match="solo"):
+        assemble_prompt(solo, "BOT2", "A line.")
+
+
 def test_unknown_speaker_is_rejected():
     with pytest.raises(PromptError, match="speaker"):
         assemble_prompt(_baseline(), "HOST", "A line.")  # type: ignore[arg-type]

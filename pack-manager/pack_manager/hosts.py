@@ -1,4 +1,4 @@
-"""Lock the canonical PHASEONE[lol] / deb packs and 1344x768 hero still."""
+"""Lock the canonical PHASEONE[lol] pack and 1344x768 solo hero still."""
 
 from __future__ import annotations
 
@@ -16,9 +16,8 @@ from .packs import PackService
 HERO_WIDTH = 1344
 HERO_HEIGHT = 768
 BOT1_NAME = "PHASEONE[lol]"
-BOT2_NAME = "deb"
-SCENE_NAME = "Light Media Club"
-DEFAULT_HERO = Path(__file__).resolve().parents[1] / "fixtures" / "hero_wide.png"
+SCENE_NAME = "Solo Stream Desk"
+DEFAULT_HERO = Path(__file__).resolve().parents[1] / "fixtures" / "hero_solo.png"
 
 DISABLED_TTS = {
     "enabled": False,
@@ -45,18 +44,19 @@ BOT1_MANIFEST = {
     },
     "persona": (
         "You sit at the desk as an AI analyst and the voice of the audience. "
-        "Walk through the capability the post just showed, then talk about "
-        "what it does to people and what it lets someone build. When a piece "
-        "clicks, get into it. You have a point of view. You are not a driver "
+        "Read the load-bearing bit of the post, say who wrote it and what "
+        "they are actually talking about, then unpack the idea. Connect it "
+        "to a broader theme and have a point of view. When chat hands you a "
+        "real question, answer that after the spine. You are not a driver "
         "and not a user of the product. Speak about drivers, cars, people, "
         "shops. You are not pitching a headline and you are not smarter than "
         "the room. If you are confused, say so. If something is actually "
         "interesting, say so like you mean it."
     ),
     "writer_rules": [
-        "Name the capability, then what it does to people and what you could build.",
-        "If they said something, work with that. Do not start a new essay.",
-        "Put it next to something the audience already lives with.",
+        "Read the load-bearing bit, then who posted and what they mean.",
+        "Dissect the idea, then name one broader theme, then take a side.",
+        "After that spine, you may answer one selected chat comment. Do not invent chat.",
         "Have a take. Do not sell a headline. Do not write slogan copy.",
         "Speak as an analyst. Never my car, I never clicked yes, or when I drive.",
         "If a picture or number is missing, say so once and move on. Do not invent it.",
@@ -65,7 +65,7 @@ BOT1_MANIFEST = {
         "You get interested in public. The fun part is what this enables, "
         "not whether the post proved itself. When a piece of the story is "
         "actually good, be into it. You explain an idea when it just came "
-        "up. You leave room for the other host. The conversation teaches. "
+        "up. Chat is the other voice in the room. The conversation teaches. "
         "You do not deliver the finished answer. You are software watching "
         "the world, not living in it."
     ),
@@ -82,64 +82,20 @@ BOT1_MANIFEST = {
     "tts": DISABLED_TTS,
 }
 
-BOT2_MANIFEST = {
-    "schema_version": 2,
-    "visual_invariants": {
-        "locked_traits": ["silhouette", "eye_design", "proportions"],
-        "silhouette": "Tall cobalt software sprite.",
-        "eye_design": "Two solid cream rounded rectangles without pupils.",
-        "proportions": "Tall and narrow; height greater than width.",
-    },
-    "persona": (
-        "You are the other analyst at the desk, and you are the audience. You "
-        "heard what they just said. Yes-and it, or ask the question people at "
-        "home just had. Then have a take. Follow if this is true, then what "
-        "else is true. Privacy and trust get one honest pass. The rest of "
-        "the time is what this enables. You are not a driver. You will get "
-        "into it when it lands."
-    ),
-    "writer_rules": [
-        "Answer their last line. Yes-and, or ask the human hole the audience just hit.",
-        "If you already asked a question, do not rephrase it. Broaden or take a new thread.",
-        "Use small words. If you need a term, explain it in the same breath.",
-        "Have a point of view. Debate the idea, not the person.",
-        "Do not recap. Do not one-up. Do not land what this really means.",
-        "Talk like two analysts figuring out what this unlocks.",
-    ],
-    "soul": (
-        "You learn in public. If an explanation jumped, pull it back. If they "
-        "are litigating the tweet, ask what it unlocks. You do not deliver "
-        "the answer. You make the next step visible, and you have a take on it."
-    ),
-    "opinions": [
-        "If I do not get why I should care, they do not get it.",
-        "A missing screenshot is a caveat, not the show.",
-        "We can sit with we do not know that yet, then talk about the capability.",
-        "Two analysts figuring out what this unlocks is the show.",
-    ],
-    "voice_direction": (
-        "Higher thinner voice, quick and clipped, bright, slightly nasal, "
-        "restless upward energy. Gets into it when something is good."
-    ),
-    "tts": DISABLED_TTS,
-}
-
 SCENE_MANIFEST = {
     "schema_version": 2,
     "set": (
-        "A clean light-mode live media clubhouse. A substantial dark walnut "
-        "pill-shaped desk sits on a cream oval rug over light wood floor, "
-        "vertical ribbing on the desk face and a warm recessed glow at centre. "
-        "Two short black desk-stand microphones sit in front of the hosts. "
-        "The centre wall is a quiet cream panel between forest-green pillars. "
-        "Outer thirds hold recessed white shelves with plants, lamps and "
-        "abstract colour-block art, plus one large colourful puzzle cube on "
-        "the left floor and one oversized dark chess knight on the right. "
-        "A black lighting grid with square soft panels hangs above. No "
-        "papers, stickers, logos or readable displays."
+        "A solo livestream desk in a dark charcoal room. One compact dark "
+        "walnut desk sits left of center on dark wood floor. One short black "
+        "desk-stand microphone sits in front of the single orange host. A "
+        "large blank dark monitor hangs behind the desk with a warm backlight "
+        "halo. Left wall has two small wood shelves: one plant, a few books. "
+        "The right third of the frame is empty dark space for a chat well. "
+        "No second chair, no second microphone, no second host. No papers, "
+        "stickers, logos or readable displays."
     ),
-    "palette": ["warm white", "forest green", "cobalt", "signal orange"],
-    "lighting": "Bright soft broadcast light.",
+    "palette": ["charcoal", "walnut", "signal orange", "acid lemon"],
+    "lighting": "Soft key on the host, warm monitor backlight, dim room.",
     "frame": {"w": HERO_WIDTH, "h": HERO_HEIGHT, "fps": 24},
     "reanchor_every": 5,
 }
@@ -169,13 +125,9 @@ def lock_canonical_hosts(
     hero_bytes = hero_path.read_bytes()
     hero = assets.put_bytes(hero_path.name, hero_bytes, "image/png")
     bot1 = packs.create_pack("character", BOT1_NAME)
-    bot2 = packs.create_pack("character", BOT2_NAME)
     scene = packs.create_pack("scene", SCENE_NAME)
     bot1_version = packs.create_version(
         bot1.id, {**BOT1_MANIFEST, "asset_ids": [hero.id]}
-    )
-    bot2_version = packs.create_version(
-        bot2.id, {**BOT2_MANIFEST, "asset_ids": [hero.id]}
     )
     scene_version = packs.create_version(
         scene.id, {**SCENE_MANIFEST, "asset_ids": [hero.id]}
@@ -183,7 +135,6 @@ def lock_canonical_hosts(
     candidate = candidates.create(
         character_versions={
             "BOT1": (bot1_version.pack_id, bot1_version.version),
-            "BOT2": (bot2_version.pack_id, bot2_version.version),
         },
         scene_pack_id=scene_version.pack_id,
         scene_version=scene_version.version,
@@ -192,7 +143,7 @@ def lock_canonical_hosts(
     approved = candidates.approve(
         candidate.id,
         canonical=True,
-        review_note="Canonical Light Media Club still from the archived visual board.",
+        review_note="Canonical solo stream desk still.",
     )
     return baselines.lock_run(approved.cast_key)
 

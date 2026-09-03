@@ -13,7 +13,8 @@ from .packs import PackService
 
 
 _ALLOWED_VARIANT_CHANGES = {"scene", "palette", "accessories"}
-_REQUIRED_CHARACTER_SLOTS = {"BOT1", "BOT2"}
+_REQUIRED_CHARACTER_SLOTS = {"BOT1"}
+_ALLOWED_CHARACTER_SLOTS = {"BOT1", "BOT2"}
 
 
 @dataclass(frozen=True)
@@ -395,12 +396,15 @@ class CandidateService:
     ) -> tuple[CharacterVersion, ...]:
         if not isinstance(character_versions, Mapping) or not character_versions:
             raise ValidationError("character_versions must be a non-empty mapping")
-        if set(character_versions) != _REQUIRED_CHARACTER_SLOTS:
-            raise ValidationError(
-                "character_versions must contain exactly BOT1 and BOT2"
-            )
+        slots = set(character_versions)
+        if not _REQUIRED_CHARACTER_SLOTS.issubset(slots):
+            raise ValidationError("character_versions must contain BOT1")
+        if not slots.issubset(_ALLOWED_CHARACTER_SLOTS):
+            raise ValidationError("character_versions may only contain BOT1 and BOT2")
         versions = []
         for slot in ("BOT1", "BOT2"):
+            if slot not in character_versions:
+                continue
             reference = character_versions[slot]
             if not isinstance(slot, str) or not slot.strip():
                 raise ValidationError("character slot must be a non-empty string")
@@ -477,7 +481,7 @@ class CandidateService:
             if (
                 not isinstance(accessories, dict)
                 or not accessories
-                or not set(accessories).issubset(_REQUIRED_CHARACTER_SLOTS)
+                or not set(accessories).issubset(_ALLOWED_CHARACTER_SLOTS)
                 or any(
                     not isinstance(items, list)
                     or any(

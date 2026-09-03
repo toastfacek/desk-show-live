@@ -8,7 +8,9 @@ from .db import Database
 from .errors import IntegrityError, ValidationError
 from .packs import PackService
 
-_REQUIRED_CHARACTER_SLOTS = ("BOT1", "BOT2")
+_REQUIRED_CHARACTER_SLOTS = ("BOT1",)
+_OPTIONAL_CHARACTER_SLOTS = ("BOT2",)
+_ALLOWED_CHARACTER_SLOTS = _REQUIRED_CHARACTER_SLOTS + _OPTIONAL_CHARACTER_SLOTS
 
 
 def _baseline_service(data_dir: Path, *, maintenance: bool = False) -> BaselineService:
@@ -48,8 +50,8 @@ def _validate_flight_ready_export(loaded: LoadedBaseline) -> None:
     characters = manifest.get("packs", {}).get("characters")
     if not isinstance(characters, list):
         raise IntegrityError("invalid character pack list")
-    if len(characters) != 2:
-        raise ValidationError("baseline requires exactly two character packs")
+    if len(characters) < 1 or len(characters) > 2:
+        raise ValidationError("baseline requires one or two character packs")
 
     slots: list[str] = []
     for record in characters:
@@ -57,7 +59,7 @@ def _validate_flight_ready_export(loaded: LoadedBaseline) -> None:
             raise IntegrityError("invalid character pack record")
         slot = record.get("slot")
         if not isinstance(slot, str):
-            raise ValidationError("baseline requires exact character slots BOT1 and BOT2")
+            raise ValidationError("baseline requires character slot BOT1")
         slots.append(slot)
         relative_path = record.get("path")
         if not isinstance(relative_path, str):
@@ -74,8 +76,8 @@ def _validate_flight_ready_export(loaded: LoadedBaseline) -> None:
             raise IntegrityError("invalid exported character manifest")
         PackService.validate_flight_ready("character", inner)
 
-    if sorted(slots) != list(_REQUIRED_CHARACTER_SLOTS):
-        raise ValidationError("baseline requires exact character slots BOT1 and BOT2")
+    if "BOT1" not in slots or not set(slots).issubset(_ALLOWED_CHARACTER_SLOTS):
+        raise ValidationError("baseline requires character slot BOT1")
 
     scene_record = manifest.get("packs", {}).get("scene")
     if not isinstance(scene_record, dict):

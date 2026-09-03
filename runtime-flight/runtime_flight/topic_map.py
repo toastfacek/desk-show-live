@@ -63,12 +63,13 @@ def debate_from_raw(raw: dict[str, object]) -> object:
     return raw.get("debate") if "debate" in raw else raw.get("fight")
 
 
-def host_voices_from_baseline(baseline: BaselineContext) -> tuple[HostVoice, HostVoice]:
+def host_voices_from_baseline(baseline: BaselineContext) -> tuple[HostVoice, ...]:
     voices = [_voice_from_character(character) for character in baseline.characters]
     voices.sort(key=lambda voice: voice.speaker)
-    if len(voices) != 2 or {voice.speaker for voice in voices} != {"BOT1", "BOT2"}:
-        raise ValueError("baseline must expose BOT1 and BOT2 host voices")
-    return voices[0], voices[1]
+    speakers = {voice.speaker for voice in voices}
+    if "BOT1" not in speakers or not speakers.issubset({"BOT1", "BOT2"}):
+        raise ValueError("baseline must expose BOT1")
+    return tuple(voices)
 
 
 def _voice_from_character(character: CharacterPackTruth) -> HostVoice:

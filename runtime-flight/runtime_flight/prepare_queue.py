@@ -124,6 +124,7 @@ async def _write_segments_async(
             turns=turns,
             voices=voices,
             clip_duration_s=config.video_duration_s,
+            chat=None,
         )
         prepared.append(
             PreparedSegment(
@@ -145,6 +146,7 @@ async def _write_one(
     turns: int,
     voices,
     clip_duration_s: int,
+    chat: tuple[dict[str, str], ...] | None = None,
 ) -> list[Thought]:
     topic_map = resolve_topic_map(package)
     coverage = CoverageState.initial()
@@ -169,16 +171,13 @@ async def _write_one(
                 voices=voices,
                 coverage=coverage,
                 clip_duration_s=clip_duration_s,
+                chat=chat,
             )
             thought, *pending = list(batch)
         planned.append(thought)
         coverage = advance_coverage(coverage, thought, topic_map)
-        if thought.thought_open:
-            next_speaker = thought.speaker
-            thought_open = True
-        else:
-            next_speaker = "BOT2" if thought.speaker == "BOT1" else "BOT1"
-            thought_open = False
+        next_speaker = thought.speaker if thought.thought_open else "BOT1"
+        thought_open = thought.thought_open
         if coverage.map_complete:
             break
     if not planned:
@@ -197,6 +196,7 @@ async def _write_point_retry(
     voices,
     coverage,
     clip_duration_s: int,
+    chat: tuple[dict[str, str], ...] | None = None,
 ):
     last_error: Exception | None = None
     for attempt in range(WRITE_RETRIES + 1):
@@ -210,6 +210,7 @@ async def _write_point_retry(
                 voices=voices,
                 coverage=coverage,
                 clip_duration_s=clip_duration_s,
+                chat=chat,
             )
         except WriterError as error:
             last_error = error

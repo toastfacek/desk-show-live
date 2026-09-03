@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from runtime_flight.baseline import BaselineContext
+from runtime_flight.chat_pick import ChatPickError, load_chat_file, pick_chat
 from runtime_flight.config import RuntimeConfig
 from runtime_flight.content_queue import (
     LOCK_NAME,
@@ -30,7 +31,6 @@ from runtime_flight.performer_fal import ReadyTake, TakeRequest
 from runtime_flight.prepare_pass import (
     HERO_IMAGE_PLACEHOLDER,
     PREPARE_PASS_DURATION_S,
-    PREPARE_PASS_TURNS,
     _append_jsonl,
     _build_performer,
     _concat,
@@ -46,6 +46,7 @@ from runtime_flight.topic_map import host_voices_from_baseline
 from runtime_flight.writer import Writer, WriterError
 
 PREFETCH_PENDING = 3
+LIST_TURNS = frozenset(range(2, 9))
 
 
 def run_orchestrator(
@@ -67,9 +68,10 @@ def run_orchestrator(
     writer_factory=None,
     planner_factory=None,
     now_fn: Callable[[], datetime] | None = None,
+    chat_file: Path | None = None,
 ) -> dict[str, Any]:
-    if turns not in PREPARE_PASS_TURNS:
-        raise OperatorError("run-list --turns must be 2 or 3")
+    if turns not in LIST_TURNS:
+        raise OperatorError("run-list --turns must be 2 to 8")
     clock = now_fn or (lambda: datetime.now(timezone.utc))
     deadline = resolve_until(until)
     inbox = Path(inbox).resolve()
@@ -99,6 +101,7 @@ def run_orchestrator(
             writer_factory=writer_factory,
             planner_factory=planner_factory,
             now_fn=clock,
+            chat_file=chat_file,
         )
     )
 
@@ -120,9 +123,11 @@ async def _run_async(
     writer_factory,
     planner_factory,
     now_fn: Callable[[], datetime],
+    chat_file: Path | None,
 ) -> dict[str, Any]:
     baseline = BaselineContext.load(config.pack_manager_data_dir, config.baseline_id or "")
     voices = host_voices_from_baseline(baseline)
+    comments = load_chat_file(chat_file) if chat_file is not None else ()
     run_id = f"run-list-{_stamp(now_fn())}"
     root = Path(out_dir).resolve() if out_dir is not None else Path("out").resolve()
     work_dir = root / "run-list" / run_id
@@ -200,12 +205,26 @@ async def _run_async(
                     encoding="utf-8",
                 )
             package = load_package(claimed / PACKAGE_NAME)
+            chat = None
+            if comments:
+                try:
+                    picks = await pick_chat(
+                        comments,
+                        client=client,
+                        question=package.question,
+                    )
+                    chat = tuple(
+                        {"text": pick.text, "why": pick.why} for pick in picks
+                    )
+                except ChatPickError:
+                    chat = None
             thoughts = await _write_one(
                 writer,
                 package,
                 turns=turns,
                 voices=voices,
                 clip_duration_s=duration_s,
+                chat=chat,
             )
         except (
             SourceError,

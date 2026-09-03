@@ -317,7 +317,12 @@ def main(
         default=None,
         help="Optional ISO-8601 stop. Default: keep going until runway (spend, text, or empty list).",
     )
-    run_list_parser.add_argument("--turns", type=int, default=2)
+    run_list_parser.add_argument("--turns", type=int, default=6)
+    run_list_parser.add_argument(
+        "--chat-file",
+        type=Path,
+        help="JSON chat comments: {comments:[{id, author, text},...]}",
+    )
     run_list_parser.add_argument("--confirm-text-requests", type=int, required=True)
     run_list_parser.add_argument(
         "--endpoint",
@@ -507,6 +512,7 @@ def main(
                 rate=args.rate,
                 list_url=args.list_url,
                 list_file=args.list_file,
+                chat_file=args.chat_file,
                 out_dir=args.out,
                 run_orchestrator=run_list_runner,
                 http_get=http_get,

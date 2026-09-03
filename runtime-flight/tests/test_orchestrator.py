@@ -246,6 +246,65 @@ def test_run_list_retries_leftover_claimed(
     assert pending_ids(inbox) == ()
 
 
+def test_run_list_passes_selected_chat_to_writer(
+    tmp_path: Path,
+    flight_setup: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(tmp_path, flight_setup, monkeypatch)
+    inbox = tmp_path / "inbox"
+    list_file, fixtures = _list_and_fixtures(tmp_path, ("333",))
+    chat_path = tmp_path / "chat.json"
+    chat_path.write_text(
+        json.dumps(
+            {
+                "comments": [
+                    {"id": "c1", "author": "sam", "text": "Who actually posted this?"},
+                    {"id": "c2", "author": "lee", "text": "lol"},
+                ]
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    writer = ScriptWriter(None)
+
+    class ChatTextClient:
+        def __init__(self, *args, **kwargs) -> None:
+            del args, kwargs
+
+        async def complete_json(self, *, system, user):
+            del system, user
+            return {"picks": [{"comment_id": "c1", "why": "asks who wrote it"}]}
+
+    monkeypatch.setattr("runtime_flight.orchestrator.TextClient", ChatTextClient)
+
+    async def concat_fn(clips, dest: Path) -> None:
+        dest.write_bytes(b"concat")
+
+    summary = run_orchestrator(
+        config=config,
+        inbox=inbox,
+        turns=2,
+        max_text_requests=12,
+        out_dir=tmp_path / "out",
+        list_file=list_file,
+        fixtures=fixtures,
+        chat_file=chat_path,
+        performer_factory=lambda meter, work_dir, baseline: InstantPerformer(
+            meter, work_dir, baseline
+        ),
+        concat_fn=concat_fn,
+        writer_factory=lambda client: writer,
+        planner_factory=lambda client: ScriptPlanner(),
+    )
+    assert summary["commented"] == ["333"]
+    assert writer.chats
+    assert writer.chats[0] == (
+        {"text": "Who actually posted this?", "why": "asks who wrote it"},
+    )
+
+
 def test_run_list_cli_refuses_without_paid_flag(
     tmp_path: Path,
     flight_setup: dict,

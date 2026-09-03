@@ -754,6 +754,39 @@ def test_writer_sends_current_beat_coverage_and_host_voices():
     assert "empty the well" in system
     assert "PHASEONE" not in captured["system"]
     assert "deb" not in captured["system"]
+    assert "two-host" not in captured["system"]
+    assert "yes-and" not in captured["system"].lower()
+    assert "solo" in captured["system"]
+    assert "chat" in captured["system"]
+
+
+def test_writer_includes_selected_chat_in_user_payload():
+    captured: dict[str, Any] = {}
+
+    async def http_post(url, *, headers, json, timeout):
+        captured["user"] = json_module.loads(json["messages"][1]["content"])
+        return FakeResponse(200, _json_body(_valid_thought_payload()))
+
+    async def run():
+        writer = Writer(_client(http_post))
+        return await writer.write(
+            _package(),
+            (),
+            "BOT1",
+            False,
+            "open",
+            chat=(
+                {
+                    "text": "Who actually posted this?",
+                    "why": "asks who wrote it",
+                },
+            ),
+        )
+
+    _run(run())
+    assert captured["user"]["chat"] == [
+        {"text": "Who actually posted this?", "why": "asks who wrote it"}
+    ]
 
 
 def test_writer_batches_a_point_into_five_second_chunks():

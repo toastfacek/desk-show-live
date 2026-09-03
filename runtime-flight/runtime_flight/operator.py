@@ -434,6 +434,7 @@ def cmd_run_list(
     rate: str,
     list_url: str | None = None,
     list_file: Path | None = None,
+    chat_file: Path | None = None,
     out_dir: Path | None = None,
     run_orchestrator=None,
     http_get=None,
@@ -464,6 +465,7 @@ def cmd_run_list(
         out_dir=out_dir,
         list_url=list_url,
         list_file=list_file,
+        chat_file=chat_file,
         http_get=http_get,
         http_post=http_post,
     )

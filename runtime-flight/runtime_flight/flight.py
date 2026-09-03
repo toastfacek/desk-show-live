@@ -287,7 +287,8 @@ async def _run_paid_async(
             sleep=sleep,
         )
         live_player.set_name_bar("host_a", baseline.display_names["BOT1"], "")
-        live_player.set_name_bar("host_b", baseline.display_names["BOT2"], "")
+        if "BOT2" in baseline.display_names:
+            live_player.set_name_bar("host_b", baseline.display_names["BOT2"], "")
         await harness.run_with_obs(max_t=float(config.target_duration_s))
         write_evidence_bundle(
             Path(out_dir or "out/flights"),
