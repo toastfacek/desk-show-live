@@ -57,6 +57,8 @@ def test_index_is_solo_host() -> None:
     app = (ROOT / "js" / "footage-app.js").read_text(encoding="utf-8")
     assert "StreamerLoop.nextAction" in app
     assert "dt * speed" in app
+    assert "queue.filter" in app
+    assert 'ev.momentId === action.momentId' in app
 
 
 def test_composer_never_disables_the_input() -> None:

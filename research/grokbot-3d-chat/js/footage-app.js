@@ -168,7 +168,13 @@
   function drain() {
     if (speaking || closed) return;
     const action = StreamerLoop.nextAction(state, mediaT, queue);
-    queue = [];
+    if (action.move === "point" || action.move === "react") {
+      queue = queue.filter((ev) => !(ev.type === "moment" && ev.momentId === action.momentId));
+    } else if (action.move === "chat") {
+      queue = queue.filter((ev) => ev.type !== "chat");
+    } else if (action.move === "take" || action.move === "land" || action.move === "next") {
+      queue = queue.filter((ev) => ev.type !== "ended");
+    }
     paintHud(action);
     if (action.move === "wait") return;
     if (action.move === "next") {
