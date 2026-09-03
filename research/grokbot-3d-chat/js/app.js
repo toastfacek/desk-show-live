@@ -84,6 +84,7 @@
   async function handleComment(text) {
     const comment = String(text || "").trim();
     if (!comment || busy) return;
+    voice.stop();
     setBusy(true);
     appendMessage("chat", comment);
     history.push({ role: "chat", text: comment });

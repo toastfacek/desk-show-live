@@ -11,6 +11,7 @@
     let tick = 0;
     let fallback = 0;
     let speaking = false;
+    let generation = 0;
 
     function clearTimers() {
       if (tick) {
@@ -33,36 +34,40 @@
       }
     }
 
-    function finish(onEnd) {
+    function finish(mine, onEnd) {
+      if (mine !== generation) return;
       speaking = false;
       clearTimers();
       bus.set({ squash: 0 });
       if (onEnd) onEnd();
     }
 
-    function runClock(text, onEnd) {
+    function runClock(mine, text, onEnd) {
       const started = performance.now();
       const duration = estimateMs(text);
       speaking = true;
       tick = setInterval(() => {
+        if (mine !== generation) return;
         const elapsed = performance.now() - started;
         if (elapsed >= duration) {
-          finish(onEnd);
+          finish(mine, onEnd);
           return;
         }
         const energy = bus.get().energy;
         const wave = Math.abs(Math.sin((elapsed / 1000) * 6 * Math.PI * 2));
         bus.set({ squash: 0.35 + 0.65 * wave * (0.4 + 0.6 * energy) });
       }, 32);
-      fallback = setTimeout(() => finish(onEnd), duration + 40);
+      fallback = setTimeout(() => finish(mine, onEnd), duration + 40);
     }
 
     function speak(text, onEnd) {
+      generation += 1;
+      const mine = generation;
       stopSpeech();
       clearTimers();
       const line = String(text || "").trim();
       if (!line) {
-        finish(onEnd);
+        finish(mine, onEnd);
         return;
       }
       const synth = global.speechSynthesis;
@@ -77,34 +82,38 @@
         if (pick) utter.voice = pick;
         let started = false;
         utter.onstart = () => {
+          if (mine !== generation) return;
           started = true;
-          runClock(line, onEnd);
+          runClock(mine, line, onEnd);
         };
         utter.onend = () => {
-          if (speaking) finish(onEnd);
+          if (speaking) finish(mine, onEnd);
         };
         utter.onerror = () => {
-          if (!started) runClock(line, onEnd);
+          if (!started && mine === generation) runClock(mine, line, onEnd);
         };
         try {
           synth.speak(utter);
           fallback = setTimeout(() => {
-            if (!started) runClock(line, onEnd);
+            if (!started && mine === generation) runClock(mine, line, onEnd);
           }, 280);
           return;
         } catch (_err) {
-          runClock(line, onEnd);
+          runClock(mine, line, onEnd);
           return;
         }
       }
-      runClock(line, onEnd);
+      runClock(mine, line, onEnd);
     }
 
     return {
       speak,
       stop() {
+        generation += 1;
         stopSpeech();
-        finish();
+        clearTimers();
+        speaking = false;
+        bus.set({ squash: 0 });
       },
       setMuted(next) {
         muted = Boolean(next);
