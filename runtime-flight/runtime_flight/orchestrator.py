@@ -20,6 +20,7 @@ from runtime_flight.content_queue import (
     mark_done,
     mark_dropped,
     pending_ids,
+    release_claimed,
 )
 from runtime_flight.discuss import load_package
 from runtime_flight.evidence import package_as_dict
@@ -37,7 +38,7 @@ from runtime_flight.prepare_pass import (
 from runtime_flight.prepare_queue import _write_one
 from runtime_flight.prompt import assemble_prompt
 from runtime_flight.segment_planner import SegmentPlanner, SegmentPlannerError
-from runtime_flight.source import load_source_packet
+from runtime_flight.source import SourceError, load_source_packet
 from runtime_flight.runway import has_runway, resolve_until
 from runtime_flight.spend import SpendCapExceeded, SpendLedger, SpendMeter
 from runtime_flight.text_client import TextAttemptLimiter, TextClient, TextClientError
@@ -160,6 +161,7 @@ async def _run_async(
     commented: list[str] = []
     dropped: list[dict[str, Any]] = []
     stop_reason = "empty"
+    release_claimed(inbox)
 
     while True:
         if deadline is not None and now_fn() >= deadline:
@@ -205,7 +207,13 @@ async def _run_async(
                 voices=voices,
                 clip_duration_s=duration_s,
             )
-        except (SegmentPlannerError, WriterError, TextClientError, OperatorError) as error:
+        except (
+            SourceError,
+            SegmentPlannerError,
+            WriterError,
+            TextClientError,
+            OperatorError,
+        ) as error:
             if isinstance(error, TextClientError) and "budget" in str(error):
                 mark_dropped(inbox, item_id)
                 dropped.append({"tweet_id": item_id, "reason": "runway"})

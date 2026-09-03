@@ -12,7 +12,7 @@ import pytest
 
 from runtime_flight.__main__ import main
 from runtime_flight.config import load_config, validate_config
-from runtime_flight.content_queue import pending_ids
+from runtime_flight.content_queue import CLAIMED, PENDING, pending_ids
 from runtime_flight.fal_gateway import H3_MAX_TURBO_ENDPOINT
 from runtime_flight.list_load import load_list
 from runtime_flight.models import Fact, SegmentPackage, TweetCard
@@ -174,6 +174,76 @@ def test_load_list_file_leaves_items_for_the_producer(
     assert payload["enqueued"] == ["333", "111"]
     assert pending_ids(inbox) == ("333", "111")
     assert not (inbox / "pending" / "333" / "package.json").is_file()
+
+
+def test_run_list_drops_invalid_source_and_continues(
+    tmp_path: Path,
+    flight_setup: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(tmp_path, flight_setup, monkeypatch)
+    inbox = tmp_path / "inbox"
+    list_file, fixtures = _list_and_fixtures(tmp_path, ("333", "111"))
+    load_list(inbox, list_file=list_file, fixtures=fixtures)
+    packet_path = inbox / PENDING / "333" / "source_packet.local.json"
+    packet = json.loads(packet_path.read_text(encoding="utf-8"))
+    packet["tweet"]["text"] = "x" * 2001
+    packet_path.write_text(json.dumps(packet) + "\n", encoding="utf-8")
+
+    async def concat_fn(clips, dest: Path) -> None:
+        dest.write_bytes(b"concat")
+
+    summary = run_orchestrator(
+        config=config,
+        inbox=inbox,
+        turns=2,
+        max_text_requests=12,
+        out_dir=tmp_path / "out",
+        performer_factory=lambda meter, work_dir, baseline: InstantPerformer(
+            meter, work_dir, baseline
+        ),
+        concat_fn=concat_fn,
+        writer_factory=lambda client: ScriptWriter(client),
+        planner_factory=lambda client: ScriptPlanner(),
+    )
+    assert summary["stop_reason"] == "empty"
+    assert summary["commented"] == ["111"]
+    assert summary["dropped"][0]["tweet_id"] == "333"
+    assert pending_ids(inbox) == ()
+
+
+def test_run_list_retries_leftover_claimed(
+    tmp_path: Path,
+    flight_setup: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = _config(tmp_path, flight_setup, monkeypatch)
+    inbox = tmp_path / "inbox"
+    list_file, fixtures = _list_and_fixtures(tmp_path, ("333", "111"))
+    load_list(inbox, list_file=list_file, fixtures=fixtures)
+    claimed = inbox / CLAIMED / "333"
+    (inbox / PENDING / "333").rename(claimed)
+
+    async def concat_fn(clips, dest: Path) -> None:
+        dest.write_bytes(b"concat")
+
+    summary = run_orchestrator(
+        config=config,
+        inbox=inbox,
+        turns=2,
+        max_text_requests=12,
+        out_dir=tmp_path / "out",
+        performer_factory=lambda meter, work_dir, baseline: InstantPerformer(
+            meter, work_dir, baseline
+        ),
+        concat_fn=concat_fn,
+        writer_factory=lambda client: ScriptWriter(client),
+        planner_factory=lambda client: ScriptPlanner(),
+    )
+    assert summary["stop_reason"] == "empty"
+    assert summary["commented"] == ["333", "111"]
+    assert not claimed.exists()
+    assert pending_ids(inbox) == ()
 
 
 def test_run_list_cli_refuses_without_paid_flag(

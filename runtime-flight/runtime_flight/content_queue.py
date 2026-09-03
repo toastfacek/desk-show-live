@@ -114,6 +114,21 @@ def mark_dropped(inbox: Path, item_id: str) -> Path:
     return _move_claimed(inbox, item_id, DROPPED)
 
 
+def release_claimed(inbox: Path) -> tuple[str, ...]:
+    inbox = ensure_inbox(inbox)
+    claimed = inbox / CLAIMED
+    released: list[str] = []
+    if not claimed.is_dir():
+        return ()
+    for path in claimed.iterdir():
+        if not path.is_dir():
+            continue
+        dest = inbox / PENDING / path.name
+        path.rename(dest)
+        released.append(path.name)
+    return tuple(released)
+
+
 def _move_claimed(inbox: Path, item_id: str, lane: str) -> Path:
     inbox = Path(inbox).resolve()
     source = inbox / CLAIMED / item_id
