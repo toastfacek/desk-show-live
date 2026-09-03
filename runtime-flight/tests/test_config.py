@@ -315,6 +315,52 @@ def test_validate_config_accepts_ten_and_fifteen_second_clips(
     assert loaded.video_duration_s == duration_s
 
 
+def test_yaml_model_is_used_when_env_is_empty(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = _minimal_config()
+    payload["text"]["model"] = "openrouter/demo-host-mind"
+    config_path = _write_config(tmp_path, payload)
+    _set_complete_env(monkeypatch)
+    monkeypatch.delenv("TEXT_MODEL", raising=False)
+
+    loaded = load_config(config_path)
+    validate_config(loaded)
+    assert loaded.text_model == "openrouter/demo-host-mind"
+
+
+def test_yaml_model_wins_over_env(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = _minimal_config()
+    payload["text"]["model"] = "openrouter/yaml-slug"
+    config_path = _write_config(tmp_path, payload)
+    _set_complete_env(monkeypatch)
+    monkeypatch.setenv("TEXT_MODEL", "openrouter/env-slug")
+
+    loaded = load_config(config_path)
+    assert loaded.text_model == "openrouter/yaml-slug"
+
+
+def test_model_slug_is_visible_in_summary_and_repr(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = _minimal_config()
+    payload["text"]["model"] = "openrouter/demo-host-mind"
+    config_path = _write_config(tmp_path, payload)
+    _set_complete_env(monkeypatch)
+
+    loaded = load_config(config_path)
+    summary = redacted_summary(loaded)
+    assert summary["text"]["model"] == "openrouter/demo-host-mind"
+    assert "openrouter/demo-host-mind" in repr(loaded)
+    assert SECRET_API_KEY not in repr(loaded)
+    assert SECRET_API_KEY not in json.dumps(summary)
+
+
 def test_validate_config_accepts_complete_live_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

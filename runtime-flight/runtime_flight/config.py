@@ -72,7 +72,6 @@ class RuntimeConfig:
             self.baseline_id,
             self.text_base_url,
             self.text_api_key,
-            self.text_model,
             self.obs_password,
         ):
             if value:
@@ -119,7 +118,7 @@ def load_config(path: Path) -> RuntimeConfig:
         text_model_env=text_model_env,
         text_base_url=_read_env(text_base_url_env),
         text_api_key=_read_env(text_api_key_env),
-        text_model=_read_env(text_model_env),
+        text_model=_resolve_text_model(text, text_model_env),
         text_timeout_s=_require_int(text, "timeout_s"),
         text_smoke_max_requests=_require_int(text, "smoke_max_requests"),
         text_flight_max_requests=_require_int(text, "flight_max_requests"),
@@ -175,13 +174,14 @@ def validate_config(config: RuntimeConfig, *, require_obs: bool = True) -> None:
         (config.baseline_id_env, config.baseline_id),
         (config.text_base_url_env, config.text_base_url),
         (config.text_api_key_env, config.text_api_key),
-        (config.text_model_env, config.text_model),
     ]
     if require_obs:
         required_env.append((config.obs_password_env, config.obs_password))
     for env_name, value in required_env:
         if not value:
             errors.append(f"missing required environment variable: {env_name}")
+    if not config.text_model:
+        errors.append("text.model missing (set text.model in yaml or TEXT_MODEL)")
 
     if config.spend_cap_usd is None:
         if os.environ.get(config.spend_cap_env, "") != "":
@@ -267,6 +267,14 @@ def redacted_summary(config: RuntimeConfig) -> dict[str, Any]:
             "enabled": config.stream_enabled,
         },
     }
+
+
+def _resolve_text_model(text: dict[str, Any], model_env: str) -> str | None:
+    """YAML `text.model` is the visible slug. Env is fallback only."""
+    raw = text.get("model")
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip()
+    return _read_env(model_env)
 
 
 def _read_env(name: str) -> str | None:
