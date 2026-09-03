@@ -5,6 +5,8 @@ from __future__ import annotations
 import ast
 import asyncio
 from decimal import Decimal
+
+import pytest
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Literal
@@ -21,7 +23,7 @@ from runtime_flight.harness_live import (
     writer_phase,
 )
 from runtime_flight.models import Fact, SegmentPackage, Thought, TweetCard
-from runtime_flight.performer_fal import ReadyTake, TakeRequest
+from runtime_flight.performer_fal import FalCookTimings, ReadyTake, TakeRequest
 from runtime_flight.source import (
     EXPECTED_AUTHOR,
     EXPECTED_LINKED_URL,
@@ -292,6 +294,11 @@ class FakePerformer:
             request_id=f"req-{request.take}",
             status="ready",
             reserved_cost_usd=reserved,
+            cook=FalCookTimings(
+                t_inference_s=2.71,
+                timings={"inference": 2.71},
+                t_cook_s=self.delay_s,
+            ),
         )
 
 
@@ -313,6 +320,7 @@ def _harness(
     target_duration_s: float = 90.0,
     delay_s: float = 4.0,
     forced_late_takes: tuple[int, ...] = (),
+    forced_late_delay_s: float = 8.0,
     fail_takes: tuple[int, ...] = (),
     drop_422_takes: tuple[int, ...] = (),
     reanchor_every: int = 60,
@@ -328,6 +336,7 @@ def _harness(
         tmp_path,
         delay_s=delay_s,
         forced_late_takes=forced_late_takes,
+        forced_late_delay_s=forced_late_delay_s,
         fail_takes=fail_takes,
         drop_422_takes=drop_422_takes,
     )
@@ -366,25 +375,30 @@ def test_play_current_while_next_cooks(tmp_path: Path) -> None:
         await harness.run_simulated(until_aired=2)
 
     _run(run())
-    play_and_submit = [
-        beat
-        for beat in harness.beats
-        if beat.get("host_source") == "ready:1" and beat.get("submit") is not None
+    play_take_1 = [
+        beat for beat in harness.beats if beat.get("host_source") == "ready:1"
     ]
-    assert play_and_submit
-    assert play_and_submit[0]["submit"]["take"] == 2
-    assert performer.max_inflight == 1
+    assert play_take_1
+    take1 = next(row for row in harness.log if row["take"] == 1)
+    take2 = next(row for row in harness.log if row["take"] == 2)
+    assert take2["t_submit"] is not None
+    assert take1["t_on_air"] is not None
+    assert take2["t_submit"] <= take1["t_on_air"]
+    assert performer.max_inflight >= 2
     assert {req.baseline_id for req in performer.started} == {BASELINE_ID}
 
 
-def test_one_performer_request_max(tmp_path: Path) -> None:
+def test_alternating_hosts_cook_in_parallel(tmp_path: Path) -> None:
     harness, _, performer, _ = _harness(tmp_path)
 
     async def run() -> None:
         await harness.run_simulated(until_aired=3)
 
     _run(run())
-    assert performer.max_inflight == 1
+    assert performer.max_inflight >= 2
+    heroes = [req for req in performer.started if req.anchor == "hero"]
+    assert len(heroes) >= 2
+    assert {req.speaker for req in heroes[:2]} == {"BOT1", "BOT2"}
     assert all(req.speaker in {"BOT1", "BOT2"} for req in performer.started)
 
 
@@ -419,20 +433,74 @@ def test_same_speaker_chains_the_exact_frame_url(tmp_path: Path) -> None:
     assert performer.started[1].speaker == "BOT1"
     assert performer.started[1].anchor == "chain"
     assert performer.started[1].image_url == FRAME_URL.format(take=1)
+    take1 = next(row for row in harness.log if row["take"] == 1)
+    take2 = next(row for row in harness.log if row["take"] == 2)
+    assert take2["t_submit"] >= take1["t_ready"]
+    assert take2["t_submit"] <= take1["t_on_air"]
+
+
+def test_same_speaker_holds_first_take_until_successor_ready(tmp_path: Path) -> None:
+    harness, _, _, _ = _harness(tmp_path, writer=ContinuingWriter(), delay_s=4.0)
+
+    async def run() -> None:
+        await harness.run_simulated(until_aired=1, max_t=20)
+
+    _run(run())
+    take1 = next(row for row in harness.log if row["take"] == 1)
+    take2 = next(row for row in harness.log if row["take"] == 2)
+    assert take1["t_ready"] is not None
+    assert take2["t_ready"] is not None
+    assert take1["t_on_air"] == take2["t_ready"]
+    assert take2["t_on_air"] is None
+
+
+def test_successor_airs_on_the_cut_without_a_hole(tmp_path: Path) -> None:
+    harness, _, _, _ = _harness(tmp_path, writer=ContinuingWriter(), delay_s=4.0)
+
+    async def run() -> None:
+        await harness.run_simulated(until_aired=2, max_t=30)
+
+    _run(run())
+    take1 = next(row for row in harness.log if row["take"] == 1)
+    take2 = next(row for row in harness.log if row["take"] == 2)
+    assert take2["t_on_air"] == pytest.approx(take1["t_on_air"] + CLIP_DURATION_S)
+
+
+def test_blocked_later_ready_does_not_recut_every_poll(tmp_path: Path) -> None:
+    harness, _, _, _ = _harness(
+        tmp_path, delay_s=2.0, forced_late_takes=(1,), forced_late_delay_s=8.0
+    )
+
+    async def run() -> None:
+        await harness.run_simulated(until_aired=1, max_t=20)
+
+    _run(run())
+    wait_beats = [
+        beat
+        for beat in harness.beats
+        if beat.get("host_source") is None
+        and beat["layout"] in {"card_full", "split", "hold"}
+    ]
+    assert len(wait_beats) <= 3
 
 
 def test_late_take_uses_card_or_hold(tmp_path: Path) -> None:
-    harness, _, performer, _ = _harness(tmp_path, forced_late_takes=(2,))
+    harness, _, performer, _ = _harness(
+        tmp_path,
+        writer=ContinuingWriter(),
+        delay_s=4.0,
+        forced_late_takes=(3,),
+        forced_late_delay_s=12.0,
+    )
 
     async def run() -> None:
-        await harness.run_simulated(until_aired=2)
+        await harness.run_simulated(until_aired=3)
 
     _run(run())
-    assert any(beat["layout"] in {"card_full", "hold"} for beat in harness.beats)
-    take2 = next(row for row in harness.log if row["take"] == 2)
-    assert take2["status"] == "late"
-    assert take2["t_on_air"] is not None
-    assert performer.max_inflight == 1
+    assert any(beat["layout"] in {"card_full", "hold", "split"} for beat in harness.beats)
+    take3 = next(row for row in harness.log if row["take"] == 3)
+    assert take3["status"] == "late"
+    assert take3["t_on_air"] is not None
 
 
 def test_cap_prevents_submit(tmp_path: Path) -> None:
@@ -532,6 +600,19 @@ def test_bot_ids_stay_until_set_speaking(tmp_path: Path) -> None:
     assert "host_b" in speaking
     assert all(host in {None, "host_a", "host_b"} for host in speaking)
     assert "host_a" not in {req.speaker for req in performer.started}
+
+
+def test_ready_row_copies_fal_inference(tmp_path: Path) -> None:
+    harness, _, _, _ = _harness(tmp_path)
+
+    async def run() -> None:
+        await harness.run_simulated(until_aired=1)
+
+    _run(run())
+    row = next(item for item in harness.log if item["take"] == 1)
+    assert row["t_inference_s"] == 2.71
+    assert row["fal_timings"] == {"inference": 2.71}
+    assert row["t_cook_s"] == 4.0
 
 
 def test_writer_phase_is_derived_not_raw_timing(tmp_path: Path) -> None:

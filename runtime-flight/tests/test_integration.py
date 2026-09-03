@@ -103,7 +103,7 @@ def test_zero_cost_flight_writes_verifiable_evidence(tmp_path: Path) -> None:
         if row.get("t_on_air") is not None and row.get("speaker")
     }
     assert speakers >= {"BOT1", "BOT2"}
-    assert performer.max_inflight == 1
+    assert 2 <= performer.max_inflight <= 4
     assert not any(call[0] == "stop_stream" for call in client.calls)
     assert ("stop_record",) in client.calls
 

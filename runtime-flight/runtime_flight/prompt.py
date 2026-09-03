@@ -9,6 +9,8 @@ from runtime_flight.baseline import BaselineContext, CharacterPackTruth
 
 MAX_LINE_CHARS = 120
 SPEAKERS = frozenset({"BOT1", "BOT2"})
+SOLO_CAMERA = "Camera: locked eye-level single-shot, BOT1 at the desk, empty chat well on the right, no camera movement."
+TWO_SHOT_CAMERA = "Camera: locked wide eye-level two-shot, BOT1 left, BOT2 right, no camera movement."
 
 
 class PromptError(Exception):
@@ -19,25 +21,37 @@ def assemble_prompt(
     baseline: BaselineContext,
     speaker: Literal["BOT1", "BOT2"],
     line: str,
+    max_line_chars: int = MAX_LINE_CHARS,
 ) -> str:
     if speaker not in SPEAKERS:
         raise PromptError("speaker must be BOT1 or BOT2")
-    cleaned = _require_line(line)
+    cleaned = _require_line(line, max_line_chars=max_line_chars)
     bot1 = _character(baseline, "BOT1")
-    bot2 = _character(baseline, "BOT2")
-    active = bot1 if speaker == "BOT1" else bot2
+    slots = {character.slot for character in baseline.characters}
     scene = baseline.scene.manifest
+    if "BOT2" in slots:
+        bot2 = _character(baseline, "BOT2")
+        active = bot1 if speaker == "BOT1" else bot2
+        host_lines = (f"BOT1: {_host_line(bot1)}", f"BOT2: {_host_line(bot2)}")
+        camera = TWO_SHOT_CAMERA
+        action = f"{speaker} speaks while the other host listens with small eye and body reactions."
+    else:
+        if speaker != "BOT1":
+            raise PromptError("solo baseline can only speak as BOT1")
+        active = bot1
+        host_lines = (f"BOT1: {_host_line(bot1)}",)
+        camera = SOLO_CAMERA
+        action = "BOT1 speaks to camera. No second host."
     return "\n".join(
         (
             "Original flat 2D animated live-show shot.",
             f"Scene: {_require_str(scene.get('set'), 'set')}",
             f"Palette: {_format_palette(scene.get('palette'))}",
             f"Lighting: {_require_str(scene.get('lighting'), 'lighting')}",
-            "Camera: locked wide eye-level two-shot, BOT1 left, BOT2 right, no camera movement.",
-            f"BOT1: {_host_line(bot1)}",
-            f"BOT2: {_host_line(bot2)}",
+            camera,
+            *host_lines,
             f"Active host voice: {_require_str(active.manifest.get('voice_direction'), 'voice_direction')}",
-            f"Action: {speaker} speaks while the other host listens with small eye and body reactions.",
+            f"Action: {action}",
             f'Dialogue: "{_escape_quotes(cleaned)}"',
             "No readable text, letters, numbers, logos, captions, lower thirds, or UI inside the generated frame.",
         )
@@ -72,13 +86,13 @@ def _format_palette(value: Any) -> str:
     raise PromptError("palette must be a non-empty string")
 
 
-def _require_line(line: str) -> str:
+def _require_line(line: str, max_line_chars: int = MAX_LINE_CHARS) -> str:
     if not isinstance(line, str) or not line.strip():
         raise PromptError("thought text is empty")
     if any(unicodedata.category(char) == "Cc" for char in line):
         raise PromptError("thought text contains a control character")
-    if len(line) > MAX_LINE_CHARS:
-        raise PromptError("thought text exceeds 120 characters")
+    if len(line) > max_line_chars:
+        raise PromptError(f"thought text exceeds {max_line_chars} characters")
     return line
 
 

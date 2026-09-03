@@ -1,7 +1,11 @@
 # Runtime live flight check
 
-Learnings from the first paid OBS live on this box (`live-20260901T155458Z`)
-and the programme fixes that followed. Read this before the next `live` run.
+**Historical.** This is the first paid OBS live (`live-20260901T155458Z`), a
+two-host Light Media Club 90s flight. The current lock is [../SHOW.md](../SHOW.md):
+solo PHASEONE, list rundown, no OBS on that path.
+
+Learnings below still apply if you run `smoke` / `live` through stock OBS on
+this box (Constrained Baseline decode, absolute `HOST_WIDE` path, remux).
 The operator command sheet is [README.md](README.md).
 
 Record only. `stream.enabled` stays false. Preflight refuses if OBS is already
@@ -32,8 +36,11 @@ Named shows stay in research. They never enter Writer, HostMind, or H3 prompts.
 | Aired | 8 takes (2 and 4 failed on fal). Writer stayed on BOT1. |
 
 Automated `verify-flight` was **F-FAIL**: it wants 10 aired and both hosts.
-Overlapping fal (submit next while current is on air) is intended cook/play,
-not a bug.
+Overlapping fal is intended. The harness keeps up to four H3 jobs in flight.
+A speaker change or reanchor is a hero take and can start while another job
+cooks. Same-speaker chain still waits for that host's last frame. The two
+wells are crops of one two-shot; the ready buffer is a queue of those
+two-shots, not two generators.
 
 The first programme recording looked wrong in three ways that are easy to
 misread: silent audio, cameras fading in and out, hosts pinned to the sides
@@ -213,7 +220,9 @@ stays in the scenes and stays hidden. The overlay owns those plates.
   `card_origin=http://127.0.0.1:8765` for `card.json`.
 - Discuss is text-only. `--confirm-text-requests` is required. With
   `--package`, confirm == max-turns. Cap 12 turns.
-- Spoken Writer lines stay at 120 chars / ~4.3s. Discuss lines stay at 220.
+- Spoken Writer lines scale with `video.duration_s` (15s live default:
+  360 chars / ~14.3s). Discuss lines stay at 220. H3 duration must be
+  5, 10, or 15.
 - Scene pack `reanchor_every` stays 5.
 - Label the live inherit model `baseline` in outputs. Treat `TEXT_MODEL` as a
   secret.

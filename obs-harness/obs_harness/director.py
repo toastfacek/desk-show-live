@@ -31,13 +31,15 @@ def decide(snapshot: dict) -> dict:
         return beat(layout="hold", why="hold flag")
 
     ready = list(snapshot.get("ready") or [])
-    cooking = snapshot.get("cooking")
+    cooking = _cooking_jobs(snapshot)
     next_line = snapshot.get("next_line")
     spend_policy = segment.get("spend_policy") or "normal"
+    inflight = len(cooking)
     can_submit = (
-        cooking is None
+        inflight < _max_inflight(snapshot)
         and next_line is not None
         and spend_policy == "normal"
+        and (bool(snapshot.get("chain_ready")) or inflight == 0)
     )
 
     if ready:
@@ -55,17 +57,40 @@ def decide(snapshot: dict) -> dict:
 
     wait_layout = _wait_layout(snapshot)
 
-    if cooking is not None:
+    if cooking and not can_submit:
         return beat(layout=wait_layout, why="waiting on cooking")
 
-    if next_line is not None and spend_policy == "normal":
+    if can_submit:
+        why = (
+            "cold start or hole; submit next line"
+            if not cooking
+            else "buffer slot free; submit next line"
+        )
         return beat(
             layout=wait_layout,
             submit=_submit_from_line(snapshot, next_line),
-            why="cold start or hole; submit next line",
+            why=why,
         )
 
     return beat(layout="hold", why="script ended or stop")
+
+
+def _cooking_jobs(snapshot: dict) -> list:
+    cooking = snapshot.get("cooking")
+    if not cooking:
+        return []
+    if isinstance(cooking, dict):
+        return [cooking]
+    return list(cooking)
+
+
+def _max_inflight(snapshot: dict) -> int:
+    raw = snapshot.get("max_inflight")
+    if raw is None:
+        raw = (snapshot.get("segment") or {}).get("max_inflight")
+    if raw is None:
+        return 1
+    return int(raw)
 
 
 def _wait_layout(snapshot: dict) -> str:

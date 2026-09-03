@@ -15,6 +15,7 @@ from runtime_flight.config import (
     load_config,
     validate_config,
 )
+from runtime_flight.fal_gateway import H3_MAX_TURBO_ENDPOINT
 from runtime_flight.obs_session import ObsSession
 from runtime_flight.obs_setup import setup_obs
 from runtime_flight.source import SourceError, load_source_packet
@@ -24,6 +25,7 @@ from runtime_flight.signals import install_panic_handler
 PAID_FLAG_ENV = "RUNTIME_ALLOW_PAID"
 SMOKE_MAX_TEXT = 6
 LIVE_MAX_TEXT = 24
+ORCHESTRATOR_MAX_TEXT = 2000
 SMOKE_FAL_ATTEMPTS = frozenset({1, 2})
 LIVE_SEGMENT_MAX_FAL = 18
 DISCUSS_MAX_TURNS = 12
@@ -58,6 +60,13 @@ def require_text_request_limit(mode: Literal["smoke", "live"], count: int) -> No
     if count > limit:
         raise OperatorError(
             f"text request limit exceeded: {count} > {limit} for mode {mode}"
+        )
+
+
+def require_orchestrator_text_limit(count: int) -> None:
+    if count < 1 or count > ORCHESTRATOR_MAX_TEXT:
+        raise OperatorError(
+            f"run-list --confirm-text-requests must be 1 to {ORCHESTRATOR_MAX_TEXT}"
         )
 
 
@@ -251,6 +260,215 @@ def cmd_stage(
         )
     except StageError as error:
         raise OperatorError(str(error)) from error
+
+
+def cmd_time_fal(
+    config: RuntimeConfig,
+    *,
+    confirm_spend: str | None,
+    takes: int,
+    duration_s: int,
+    run_time_fal,
+    out_dir: Path | None = None,
+) -> dict[str, Any]:
+    require_paid_flag()
+    require_confirm_spend(config, confirm_spend)
+    if takes < 1 or takes > 3:
+        raise OperatorError("time-fal --takes must be 1 to 3")
+    if duration_s != 5:
+        raise OperatorError("time-fal --duration must be 5")
+    return run_time_fal(
+        config=config,
+        takes=takes,
+        duration_s=duration_s,
+        out_dir=out_dir,
+    )
+
+
+def cmd_prepare_pass(
+    config: RuntimeConfig,
+    *,
+    confirm_spend: str | None,
+    endpoint: str,
+    duration_s: int,
+    rate: str,
+    run_prepare_pass,
+    out_dir: Path | None = None,
+    queue: list[Path] | None = None,
+    turns: int = 3,
+    confirm_text_requests: int = 0,
+    run_prepare_queue=None,
+    http_post=None,
+) -> dict[str, Any]:
+    from runtime_flight.prepare_pass import (
+        PREPARE_PASS_SEGMENTS_MAX,
+        PREPARE_PASS_SEGMENTS_MIN,
+        PREPARE_PASS_TURNS,
+        apply_prepare_overrides,
+        parse_prepare_rate,
+    )
+
+    require_paid_flag()
+    require_confirm_spend(config, confirm_spend)
+    if duration_s != 5:
+        raise OperatorError("prepare-pass --duration must be 5")
+    updated = apply_prepare_overrides(
+        config,
+        endpoint=endpoint or H3_MAX_TURBO_ENDPOINT,
+        duration_s=duration_s,
+        rate_768p_usd_per_s=parse_prepare_rate(rate),
+    )
+    validate_config(updated, require_obs=False)
+    if queue:
+        if not (PREPARE_PASS_SEGMENTS_MIN <= len(queue) <= PREPARE_PASS_SEGMENTS_MAX):
+            raise OperatorError("prepare-pass --queue must be 3 to 6 staged tweet directories")
+        if turns not in PREPARE_PASS_TURNS:
+            raise OperatorError("prepare-pass --turns must be 2 or 3")
+        if confirm_text_requests < len(queue):
+            raise OperatorError(
+                "prepare-pass --confirm-text-requests must be at least the queue length"
+            )
+        require_text_request_limit(updated.mode, confirm_text_requests)
+        runner = run_prepare_queue
+        if runner is None:
+            from runtime_flight.prepare_queue import run_prepare_queue as runner
+        return runner(
+            config=updated,
+            source_dirs=list(queue),
+            turns=turns,
+            max_text_requests=confirm_text_requests,
+            out_dir=out_dir,
+            http_post=http_post,
+        )
+    if confirm_text_requests:
+        raise OperatorError("prepare-pass text requests are only used with --queue")
+    return run_prepare_pass(config=updated, out_dir=out_dir)
+
+
+def cmd_enqueue(*, inbox: Path, source_dirs: list[Path]) -> dict[str, Any]:
+    from runtime_flight.content_queue import enqueue, needs_producer, pending_ids
+
+    if not source_dirs:
+        raise OperatorError("enqueue needs at least one staged directory")
+    claimed = [str(enqueue(inbox, path)) for path in source_dirs]
+    return {
+        "inbox": str(Path(inbox).resolve()),
+        "enqueued": claimed,
+        "pending": list(pending_ids(inbox)),
+        "needs_producer": list(needs_producer(inbox)),
+    }
+
+
+def cmd_cook_queue(
+    config: RuntimeConfig,
+    *,
+    confirm_spend: str | None,
+    inbox: Path,
+    ready_buffer_s: int,
+    turns: int,
+    confirm_text_requests: int,
+    endpoint: str,
+    duration_s: int,
+    rate: str,
+    out_dir: Path | None = None,
+    run_cook_queue=None,
+    http_post=None,
+) -> dict[str, Any]:
+    from runtime_flight.prepare_pass import apply_prepare_overrides, parse_prepare_rate
+    from runtime_flight.queue_worker import (
+        READY_BUFFER_MAX_S,
+        READY_BUFFER_MIN_S,
+        run_cook_queue as default_run,
+    )
+
+    require_paid_flag()
+    require_confirm_spend(config, confirm_spend)
+    if duration_s != 5:
+        raise OperatorError("cook-queue --duration must be 5")
+    if not (READY_BUFFER_MIN_S <= ready_buffer_s <= READY_BUFFER_MAX_S):
+        raise OperatorError("cook-queue --ready-buffer-s must be 45 to 60")
+    if confirm_text_requests < 1:
+        raise OperatorError("cook-queue --confirm-text-requests must be at least 1")
+    require_text_request_limit(config.mode, confirm_text_requests)
+    updated = apply_prepare_overrides(
+        config,
+        endpoint=endpoint or H3_MAX_TURBO_ENDPOINT,
+        duration_s=duration_s,
+        rate_768p_usd_per_s=parse_prepare_rate(rate),
+    )
+    validate_config(updated, require_obs=False)
+    runner = run_cook_queue if run_cook_queue is not None else default_run
+    return runner(
+        config=updated,
+        inbox=inbox,
+        ready_buffer_s=ready_buffer_s,
+        turns=turns,
+        max_text_requests=confirm_text_requests,
+        out_dir=out_dir,
+        http_post=http_post,
+    )
+
+
+def cmd_load_list(
+    *,
+    inbox: Path,
+    list_url: str | None = None,
+    list_file: Path | None = None,
+    http_get=None,
+) -> dict[str, Any]:
+    from runtime_flight.list_load import load_list
+
+    return load_list(inbox, list_url=list_url, list_file=list_file, http_get=http_get)
+
+
+def cmd_run_list(
+    config: RuntimeConfig,
+    *,
+    confirm_spend: str | None,
+    inbox: Path,
+    until: str | None = None,
+    turns: int,
+    confirm_text_requests: int,
+    endpoint: str,
+    duration_s: int,
+    rate: str,
+    list_url: str | None = None,
+    list_file: Path | None = None,
+    chat_file: Path | None = None,
+    out_dir: Path | None = None,
+    run_orchestrator=None,
+    http_get=None,
+    http_post=None,
+) -> dict[str, Any]:
+    from runtime_flight.prepare_pass import apply_prepare_overrides, parse_prepare_rate
+    from runtime_flight.orchestrator import run_orchestrator as default_run
+
+    require_paid_flag()
+    require_confirm_spend(config, confirm_spend)
+    if duration_s != 5:
+        raise OperatorError("run-list --duration must be 5")
+    require_orchestrator_text_limit(confirm_text_requests)
+    updated = apply_prepare_overrides(
+        config,
+        endpoint=endpoint or H3_MAX_TURBO_ENDPOINT,
+        duration_s=duration_s,
+        rate_768p_usd_per_s=parse_prepare_rate(rate),
+    )
+    validate_config(updated, require_obs=False)
+    runner = run_orchestrator if run_orchestrator is not None else default_run
+    return runner(
+        config=updated,
+        inbox=inbox,
+        until=until,
+        turns=turns,
+        max_text_requests=confirm_text_requests,
+        out_dir=out_dir,
+        list_url=list_url,
+        list_file=list_file,
+        chat_file=chat_file,
+        http_get=http_get,
+        http_post=http_post,
+    )
 
 
 def cmd_replay(bundle: Path, *, network_call: Callable[..., Any] | None = None) -> dict[str, Any]:

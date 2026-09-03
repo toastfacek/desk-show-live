@@ -249,6 +249,27 @@ def test_validate_config_enforces_video_restrictions(
         validate_config(loaded)
 
 
+def test_validate_config_accepts_h3_max_turbo(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = _minimal_config()["video"] | {
+        "endpoint": "minimax/h3-max-turbo/image-to-video"
+    }
+    config_path = _write_config(tmp_path, _minimal_config(video=video))
+    _set_complete_env(monkeypatch)
+    loaded = load_config(config_path)
+    validate_config(loaded)
+    assert loaded.video_endpoint == "minimax/h3-max-turbo/image-to-video"
+
+
+def test_config_and_gateway_allow_the_same_video_endpoints() -> None:
+    from runtime_flight.config import ALLOWED_VIDEO_ENDPOINTS as config_endpoints
+    from runtime_flight.fal_gateway import ALLOWED_VIDEO_ENDPOINTS as gateway_endpoints
+
+    assert config_endpoints == gateway_endpoints
+
+
 def test_secret_redaction_in_repr_errors_and_summary(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -277,6 +298,21 @@ def test_secret_redaction_in_repr_errors_and_summary(
         assert SECRET_OBS_PASSWORD not in str(error)
     else:
         raise AssertionError("expected ConfigError")
+
+
+@pytest.mark.parametrize("duration_s", [10, 15])
+def test_validate_config_accepts_ten_and_fifteen_second_clips(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    duration_s: int,
+) -> None:
+    video = _minimal_config()["video"] | {"duration_s": duration_s}
+    config_path = _write_config(tmp_path, _minimal_config(video=video))
+    _set_complete_env(monkeypatch, cap="12.00")
+
+    loaded = load_config(config_path)
+    validate_config(loaded)
+    assert loaded.video_duration_s == duration_s
 
 
 def test_validate_config_accepts_complete_live_config(

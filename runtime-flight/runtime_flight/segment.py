@@ -27,6 +27,7 @@ from runtime_flight.topic_map import (
     resolve_topic_map,
 )
 from runtime_flight.performer_fal import FalPerformer, ReadyTake, TakeRequest
+from runtime_flight.clip import max_thought_chars
 from runtime_flight.prompt import assemble_prompt
 from runtime_flight.segment_planner import SegmentPlanner
 from runtime_flight.source import load_source_packet
@@ -129,11 +130,18 @@ async def _run_segment_async(
                 phase,
                 voices=voices,
                 coverage=coverage,
+                clip_duration_s=config.video_duration_s,
             )
             thought, *pending = list(batch)
         planned.append(thought)
         coverage = advance_coverage(coverage, thought, topic_map)
-        request = _request_for(baseline, thought, take, completed)
+        request = _request_for(
+            baseline,
+            thought,
+            take,
+            completed,
+            max_line_chars=max_thought_chars(config.video_duration_s),
+        )
         requests.append(request)
         events.append(
             {
@@ -229,6 +237,7 @@ def _request_for(
     thought: Thought,
     take: int,
     completed: list[ReadyTake],
+    max_line_chars: int,
 ) -> TakeRequest:
     previous = completed[take - 2] if take > 1 else None
     anchor, image_url = persist_anchor(
@@ -243,7 +252,12 @@ def _request_for(
         take=take,
         speaker=thought.speaker,
         line=thought.text,
-        prompt=assemble_prompt(baseline, thought.speaker, thought.text),
+        prompt=assemble_prompt(
+            baseline,
+            thought.speaker,
+            thought.text,
+            max_line_chars=max_line_chars,
+        ),
         anchor=anchor,
         image_url=image_url,
         baseline_id=baseline.baseline_id,
@@ -361,13 +375,14 @@ def _build_fal_performer(
     fal_key = os.environ.get("FAL_KEY")
     if not fal_key:
         raise OperatorError("missing required environment variable: FAL_KEY")
-    gateway = FalGateway(fal_key=fal_key)
+    gateway = FalGateway(fal_key=fal_key, endpoint=config.video_endpoint)
     return FalPerformer(
         meter=meter,
         gateway=gateway,
         upload=_fal_upload,
         work_dir=work_dir,
         hero_path=hero_path,
+        duration_s=config.video_duration_s,
     )
 
 

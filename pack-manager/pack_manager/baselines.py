@@ -341,7 +341,10 @@ class BaselineService:
                 "path": hero_relative,
                 "sha256": hero.sha256,
             },
-            "host_map": {"BOT1": "host_a", "BOT2": "host_b"},
+            "host_map": {
+                slot: ("host_a" if slot == "BOT1" else "host_b")
+                for slot in display_names
+            },
             "display_names": display_names,
             "packs": {
                 "characters": character_records,
@@ -367,16 +370,24 @@ class BaselineService:
     def _verify_runtime_metadata(
         self, manifest: dict, verified_bytes: dict[str, bytes]
     ) -> None:
-        if manifest.get("host_map") != {
+        host_map = manifest.get("host_map")
+        expected_map = {
             "BOT1": "host_a",
             "BOT2": "host_b",
-        }:
+        }
+        if not isinstance(host_map, dict) or not host_map:
+            raise IntegrityError("invalid host mapping")
+        if "BOT1" not in host_map or not set(host_map).issubset(expected_map):
+            raise IntegrityError("invalid host mapping")
+        if any(host_map[slot] != expected_map[slot] for slot in host_map):
             raise IntegrityError("invalid host mapping")
         characters = manifest.get("packs", {}).get("characters")
         display_names = manifest.get("display_names")
         if not isinstance(characters, list) or not isinstance(display_names, dict):
             raise IntegrityError("invalid display names")
-        if set(display_names) != {"BOT1", "BOT2"}:
+        if "BOT1" not in display_names or not set(display_names).issubset({"BOT1", "BOT2"}):
+            raise IntegrityError("invalid display names")
+        if set(display_names) != set(host_map):
             raise IntegrityError("invalid display names")
         expected = {}
         try:

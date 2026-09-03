@@ -13,12 +13,14 @@ from urllib.parse import urlparse
 import pytest
 
 from runtime_flight.fal_gateway import (
+    H3_MAX_TURBO_ENDPOINT,
     QUEUE_SUBMIT_URL,
     FalGateway,
     FalGatewayError,
     FalUnknownSubmission,
     QueueHandle,
     QueueResult,
+    queue_submit_url,
 )
 from runtime_flight.spend import SpendLedger, SpendMeter, arguments_sha256
 
@@ -97,14 +99,22 @@ def _run(coro):
     return asyncio.run(coro)
 
 
-def _gateway(http_request, clock: FakeClock | None = None) -> FalGateway:
+def _gateway(
+    http_request,
+    clock: FakeClock | None = None,
+    *,
+    endpoint: str | None = None,
+) -> FalGateway:
     clock = clock or FakeClock()
-    return FalGateway(
-        fal_key=FAL_KEY,
-        http_request=http_request,
-        sleep=clock.sleep,
-        monotonic=clock.monotonic,
-    )
+    kwargs: dict[str, Any] = {
+        "fal_key": FAL_KEY,
+        "http_request": http_request,
+        "sleep": clock.sleep,
+        "monotonic": clock.monotonic,
+    }
+    if endpoint is not None:
+        kwargs["endpoint"] = endpoint
+    return FalGateway(**kwargs)
 
 
 def test_submit_posts_queue_once_with_key_authorization() -> None:
@@ -124,6 +134,25 @@ def test_submit_posts_queue_once_with_key_authorization() -> None:
     assert headers["Authorization"] == f"Key {FAL_KEY}"
     assert headers["Content-Type"] == "application/json"
     assert calls[0]["json"] == ARGUMENTS
+
+
+def test_submit_posts_turbo_queue_url() -> None:
+    calls: list[dict[str, Any]] = []
+
+    async def http_request(method: str, url: str, **kwargs: Any) -> FakeResponse:
+        calls.append({"method": method, "url": url, **kwargs})
+        return FakeResponse(200, _enqueue_body())
+
+    handle = _run(_gateway(http_request, endpoint=H3_MAX_TURBO_ENDPOINT).submit(ARGUMENTS))
+    assert handle.request_id == REQUEST_ID
+    assert calls[0]["method"] == "POST"
+    assert calls[0]["url"] == queue_submit_url(H3_MAX_TURBO_ENDPOINT)
+    assert calls[0]["url"] == "https://queue.fal.run/minimax/h3-max-turbo/image-to-video"
+
+
+def test_queue_submit_url_rejects_unknown_endpoint() -> None:
+    with pytest.raises(FalGatewayError, match="endpoint"):
+        queue_submit_url("other/model")
 
 
 @pytest.mark.parametrize("failure", ["timeout", 429, 503])
@@ -209,6 +238,12 @@ def test_reconcile_polls_status_with_auth_and_fetches_result_once_on_completed()
     assert result.remote_state == "COMPLETED"
     assert result.payload == {"video": {"url": "https://v3.fal.media/files/out.mp4"}}
     assert result.unknown_submission is False
+    assert result.t_first_progress_s is None
+    assert result.t_completed_s is not None
+    assert result.t_completed_s >= 0.0
+    assert result.status_samples
+    assert result.status_samples[0]["status"] == "IN_QUEUE"
+    assert "t_s" in result.status_samples[0]
     status_gets = [c for c in calls if c == ("GET", STATUS_URL)]
     response_gets = [c for c in calls if c == ("GET", RESPONSE_URL)]
     assert status_gets
@@ -228,7 +263,9 @@ def test_poll_interval_schedule_250ms_then_500ms_then_2s() -> None:
             return FakeResponse(200, {"ok": True})
         raise AssertionError(f"unexpected {method} {url}")
 
-    _run(_gateway(http_request, clock).reconcile(_handle()))
+    result = _run(_gateway(http_request, clock).reconcile(_handle()))
+    assert result.t_first_progress_s == 0.0
+    assert result.t_completed_s is not None
     early = [s for s, t in _sleeps_at(clock) if t < 2.0]
     mid = [s for s, t in _sleeps_at(clock) if 2.0 <= t < 10.0]
     late = [s for s, t in _sleeps_at(clock) if t >= 10.0]

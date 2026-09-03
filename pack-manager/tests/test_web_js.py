@@ -153,14 +153,14 @@ console.log(JSON.stringify({
     }
 
 
-def test_ui_requires_two_hosts_and_refreshes_requested_candidates():
+def test_ui_requires_bot1_and_refreshes_requested_candidates():
     root = Path(__file__).parents[1] / "pack_manager" / "web"
     html = (root / "index.html").read_text()
     javascript = (root / "app.js").read_text()
 
     assert 'name="BOT1"' in html
-    bot2 = html.split('name="BOT2"', 1)[1].split("</select>", 1)[0]
-    assert "required" in bot2
+    for chunk in html.split('name="BOT2"')[1:]:
+        assert "required" not in chunk.split("</select>", 1)[0]
     assert "requestedCandidatesForCanonical" in javascript
     assert "addEventListener(" in javascript
     assert '"change"' in javascript

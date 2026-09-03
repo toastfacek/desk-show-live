@@ -1,6 +1,6 @@
-# Where the two hosts live
+# Where the host lives
 
-PHASEONE[lol] and deb are not missing. They are not loose PNGs next to `studio.yaml`.
+PHASEONE[lol] is not missing. The sprite is not a loose PNG next to `studio.yaml`.
 
 | What you want | Where it actually is |
 | :---- | :---- |
@@ -8,7 +8,7 @@ PHASEONE[lol] and deb are not missing. They are not loose PNGs next to `studio.y
 | Character packs, scene packs, hero candidates, locked 1344×768 baseline | `pack-manager/` |
 | Live image bytes on a machine that already approved them | `pack-manager/data/` — **gitignored**. Hashed blobs, not filenames. |
 | A locked run you can hand to flight | `pack-manager/data/exports/<baseline-id>/` |
-| Seed still for empty clones / this Cloud Agent environment | `pack-manager/fixtures/hero_wide.png` (1344×768). Approved Light Media Club wide: orange pebble left, cobalt lozenge right, walnut desk. Lock it with `python3 -m pack_manager.hosts`. |
+| Seed still for empty clones / this Cloud Agent environment | `pack-manager/fixtures/hero_solo.png` (1344×768). Solo stream desk: one orange sprite, one mic, blank monitor, empty right third for chat. Lock it with `python3 -m pack_manager.hosts`. |
 | OBS timing placeholders (not the hosts) | `obs-harness/assets/clips/*.mp4` |
 | Old one-host bake (`hero.png`, `hold.mp4`) | Root `assets/` — also gitignored. `bake_assets.py` / `run_live.py`. Different show. |
 
@@ -20,7 +20,7 @@ This environment stages a demo from the checked-in seed:
 ./scripts/stage-demo.sh
 ```
 
-That writes gitignored Pack Manager `data/` (PHASEONE[lol], deb, locked 1344×768 baseline) and the reviewed Dwarkesh source packet under `runtime-flight/inputs/`. It does not call fal or a text model.
+That writes gitignored Pack Manager `data/` (PHASEONE[lol] only, locked 1344×768 solo baseline) and the reviewed Dwarkesh source packet under `runtime-flight/inputs/`. It does not call fal or a text model.
 
 M0: flight-ready Character/Scene Pack **v2** plus one approved, locked 1344×768 hero baseline in Pack Manager.
 
