@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PHASEONE · footage loop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root {
+      --ink: #0b0a08;
+      --panel: #15130f;
+      --panel-2: #1e1b16;
+      --line: #2a2620;
+      --bone: #f4f1ea;
+      --bone-2: #ada69a;
+      --bone-3: #6b655c;
+      --lemon: #d4e04a;
+      --amber: #f0a12a;
+      --display: Archivo, "Helvetica Neue", sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--ink); color: var(--bone); }
+    body { font: 400 15px/1.45 var(--display); letter-spacing: -0.01em; }
+    .desk {
+      height: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(280px, 0.92fr);
+      min-height: 100vh;
+    }
+    .monitor, .well, .chat {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .monitor {
+      background: #0a0c10;
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+    }
+    .monitor-frame {
+      flex: 1;
+      margin: 22px 22px 12px;
+      border: 1px solid #2a3340;
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(80, 140, 200, 0.18), transparent 46%),
+        linear-gradient(180deg, #14202c 0%, #0b1016 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 20px;
+    }
+    .monitor-kicker {
+      font: 600 11px/1 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--lemon);
+      margin: 0 0 8px;
+    }
+    .monitor-copy {
+      margin: 0;
+      font: 500 22px/1.25 var(--display);
+      font-stretch: 88%;
+      max-width: 28ch;
+    }
+    .monitor-why { margin: 8px 0 0; color: var(--bone-3); font: 400 12px/1.4 var(--mono); }
+    .timeline { padding: 0 22px 18px; }
+    .bar {
+      height: 6px;
+      background: #2a2620;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .bar > span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--lemon);
+    }
+    .ticks { display: flex; justify-content: space-between; margin-top: 8px; color: var(--bone-3); font: 400 10px/1 var(--mono); }
+    .well {
+      background:
+        radial-gradient(ellipse at 42% 38%, rgba(240, 161, 42, 0.16), transparent 42%),
+        linear-gradient(180deg, #17151c 0%, #0c0b10 100%);
+    }
+    #stage { width: 100%; height: 100%; display: block; cursor: grab; }
+    .tag, .face-state, .spoken, .hint {
+      position: absolute;
+      pointer-events: none;
+    }
+    .tag, .face-state, .hint {
+      font: 500 11px/1 var(--mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--bone-3);
+    }
+    .tag { top: 22px; left: 24px; color: var(--bone-2); }
+    .face-state { top: 22px; right: 24px; color: var(--amber); }
+    .hint { bottom: 88px; left: 24px; }
+    .spoken {
+      left: 24px; right: 24px; bottom: 24px; margin: 0;
+      font: 500 18px/1.3 var(--display); font-stretch: 90%;
+    }
+    .chat {
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      border-left: 1px solid var(--line);
+    }
+    .chat-head { padding: 18px 20px 12px; border-bottom: 1px solid var(--line); }
+    .chat-head h1 {
+      margin: 0 0 4px;
+      font: 700 15px/1.1 var(--display);
+      font-stretch: 88%;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    .chat-head p, .meta, .hud, .note {
+      margin: 0;
+      color: var(--bone-3);
+      font: 400 11px/1.4 var(--mono);
+    }
+    #mute {
+      position: absolute; top: 16px; right: 16px;
+      appearance: none; border: 1px solid var(--line);
+      background: var(--panel); color: var(--bone);
+      border-radius: 999px; padding: 7px 12px;
+      font: 500 12px/1 var(--mono); cursor: pointer; z-index: 2;
+    }
+    #log {
+      list-style: none; margin: 0; padding: 16px 18px 8px;
+      flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 12px;
+    }
+    .who { font: 600 10px/1 var(--mono); letter-spacing: 0.14em; color: var(--bone-3); }
+    .msg-host .who { color: var(--amber); }
+    .msg-chat .who { color: var(--lemon); }
+    .msg p { margin: 4px 0 0; }
+    .msg-chat { padding-left: 18px; border-left: 2px solid var(--lemon); }
+    .msg-host { padding-left: 18px; border-left: 2px solid var(--amber); }
+    .hud { padding: 0 20px 10px; word-break: break-word; }
+    .note { padding: 0 20px 12px; }
+    .samples, .composer { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 12px; }
+    .composer { border-top: 1px solid var(--line); padding-top: 14px; }
+    button, #send {
+      appearance: none; border: 1px solid var(--line);
+      background: var(--panel); color: var(--bone);
+      border-radius: 999px; padding: 7px 12px;
+      font: 500 12px/1 var(--mono); cursor: pointer;
+    }
+    #send { background: var(--lemon); color: var(--ink); border-color: var(--lemon); font-weight: 600; }
+    #comment {
+      flex: 1; min-width: 0;
+      background: var(--panel-2); border: 1px solid var(--line);
+      color: var(--bone); border-radius: 8px; padding: 10px 12px;
+    }
+    .decision {
+      position: absolute; top: 48px; left: 24px;
+      font: 600 11px/1.4 var(--mono); letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--lemon);
+      pointer-events: none; max-width: 22ch;
+    }
+    a.back { color: var(--bone-2); }
+    @media (max-width: 1100px) {
+      .desk { grid-template-columns: 1fr; grid-template-rows: 28vh 36vh 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="desk">
+    <section class="monitor" aria-label="Content view">
+      <div class="monitor-frame">
+        <p class="monitor-kicker" id="mon-kicker">Content view · footage</p>
+        <p class="monitor-copy" id="mon-copy">Waiting for the drop.</p>
+        <p class="monitor-why" id="mon-why"></p>
+      </div>
+      <div class="timeline">
+        <div class="bar" aria-hidden="true"><span id="playhead"></span></div>
+        <div class="ticks">
+          <span id="t-now">0.0s</span>
+          <span id="t-end">40s</span>
+        </div>
+      </div>
+    </section>
+    <section class="well" aria-label="Host well">
+      <span class="tag">PHASEONE[lol]</span>
+      <span class="face-state" id="face-state">listening</span>
+      <p class="decision" id="decision">stay · open</p>
+      <canvas id="stage" width="720" height="640">3D grokbot</canvas>
+      <p class="hint">content view is the eye · chat is an interrupt</p>
+      <p class="spoken" id="spoken">The clip starts. The host does not wait for chat.</p>
+    </section>
+    <aside class="chat" aria-label="Chat well">
+      <header class="chat-head">
+        <button type="button" id="mute" aria-pressed="false">Sound on</button>
+        <h1>Chat well</h1>
+        <p>Curated poke, not the rundown. <a class="back" href="index.html">Face only</a></p>
+        <p class="meta">loop: <span id="loop-state">stay</span> · move <span id="loop-move">wait</span></p>
+      </header>
+      <ul id="log"></ul>
+      <p class="hud" id="hud" aria-live="polite"></p>
+      <p class="note">The loop lands when the clip ends and a take is in, when the clock dies, or when it has been quiet after a take. Unseen moments block an early land.</p>
+      <div class="samples">
+        <button type="button" data-sample="is that the wanted system actually committing?">wanted system?</button>
+        <button type="button" data-sample="the landing looked too lucky lol">lucky landing</button>
+        <button type="button" data-sample="would you actually play this?">would you play this?</button>
+      </div>
+      <form class="composer" id="composer">
+        <label class="visually-hidden" for="comment" style="position:absolute;left:-9999px">Comment</label>
+        <input id="comment" name="comment" maxlength="280" autocomplete="off" placeholder="Poke the clip">
+        <button type="submit" id="send">Send</button>
+      </form>
+    </aside>
+  </div>
+  <script src="vendor/zdog.dist.min.js"></script>
+  <script src="https://unpkg.com/zdog@1.1.3/dist/zdog.dist.min.js"></script>
+  <script src="js/bus.js"></script>
+  <script src="js/grokbot.js"></script>
+  <script src="js/voice.js"></script>
+  <script src="js/loop.js"></script>
+  <script src="js/footage-app.js"></script>
+</body>
+</html>
