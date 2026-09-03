@@ -51,6 +51,9 @@ def test_index_is_solo_host() -> None:
     assert 'data-mood="skeptical"' in html
     assert 'id="talk"' in html
     assert "Type or talk" in html
+    footage = (ROOT / "footage.html").read_text(encoding="utf-8")
+    assert "content view" in footage.lower()
+    assert "deb" not in footage.lower()
 
 
 def test_composer_never_disables_the_input() -> None:

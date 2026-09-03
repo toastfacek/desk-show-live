@@ -24,7 +24,7 @@ From the repo root, stub-only (no keys):
 python3 -m http.server 8765 --directory research/grokbot-3d-chat
 ```
 
-Then open [http://127.0.0.1:8765/](http://127.0.0.1:8765/).
+Then open [http://127.0.0.1:8765/](http://127.0.0.1:8765/) for face + typed chat, or [http://127.0.0.1:8765/footage.html](http://127.0.0.1:8765/footage.html) for the streamer loop: content view is the eye, the host keeps talking without waiting for chat, curated pokes interrupt, and the loop lands when the clip is exhausted.
 
 Or open `index.html` as a file. The stub brain still drives the face. **Talk** needs `http://localhost` or https (browser mic rules). Type always works.
 
