@@ -61,10 +61,13 @@ class RuntimeConfig:
     stream_enabled: bool
 
     def __repr__(self) -> str:
-        return _redact_known_secrets(super().__repr__(), self._secret_values())
+        fields = ", ".join(
+            f"{name}={getattr(self, name)!r}" for name in self.__dataclass_fields__
+        )
+        return _redact_known_secrets(f"{type(self).__name__}({fields})", self._secret_values())
 
     def __str__(self) -> str:
-        return _redact_known_secrets(super().__str__(), self._secret_values())
+        return self.__repr__()
 
     def _secret_values(self) -> tuple[str, ...]:
         values: list[str] = []
