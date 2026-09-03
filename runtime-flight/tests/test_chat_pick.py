@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import asyncio
 import json as json_module
 from pathlib import Path
 
@@ -64,34 +65,40 @@ def test_load_chat_file(tmp_path: Path) -> None:
     assert comments[0].text == "Who actually posted this?"
 
 
-@pytest.mark.asyncio
-async def test_pick_chat_keeps_supplied_text() -> None:
+def test_pick_chat_keeps_supplied_text() -> None:
     comments = (
         ChatComment("c1", "sam", "Who actually posted this?"),
         ChatComment("c2", "lee", "lol"),
     )
-    picks = await pick_chat(
-        comments,
-        client=_client(
-            {"picks": [{"comment_id": "c1", "why": "asks who wrote it"}]}
-        ),
-        question="What does this unlock?",
-    )
+
+    async def run():
+        return await pick_chat(
+            comments,
+            client=_client(
+                {"picks": [{"comment_id": "c1", "why": "asks who wrote it"}]}
+            ),
+            question="What does this unlock?",
+        )
+
+    picks = asyncio.run(run())
     assert picks[0].comment_id == "c1"
     assert picks[0].text == "Who actually posted this?"
     assert picks[0].why == "asks who wrote it"
 
 
-@pytest.mark.asyncio
-async def test_pick_chat_rejects_invented_id() -> None:
+def test_pick_chat_rejects_invented_id() -> None:
     comments = (ChatComment("c1", "sam", "Who actually posted this?"),)
-    with pytest.raises(ChatPickError, match="supplied"):
+
+    async def run():
         await pick_chat(
             comments,
             client=_client(
                 {"picks": [{"comment_id": "nope", "why": "invented"}]}
             ),
         )
+
+    with pytest.raises(ChatPickError, match="supplied"):
+        asyncio.run(run())
 
 
 def test_picker_stays_isolated() -> None:

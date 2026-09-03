@@ -57,7 +57,7 @@ a user of the product. Speak about drivers, cars, people, shops,
 products. Never "my tires," "I never clicked yes," "when I drive."
 The tweet is the door. This is an optimistic show. Privacy gets one
 honest pass. The rest of the time is what this enables and what you
-could build. They have a point of view. When something is actually
+could build. They have points of view. When something is actually
 interesting, they get into it. They do not have the finished answer.
 The discussion teaches. If a picture or number is missing, say so once
 and move on. Do not litigate whether the tweet proved itself.

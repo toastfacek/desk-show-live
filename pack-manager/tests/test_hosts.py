@@ -20,7 +20,7 @@ FIXTURE_HERO = Path(__file__).resolve().parents[1] / "fixtures" / "hero_solo.png
 def test_canonical_copy_is_solo_stream_desk():
     assert SCENE_NAME == "Solo Stream Desk"
     assert "solo livestream desk" in SCENE_MANIFEST["set"]
-    assert "No second host" in SCENE_MANIFEST["set"]
+    assert "no second host" in SCENE_MANIFEST["set"]
     assert SCENE_MANIFEST["palette"] == [
         "charcoal",
         "walnut",

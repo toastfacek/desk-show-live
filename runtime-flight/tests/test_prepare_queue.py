@@ -250,8 +250,9 @@ def test_prepare_queue_retries_empty_writer_batch(
     assert summary["queue"][0]["tweet_id"] == "111"
 
 
-@pytest.mark.asyncio
-async def test_write_one_stays_on_bot1() -> None:
+def test_write_one_stays_on_bot1() -> None:
+    import asyncio
+
     from runtime_flight.models import Fact, SegmentPackage, TweetCard
     from runtime_flight.prepare_queue import _write_one
 
@@ -266,14 +267,18 @@ async def test_write_one_stays_on_bot1() -> None:
         center=TweetCard(author="one", text="A public workflow note.", url="https://x.com/a/status/111"),
     )
     writer = ScriptWriter(None)
-    thoughts = await _write_one(
-        writer,
-        package,
-        turns=3,
-        voices=(),
-        clip_duration_s=5,
-        chat=({"text": "Who posted this?", "why": "asks who wrote it"},),
-    )
+
+    async def run():
+        return await _write_one(
+            writer,
+            package,
+            turns=3,
+            voices=(),
+            clip_duration_s=5,
+            chat=({"text": "Who posted this?", "why": "asks who wrote it"},),
+        )
+
+    thoughts = asyncio.run(run())
     assert [thought.speaker for thought in thoughts] == ["BOT1", "BOT1", "BOT1"]
     assert writer.speakers == ["BOT1", "BOT1", "BOT1"]
     assert writer.chats[0] == ({"text": "Who posted this?", "why": "asks who wrote it"},)
