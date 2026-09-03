@@ -1,10 +1,15 @@
-# One-tweet live flight
+# Runtime flight
 
-Zero-cost operator commands for the Dwarkesh Patel one-tweet live test. Paid
-`smoke` and `live` are human-gated and are not implied by a passing test suite.
+Current show lock: [../SHOW.md](../SHOW.md). Solo PHASEONE, list rundown, optional
+chat file. Record only.
+
+Zero-cost operator commands and the older Dwarkesh one-tweet live test live here
+too. Paid `smoke` and `live` are human-gated and are not implied by a passing
+test suite.
 
 Programme learnings from the first paid OBS live (decode, audio, fade, crop,
-overlay port): [LIVE_FLIGHT_CHECK.md](LIVE_FLIGHT_CHECK.md).
+overlay port): [LIVE_FLIGHT_CHECK.md](LIVE_FLIGHT_CHECK.md). That flight was
+two-host Light Media Club. The live lock is now the solo desk.
 
 `check`, `setup-obs`, `rehearse`, `replay`, and `verify-flight` are bound to the
 flight services. `smoke` and `live` are bound too, but they still refuse unless
@@ -16,7 +21,29 @@ Flight source (operator-supplied, never paraphrase):
 - Tweet: https://x.com/dwarkesh_sp/status/2093833419377815719
 - Article: https://www.dwarkesh.com/p/openai-huggingface
 
-## Commands
+## List rundown (current show)
+
+```bash
+python3 -m runtime_flight load-list \
+  --inbox out/inbox \
+  --list 'https://x.com/i/lists/<id>'
+
+RUNTIME_ALLOW_PAID=1 python3 -m runtime_flight run-list \
+  --config config.local.yaml \
+  --inbox out/inbox \
+  --list 'https://x.com/i/lists/<id>' \
+  --chat-file chat.json \
+  --turns 6 \
+  --confirm-spend 8.00 \
+  --confirm-text-requests 240 \
+  --out out
+```
+
+`--list-file` is an offline snapshot. `--chat-file` is `{comments:[{id, author, text},...]}`.
+`--turns` is 2–8 (default 6). Stop is runway (spend, text, empty), not Sunday.
+`run-list` does not talk to OBS.
+
+## Older commands
 
 ```bash
 python3 -m runtime_flight check --config config.yaml

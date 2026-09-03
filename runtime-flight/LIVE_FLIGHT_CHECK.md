@@ -1,7 +1,11 @@
 # Runtime live flight check
 
-Learnings from the first paid OBS live on this box (`live-20260901T155458Z`)
-and the programme fixes that followed. Read this before the next `live` run.
+**Historical.** This is the first paid OBS live (`live-20260901T155458Z`), a
+two-host Light Media Club 90s flight. The current lock is [../SHOW.md](../SHOW.md):
+solo PHASEONE, list rundown, no OBS on that path.
+
+Learnings below still apply if you run `smoke` / `live` through stock OBS on
+this box (Constrained Baseline decode, absolute `HOST_WIDE` path, remux).
 The operator command sheet is [README.md](README.md).
 
 Record only. `stream.enabled` stays false. Preflight refuses if OBS is already

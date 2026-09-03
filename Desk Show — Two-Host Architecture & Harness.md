@@ -1,5 +1,7 @@
 # Runtime — Two-Host Architecture & Harness
 
+**Historical.** The live lock is now solo PHASEONE with chat. See `SHOW.md`.
+
 **Status:** Architecture, agreed in conversation 30 Aug 2026 · **Owner:** Jesse
 
 **See also:** `Agentic Live Streaming Harness — Plan.md` — who is in charge if agents run the show. `OBS Harness — TDD.md` — public runner (OBS beside us, fake clips, $0). `Live Sockets — TDD (text API + fal H3).md` — their text key and fal key, later. None of these replace this file.
