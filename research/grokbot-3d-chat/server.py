@@ -10,6 +10,7 @@ import json
 import os
 import random
 import re
+import sys
 import urllib.error
 import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -228,7 +229,7 @@ class Handler(SimpleHTTPRequestHandler):
         secret = os.environ.get("TEXT_API_KEY", "")
         if secret:
             message = message.replace(secret, "[redacted]")
-        self.log_error("%s", message)
+        sys.stderr.write("%s - %s\n" % (self.address_string(), message))
 
     def _send_json(self, payload: dict[str, Any], status: int = 200) -> None:
         blob = json.dumps(payload).encode("utf-8")

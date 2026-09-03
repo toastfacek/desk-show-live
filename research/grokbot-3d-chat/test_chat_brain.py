@@ -63,3 +63,9 @@ def test_renderer_has_no_llm() -> None:
     assert "TEXT_API" not in grokbot
     assert "Hemisphere" in grokbot
     assert "equator" in grokbot
+
+
+def test_log_message_does_not_recurse() -> None:
+    source = Path(brain.__file__).read_text(encoding="utf-8")
+    assert "self.log_error" not in source
+    assert "sys.stderr.write" in source
