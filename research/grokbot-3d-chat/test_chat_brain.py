@@ -49,6 +49,30 @@ def test_index_is_solo_host() -> None:
     assert "deb" not in html.lower()
     assert "zdog" in html.lower()
     assert 'data-mood="skeptical"' in html
+    assert 'id="talk"' in html
+    assert "Type or talk" in html
+
+
+def test_composer_never_disables_the_input() -> None:
+    app = (ROOT / "js" / "app.js").read_text(encoding="utf-8")
+    assert "input.disabled = false" in app
+    assert "input.disabled = true" not in app
+    assert "input.disabled = next" not in app
+    assert "webkitSpeechRecognition" in app
+    assert "finishTurn" in app
+    assert "{ live: liveBrain }" in app
+
+
+def test_brain_live_is_opt_in() -> None:
+    source = (ROOT / "js" / "brain.js").read_text(encoding="utf-8")
+    assert "location.protocol" not in source
+    assert "Boolean(options && options.live)" in source
+
+
+def test_voice_finish_is_idempotent() -> None:
+    source = (ROOT / "js" / "voice.js").read_text(encoding="utf-8")
+    assert "finished.has(mine)" in source
+    assert "hardMs" in source or "2000" in source
 
 
 def test_zdog_is_vendored() -> None:

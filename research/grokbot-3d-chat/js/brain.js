@@ -155,7 +155,7 @@
     }
   }
 
-  async function thinkThenReply(comment, history) {
+  async function thinkThenReply(comment, history, options) {
     const trimmed = String(comment || "").trim();
     if (!trimmed) {
       return {
@@ -164,7 +164,7 @@
         source: "stub",
       };
     }
-    const useLive = location.protocol !== "file:";
+    const useLive = Boolean(options && options.live);
     if (useLive) {
       try {
         return await liveReply(trimmed, history);

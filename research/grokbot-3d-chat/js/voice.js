@@ -12,6 +12,7 @@
     let fallback = 0;
     let speaking = false;
     let generation = 0;
+    const finished = new Set();
 
     function clearTimers() {
       if (tick) {
@@ -35,7 +36,8 @@
     }
 
     function finish(mine, onEnd) {
-      if (mine !== generation) return;
+      if (mine !== generation || finished.has(mine)) return;
+      finished.add(mine);
       speaking = false;
       clearTimers();
       bus.set({ squash: 0 });
@@ -70,6 +72,8 @@
         finish(mine, onEnd);
         return;
       }
+      const hardMs = estimateMs(line) + 2000;
+      fallback = setTimeout(() => finish(mine, onEnd), hardMs);
       const synth = global.speechSynthesis;
       if (!muted && synth) {
         const utter = new SpeechSynthesisUtterance(line);
@@ -94,7 +98,7 @@
         };
         try {
           synth.speak(utter);
-          fallback = setTimeout(() => {
+          setTimeout(() => {
             if (!started && mine === generation) runClock(mine, line, onEnd);
           }, 280);
           return;

@@ -88,7 +88,7 @@
       gap: 6px;
       max-width: 70%;
     }
-    .moods button, .samples button, #send, #mute {
+    .moods button, .samples button, #send, #talk, #mute {
       appearance: none;
       border: 1px solid var(--line);
       background: var(--panel);
@@ -168,7 +168,12 @@
       border-color: var(--lemon);
       font-weight: 600;
     }
-    #send:disabled { opacity: 0.45; cursor: wait; }
+    #send:disabled, #talk:disabled { opacity: 0.45; cursor: wait; }
+    #talk[aria-pressed="true"] {
+      background: var(--amber);
+      color: var(--ink);
+      border-color: var(--amber);
+    }
     .samples {
       display: flex;
       flex-wrap: wrap;
@@ -215,7 +220,7 @@
       <header class="chat-head">
         <button type="button" id="mute" aria-pressed="false">Sound on</button>
         <h1>Chat well</h1>
-        <p>Right third. Not a second host.</p>
+        <p>Right third. Type or talk. Not a second host.</p>
         <p class="meta">brain: <span id="brain-source">stub brain</span></p>
       </header>
       <ul id="log"></ul>
@@ -228,7 +233,8 @@
       </div>
       <form class="composer" id="composer">
         <label class="visually-hidden" for="comment" style="position:absolute;left:-9999px">Comment</label>
-        <input id="comment" name="comment" maxlength="280" autocomplete="off" placeholder="Say the thing">
+        <input id="comment" name="comment" maxlength="280" autocomplete="off" placeholder="Say the thing" enterkeyhint="send">
+        <button type="button" id="talk" aria-pressed="false">Talk</button>
         <button type="submit" id="send">Send</button>
       </form>
     </aside>
